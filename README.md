@@ -1,23 +1,46 @@
-Food Delivery Frontend
-A modern, responsive food delivery web application built with React, TypeScript, and Tailwind CSS. The project aims to provide a seamless restaurant browsing and food ordering experience, alongside an admin dashboard for managing orders and menu items.
-🚀 Tech Stack
-React — UI development
-TypeScript — Type safety
-Tailwind CSS — Styling
-Vite — Development and build tooling
-✨ Planned Features
-Restaurant discovery and search
-Restaurant menus and details
-Shopping cart and checkout
-Order history
-Admin dashboard
-Menu and order management
-Responsive user interface
-📋 Project Documentation
-For detailed functional requirements, project scope, team responsibilities, and the development roadmap, see REQUIREMENTS.md.
-👥 Team
+# Food Delivery Project
+
+A modern food delivery platform designed to make discovering restaurants, exploring menus, and ordering favorite meals simple, fast, and convenient.
+
+## 🚀 Tech Stack
+
+- **React** — User interface development.
+- **TypeScript** — Type safety and maintainable code.
+- **Tailwind CSS** — Responsive styling and UI design.
+- **Vite** — Development server and build tooling.
+
+## ✨ Planned Features
+
+### Customer Interface
+
+- Restaurant discovery and browsing.
+- Restaurant search.
+- Restaurant details and menus.
+- Shopping cart.
+- Simulated checkout and order confirmation.
+- Order history.
+- Responsive user interface.
+
+### Admin Dashboard
+
+- Dashboard overview.
+- Order management.
+- Menu management.
+
+## 📋 Project Documentation
+
+For detailed functional requirements, project scope, team responsibilities, risk mitigation, and the development roadmap, see [REQUIREMENTS.md](./REQUIREMENTS.md).
+
+## 👥 Team
+
 Developed collaboratively by a four-member frontend team as a practical software development project.
-📌 Project Status
-In Development Planning — The initial project structure and development workflow are being prepared.
-📄 License
+
+## 📌 Project Status
+
+**In Development** — The project is being developed as a frontend prototype using mock data.
+
+Real API integration, secure authentication, authorization, and payment processing are outside the scope of the initial prototype.
+
+## 📄 License
+
 No license has been selected yet.
