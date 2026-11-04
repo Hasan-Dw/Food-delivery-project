@@ -1,11 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, LogOut, X } from 'lucide-react';
+import { ArrowRight, LogOut, Search, X } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { primaryNav } from '@/config/navigation';
 import { ROUTES } from '@/config/routes';
 import { site } from '@/config/site';
 import { useLocationStore, serviceAreas } from '@/stores/location-store';
+import { useSearchDialogStore } from '@/stores/search-dialog-store';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
@@ -20,6 +21,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const { user, signOut } = useAuth();
   const areaId = useLocationStore((state) => state.areaId);
   const setArea = useLocationStore((state) => state.setArea);
+  const openSearch = useSearchDialogStore((state) => state.open);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +69,21 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-6">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              openSearch();
+            }}
+            className="mb-7 flex w-full items-center gap-3 rounded-xl border border-olive-900/12 bg-cream/70 px-3.5 py-3 text-left text-[0.8125rem] text-olive-600 transition hover:border-olive-900/25 hover:bg-cream hover:text-olive-900"
+          >
+            <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-terracotta-600" />
+            <span className="min-w-0 flex-1 truncate">Search restaurants, dishes or cuisines</span>
+            <kbd className="rounded border border-olive-900/15 bg-ivory px-1.5 py-0.5 text-[0.625rem] text-olive-500">
+              ⌘K
+            </kbd>
+          </button>
+
           <p className="eyebrow mb-3 text-terracotta-600">Deliver to</p>
           <div className="grid grid-cols-2 gap-2">
             {serviceAreas.map((area) => (

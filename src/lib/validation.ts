@@ -15,7 +15,7 @@ const passwordField = z
 export const loginSchema = z.object({
   email: emailField,
   password: z.string().min(1, 'Enter your password.'),
-  remember: z.boolean().default(false),
+  remember: z.boolean(),
 });
 
 export const registerSchema = z
@@ -57,7 +57,7 @@ export const addressSchema = z.object({
   postalCode: z.string().trim().min(4, 'Enter a postal code.').max(10, 'That postal code looks too long.'),
   country: z.string().trim().min(2, 'Enter a country.'),
   instructions: z.string().trim().max(160, 'Keep instructions under 160 characters.').optional(),
-  isDefault: z.boolean().default(false),
+  isDefault: z.boolean(),
 });
 
 export const preferencesSchema = z.object({

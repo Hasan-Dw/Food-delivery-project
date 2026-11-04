@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { AnnouncementBar } from '@/components/shared/AnnouncementBar';
 import { Navbar } from '@/components/shared/Navbar';
 import { Footer } from '@/components/shared/Footer';
+import { SearchDialog } from '@/features/search/components/SearchDialog';
 
 /** Public marketplace shell: announcement, sticky navigation, footer. */
 export function CustomerLayout() {
@@ -16,6 +17,7 @@ export function CustomerLayout() {
 
       <AnnouncementBar />
       <Navbar />
+      <SearchDialog />
 
       <main id="main" className="flex-1">
         <Outlet />
