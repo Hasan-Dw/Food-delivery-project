@@ -8,6 +8,7 @@ import { CartButton } from './CartButton';
 import { AccountMenu } from './AccountMenu';
 import { LocationMenu } from './LocationMenu';
 import { MobileMenu } from './MobileMenu';
+import { useSearchDialogStore } from '@/stores/search-dialog-store';
 import { cn } from '@/lib/cn';
 
 /**
@@ -17,6 +18,7 @@ import { cn } from '@/lib/cn';
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const openSearch = useSearchDialogStore((state) => state.open);
   const location = useLocation();
 
   useEffect(() => {
@@ -29,6 +31,19 @@ export function Navbar() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setMenuOpen(false);
+        openSearch();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [openSearch]);
 
   return (
     <>
@@ -65,13 +80,19 @@ export function Navbar() {
               <LocationMenu compact />
             </div>
 
-            <Link
-              to="/#search"
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                openSearch();
+              }}
               aria-label="Search restaurants and dishes"
-              className="hidden h-10 w-10 items-center justify-center rounded-full text-olive-600 transition hover:bg-olive-900/5 hover:text-olive-900 sm:inline-flex"
+              aria-haspopup="dialog"
+              aria-keyshortcuts="Control+K Meta+K"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-olive-600 transition hover:bg-olive-900/5 hover:text-olive-900"
             >
               <Search aria-hidden="true" className="h-[1.15rem] w-[1.15rem]" />
-            </Link>
+            </button>
 
             <div className="hidden sm:block">
               <AccountMenu />

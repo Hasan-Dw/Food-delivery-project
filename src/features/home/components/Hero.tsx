@@ -1,7 +1,6 @@
 import { ArrowRight, ArrowUpRight, Check, Star } from 'lucide-react';
 import { Image } from '@/components/ui/Image';
 import { Avatar } from '@/components/ui/Avatar';
-import { SearchBar } from '@/components/shared/SearchBar';
 import { useHeroAnimation } from '@/hooks/useHeroAnimation';
 import { useSelectedArea } from '@/stores/location-store';
 import { scrollToSection } from '@/lib/scroll';
@@ -55,11 +54,7 @@ export function Hero() {
             Discover exceptional food from restaurants around you, and enjoy every moment from order to doorstep.
           </p>
 
-          <div data-hero-reveal className="mt-8">
-            <SearchBar />
-          </div>
-
-          <div data-hero-reveal className="mt-7 flex flex-wrap items-center gap-3">
+          <div data-hero-reveal className="mt-9 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => scrollToSection('restaurants')}

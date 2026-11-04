@@ -214,12 +214,12 @@ src/
   app/            providers, router, layouts
   components/     shared chrome and UI primitives
   config/         env, routes, navigation, site constants, images
-  features/       auth, home, profile, tracking (pages + local components)
+  features/       auth, home, profile, search, tracking (pages + local components)
   hooks/          small reusable hooks
   lib/            formatting, validation, storage, query keys
   mocks/          isolated demo data and service implementations
   services/       contracts, HTTP adapters, API client
-  stores/         cart, location, discovery, toast
+  stores/         cart, location, discovery, search dialog, toast
   styles/         Tailwind entry and font faces
   types/          shared domain contracts
 docs/             architecture, design system, backend, handoff, references
