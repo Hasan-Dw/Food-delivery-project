@@ -14,6 +14,7 @@ const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
 const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
 const OrderTrackingPage = lazy(() => import('@/features/tracking/pages/OrderTrackingPage'));
+const RestaurantPage = lazy(() => import('@/features/Restaurant/RestaurantPage'));
 
 /**
  * Route map for this build.
@@ -35,6 +36,7 @@ export function AppRouter() {
           </Route>
 
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
+          <Route path={ROUTES.restaurantDetails()} element={<RestaurantPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>
