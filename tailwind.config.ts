@@ -135,6 +135,14 @@ export default {
           from: { opacity: '0', transform: 'translateY(6px) scale(0.98)' },
           to: { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        'fade-out': {
+          from: { opacity: '1' },
+          to: { opacity: '0' },
+        },
+        'dialog-out': {
+          from: { opacity: '1', transform: 'translateY(0) scale(1)' },
+          to: { opacity: '0', transform: 'translateY(12px) scale(0.96)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
@@ -144,6 +152,8 @@ export default {
         'shimmer': 'shimmer 1.8s linear infinite',
         'slide-in': 'slide-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
         'chip-in': 'chip-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'fade-out': 'fade-out 0.3s ease-in both',
+        'dialog-out': 'dialog-out 0.3s ease-in both',
       },
     },
   },

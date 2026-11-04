@@ -27,7 +27,7 @@ export const ROUTES = {
 
   // ── Owned by Team Member 4 — Restaurant Discovery ───────────────────────
   restaurants: '/restaurants',
-  restaurantDetails: (restaurantId = ':restaurantId') => `/restaurants/${restaurantId}`,
+  restaurantDetails: (restaurantName = ':restaurantName') => `/restaurants/${restaurantName}`,
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
