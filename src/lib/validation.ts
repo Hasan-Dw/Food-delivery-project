@@ -28,10 +28,65 @@ export const registerSchema = z
     email: emailField,
     password: passwordField,
     confirmPassword: z.string().min(1, 'Confirm your password.'),
+    /** Requested account type. ADMIN is deliberately not accepted. */
+    role: z.enum(['CUSTOMER', 'RESTAURANT_OWNER', 'DRIVER'], {
+      message: 'Choose an account type.',
+    }),
+    restaurantName: z.string().trim().max(120, 'Keep the restaurant name under 120 characters.').optional(),
+    restaurantAddress: z.string().trim().max(180, 'Keep the address under 180 characters.').optional(),
+    restaurantPhone: z.string().trim().max(40, 'That contact number looks too long.').optional(),
+    restaurantDescription: z
+      .string()
+      .trim()
+      .max(320, 'Keep the description under 320 characters.')
+      .optional(),
+    driverPhone: z.string().trim().max(40, 'That contact number looks too long.').optional(),
+    driverServiceArea: z.string().trim().max(120, 'Keep the service area under 120 characters.').optional(),
+    driverVehicle: z.enum(['bike', 'scooter', 'car']).optional(),
   })
-  .refine((values) => values.password === values.confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'Those passwords do not match.',
+  .superRefine((values, ctx) => {
+    if (values.password !== values.confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['confirmPassword'],
+        message: 'Those passwords do not match.',
+      });
+    }
+
+    const phonePattern = /^[+()\-\s\d]{7,}$/;
+    const required = (value: string | undefined, path: string, message: string) => {
+      if (!value || value.trim().length === 0) {
+        ctx.addIssue({ code: 'custom', path: [path], message });
+      }
+    };
+
+    if (values.role === 'RESTAURANT_OWNER') {
+      required(values.restaurantName, 'restaurantName', 'Enter the restaurant name.');
+      required(values.restaurantAddress, 'restaurantAddress', 'Enter the restaurant address.');
+      required(values.restaurantPhone, 'restaurantPhone', 'Enter a contact number for the restaurant.');
+      if (values.restaurantPhone && !phonePattern.test(values.restaurantPhone)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['restaurantPhone'],
+          message: 'Use digits, spaces, brackets or a leading +.',
+        });
+      }
+    }
+
+    if (values.role === 'DRIVER') {
+      required(values.driverPhone, 'driverPhone', 'Enter a contact number.');
+      required(values.driverServiceArea, 'driverServiceArea', 'Tell us where you can deliver.');
+      if (values.driverPhone && !phonePattern.test(values.driverPhone)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['driverPhone'],
+          message: 'Use digits, spaces, brackets or a leading +.',
+        });
+      }
+      if (!values.driverVehicle) {
+        ctx.addIssue({ code: 'custom', path: ['driverVehicle'], message: 'Choose a vehicle type.' });
+      }
+    }
   });
 
 export const forgotPasswordSchema = z.object({

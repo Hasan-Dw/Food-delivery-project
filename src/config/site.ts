@@ -1,4 +1,4 @@
-import type { DeliveryStatus } from '@/types';
+import type { DeliveryStatus, OrderStatus } from '@/types';
 
 export const site = {
   name: 'Savora',
@@ -26,51 +26,103 @@ export const site = {
   },
 } as const;
 
-export const deliveryStatusMeta: Record<
-  DeliveryStatus,
-  { label: string; short: string; description: string }
-> = {
-  confirmed: {
-    label: 'Order confirmed',
-    short: 'Confirmed',
-    description: 'The restaurant has received your order.',
+interface StatusMeta {
+  label: string;
+  short: string;
+  description: string;
+}
+
+/** Customer purchase lifecycle labels. Delivery labels are kept separate. */
+export const orderStatusMeta: Record<OrderStatus, StatusMeta> = {
+  PENDING: {
+    label: 'Order placed',
+    short: 'Placed',
+    description: 'Waiting for the restaurant to confirm your order.',
   },
-  preparing: {
+  ACCEPTED: {
+    label: 'Order accepted',
+    short: 'Accepted',
+    description: 'The restaurant has confirmed your order.',
+  },
+  REJECTED: {
+    label: 'Order rejected',
+    short: 'Rejected',
+    description: 'The restaurant could not accept this order.',
+  },
+  PREPARING: {
     label: 'Being prepared',
     short: 'Preparing',
     description: 'The kitchen is cooking everything fresh.',
   },
-  ready: {
+  READY: {
     label: 'Ready for pickup',
     short: 'Ready',
     description: 'Packed and waiting for your delivery partner.',
   },
-  on_the_way: {
-    label: 'On the way',
-    short: 'On the way',
-    description: 'Your driver is heading to your door.',
+  COMPLETED: {
+    label: 'Completed',
+    short: 'Completed',
+    description: 'This order has been completed.',
   },
-  arrived: {
-    label: 'Arriving now',
-    short: 'Arriving',
-    description: 'Your driver is moments away.',
-  },
-  delivered: {
-    label: 'Delivered',
-    short: 'Delivered',
-    description: 'Enjoy your meal.',
-  },
-  cancelled: {
+  CANCELLED: {
     label: 'Cancelled',
     short: 'Cancelled',
     description: 'This order was cancelled.',
   },
 };
 
-export const orderStatusSequence: DeliveryStatus[] = [
-  'confirmed',
-  'preparing',
-  'ready',
-  'on_the_way',
-  'delivered',
+/** Transportation lifecycle labels, separate from the restaurant's order. */
+export const deliveryStatusMeta: Record<DeliveryStatus, StatusMeta> = {
+  PENDING_ASSIGNMENT: {
+    label: 'Finding a driver',
+    short: 'Assigning',
+    description: 'We are matching your order with a delivery partner.',
+  },
+  ASSIGNED: {
+    label: 'Driver assigned',
+    short: 'Assigned',
+    description: 'A delivery partner is heading to the restaurant.',
+  },
+  PICKED_UP: {
+    label: 'Picked up',
+    short: 'Picked up',
+    description: 'Your order has left the restaurant.',
+  },
+  ON_THE_WAY: {
+    label: 'On the way',
+    short: 'On the way',
+    description: 'Your driver is heading to your door.',
+  },
+  DELIVERED: {
+    label: 'Delivered',
+    short: 'Delivered',
+    description: 'Enjoy your meal.',
+  },
+  CANCELLED: {
+    label: 'Delivery cancelled',
+    short: 'Cancelled',
+    description: 'This delivery was cancelled.',
+  },
+};
+
+/** Combined lookup for the customer tracking view. */
+export const trackingStatusMeta: Record<OrderStatus | DeliveryStatus, StatusMeta> = {
+  ...orderStatusMeta,
+  ...deliveryStatusMeta,
+};
+
+export const orderStatusSequence: OrderStatus[] = [
+  'PENDING',
+  'ACCEPTED',
+  'PREPARING',
+  'READY',
+  'COMPLETED',
+];
+
+export const deliveryStatusSequence: DeliveryStatus[] = [
+  'PENDING_ASSIGNMENT',
+  'ASSIGNED',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'DELIVERED',
 ];

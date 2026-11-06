@@ -14,7 +14,7 @@ const vehicleLabels = {
 
 /** Delivery partner card. Contact details are clearly demo data. */
 export function DriverCard({ snapshot }: { snapshot: TrackingSnapshot }) {
-  const { driver, status } = snapshot;
+  const { driver, deliveryStatus } = snapshot;
 
   return (
     <section
@@ -23,7 +23,7 @@ export function DriverCard({ snapshot }: { snapshot: TrackingSnapshot }) {
     >
       <div className="flex items-center justify-between gap-3 border-b border-olive-900/8 px-5 py-4">
         <h2 id="driver-heading" className="font-display text-[1.25rem] text-olive-900">
-          {status === 'delivered' ? 'Delivered by' : 'Your delivery partner'}
+          {deliveryStatus === 'DELIVERED' ? 'Delivered by' : 'Your delivery partner'}
         </h2>
         <Badge tone={snapshot.live ? 'success' : 'gold'}>{snapshot.live ? 'Live' : 'Demo'}</Badge>
       </div>

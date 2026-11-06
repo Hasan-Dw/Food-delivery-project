@@ -11,7 +11,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { services } from '@/services';
 import { authToken, onUnauthorized } from '@/services/api';
 import { sessionStorageBridge } from '@/services/auth/session-storage';
-import type { AuthSession, LoginCredentials, RegisterPayload, User } from '@/types';
+import { hasAnyRole, isApprovedAccount } from '@/lib/permissions';
+import type {
+  AccountStatus,
+  AuthSession,
+  LoginCredentials,
+  RegisterPayload,
+  User,
+  UserRole,
+} from '@/types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -19,6 +27,10 @@ interface AuthContextValue {
   user: User | null;
   status: AuthStatus;
   isAuthenticated: boolean;
+  role: UserRole | null;
+  accountStatus: AccountStatus | null;
+  isApproved: boolean;
+  hasRole: (roles: readonly UserRole[]) => boolean;
   signIn: (credentials: LoginCredentials) => Promise<AuthSession>;
   signUp: (payload: RegisterPayload) => Promise<AuthSession>;
   signOut: () => Promise<void>;
@@ -126,6 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       status,
       isAuthenticated: status === 'authenticated',
+      role: user?.role ?? null,
+      accountStatus: user?.accountStatus ?? null,
+      isApproved: Boolean(user && isApprovedAccount(user.accountStatus)),
+      hasRole: (roles: readonly UserRole[]) => Boolean(user && hasAnyRole(user.role, roles)),
       signIn,
       signUp,
       signOut,

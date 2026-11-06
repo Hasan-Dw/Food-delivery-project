@@ -12,6 +12,25 @@ export const ROUTES = {
   profile: '/profile',
   orderTracking: (orderId = ':orderId') => `/orders/${orderId}`,
 
+  // ── Role-scoped dashboard entry points ──────────────────────────────────
+  // Only the customer entry is mounted today. The other constants and the
+  // role guards in app/router are ready for their owners to mount their pages.
+  customerDashboard: '/profile',
+  dashboard: '/restaurant/dashboard',
+  driverDashboard: '/driver/dashboard',
+  adminDashboard: '/admin/dashboard',
+
+  // ── Implemented role dashboards ─────────────────────────────────────────
+  dashboardOrder: (orderId = ':orderId') => `/restaurant/orders/${orderId}`,
+  dashboardAnalytics: '/restaurant/analytics',
+  driverActiveDelivery: '/driver/active-delivery',
+  driverHistory: '/driver/history',
+  driverAvailability: '/driver/availability',
+  adminAccounts: '/admin/accounts',
+  adminDrivers: '/admin/drivers',
+  adminDeliveries: '/admin/deliveries',
+  adminOrders: '/admin/orders',
+
   // ── Owned by Team Member 2 — Cart & Order Flow ──────────────────────────
   cart: '/cart',
   checkout: '/checkout',
@@ -19,7 +38,6 @@ export const ROUTES = {
   orderHistory: '/orders',
 
   // ── Owned by Team Member 3 — Restaurant Dashboard ───────────────────────
-  dashboard: '/restaurant/dashboard',
   dashboardOrders: '/restaurant/orders',
   dashboardMenu: '/restaurant/menu',
   dashboardCategories: '/restaurant/categories',
