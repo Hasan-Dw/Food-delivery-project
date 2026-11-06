@@ -18,6 +18,7 @@ const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswo
 const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
 const OrderTrackingPage = lazy(() => import('@/features/tracking/pages/OrderTrackingPage'));
 const RestaurantPage = lazy(() => import('@/features/Restaurant/RestaurantPage'));
+const CartPage = lazy(() => import('@/features/cart/pages/CartPage'));
 
 /* Role workspaces. Each owns an isolated layout and its own guard. */
 const RestaurantOverviewPage = lazy(
@@ -73,6 +74,7 @@ export function AppRouter() {
 
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path={ROUTES.restaurantDetails()} element={<RestaurantPage />} />
+          <Route path={ROUTES.cart} element={<CartPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>
