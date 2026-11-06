@@ -11,6 +11,7 @@ import { PasswordInput } from '@/features/auth/components/PasswordInput';
 import { DemoAccountNotice } from '@/features/auth/components/DemoAccountNotice';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { loginSchema, type LoginValues } from '@/lib/validation';
+import { roleLandingPath } from '@/lib/permissions';
 import { getErrorMessage } from '@/services/api/errors';
 import { site } from '@/config/site';
 import { ROUTES } from '@/config/routes';
@@ -23,10 +24,10 @@ interface LocationState {
 /** Sign-in screen. The demo disclosure is part of the interface, not a footnote. */
 export default function LoginPage() {
   useDocumentTitle('Sign in');
-  const { signIn, isAuthenticated } = useAuth();
+  const { signIn, isAuthenticated, user } = useAuth();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  const from = state?.from?.startsWith('/') ? state.from : ROUTES.profile;
+  const from = state?.from?.startsWith('/') ? state.from : user ? roleLandingPath(user.role) : ROUTES.profile;
   const [formError, setFormError] = useState<string | null>(null);
 
   const {

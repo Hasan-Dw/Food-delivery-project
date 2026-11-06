@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, FlaskConical, RefreshCw } from 'lucide-react';
-import type { DeliveryStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Skeleton';
@@ -13,20 +12,27 @@ import { TrackingTimeline } from '@/features/tracking/components/TrackingTimelin
 import { useOrderTracking } from '@/features/tracking/hooks/useOrderTracking';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/stores/toast-store';
-import { deliveryStatusMeta } from '@/config/site';
+import { trackingStatusMeta } from '@/config/site';
 import { ROUTES } from '@/config/routes';
+import { resolveTrackingPhase, type TrackingPhase } from '@/lib/order-lifecycle';
 import { formatEta, formatTime } from '@/lib/format';
 import { getErrorMessage } from '@/services/api/errors';
 import { cn } from '@/lib/cn';
 
-const headlines: Record<DeliveryStatus, { lead: string; accent: string }> = {
-  confirmed: { lead: 'Dinner is', accent: 'confirmed.' },
-  preparing: { lead: 'The kitchen is', accent: 'on it.' },
-  ready: { lead: 'Packed and', accent: 'ready to go.' },
-  on_the_way: { lead: 'Dinner is', accent: 'on the way.' },
-  arrived: { lead: 'At your', accent: 'door.' },
-  delivered: { lead: 'Dinner has', accent: 'arrived.' },
-  cancelled: { lead: 'This order was', accent: 'cancelled.' },
+const headlines: Record<TrackingPhase, { lead: string; accent: string }> = {
+  PENDING: { lead: 'Your order is', accent: 'placed.' },
+  ACCEPTED: { lead: 'Your order is', accent: 'confirmed.' },
+  REJECTED: { lead: 'This order was', accent: 'rejected.' },
+  PREPARING: { lead: 'The kitchen is', accent: 'on it.' },
+  READY: { lead: 'Packed and', accent: 'ready to go.' },
+  COMPLETED: { lead: 'Dinner has', accent: 'arrived.' },
+  CANCELLED: { lead: 'This order was', accent: 'cancelled.' },
+  PENDING_ASSIGNMENT: { lead: 'Finding your', accent: 'delivery partner.' },
+  ASSIGNED: { lead: 'Your driver is', accent: 'on the way.' },
+  PICKED_UP: { lead: 'Dinner has been', accent: 'picked up.' },
+  ON_THE_WAY: { lead: 'Dinner is', accent: 'on the way.' },
+  DELIVERED: { lead: 'Dinner has', accent: 'arrived.' },
+  INCONSISTENT: { lead: 'Tracking needs', accent: 'a check.' },
 };
 
 /**
@@ -81,10 +87,21 @@ export default function OrderTrackingPage() {
 
   const currentOrder = order.data;
   const snapshot = tracking.data;
-  const status = currentOrder.status;
+  const status = resolveTrackingPhase(currentOrder.status, snapshot.deliveryStatus);
   const headline = headlines[status];
-  const meta = deliveryStatusMeta[status];
-  const isDone = status === 'delivered' || status === 'cancelled';
+  const meta =
+    status === 'INCONSISTENT'
+      ? {
+          label: 'Order and delivery mismatch',
+          short: 'Needs review',
+          description:
+            'The order and its delivery disagree. Savora operations must reconcile this before it is treated as complete.',
+        }
+      : trackingStatusMeta[status];
+  const isDelivered = status === 'DELIVERED' || status === 'COMPLETED';
+  const isCancelled = status === 'CANCELLED';
+  const isInconsistent = status === 'INCONSISTENT';
+  const isDone = isDelivered || isCancelled || isInconsistent;
   const isDemo = !snapshot.live;
 
   const refresh = async () => {
@@ -135,7 +152,7 @@ export default function OrderTrackingPage() {
                 {headline.lead} <em className="italic text-terracotta">{headline.accent}</em>
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.8125rem] text-olive-500">
-                <Badge tone={status === 'delivered' ? 'success' : status === 'cancelled' ? 'terracotta' : 'olive'}>
+                <Badge tone={isDelivered ? 'success' : isCancelled || isInconsistent ? 'terracotta' : 'olive'}>
                   {meta.label}
                 </Badge>
                 <span>{currentOrder.restaurantName}</span>
@@ -153,7 +170,13 @@ export default function OrderTrackingPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[0.625rem] font-semibold uppercase tracking-[0.14em] text-olive-500">
-                    {status === 'delivered' ? 'Delivered' : status === 'cancelled' ? 'Order status' : 'Arriving in'}
+                    {isDelivered
+                      ? 'Delivered'
+                      : isCancelled
+                        ? 'Order status'
+                        : isInconsistent
+                          ? 'Needs attention'
+                          : 'Arriving in'}
                   </p>
                   <p
                     className={cn(
@@ -161,20 +184,28 @@ export default function OrderTrackingPage() {
                       isDone ? 'text-[1.85rem]' : 'text-[2.6rem]',
                     )}
                   >
-                    {status === 'delivered'
-                      ? currentOrder.deliveredAt
-                        ? formatTime(currentOrder.deliveredAt)
+                    {isDelivered
+                      ? snapshot.deliveredAt
+                        ? formatTime(snapshot.deliveredAt)
                         : 'Delivered'
-                      : status === 'cancelled'
+                      : isCancelled
                         ? 'Cancelled'
-                        : formatEta(snapshot.etaMinutes)}
+                        : isInconsistent
+                          ? 'Mismatch'
+                          : snapshot.estimatedArrivalAt
+                            ? formatEta(snapshot.etaMinutes)
+                            : 'Awaiting driver'}
                   </p>
                   <p className="mt-2 text-[0.6875rem] leading-relaxed text-olive-500">
-                    {status === 'delivered'
+                    {isDelivered
                       ? 'Enjoy your meal. This receipt stays available in the demo.'
-                      : status === 'cancelled'
+                      : isCancelled
                         ? 'No delivery is in progress for this order.'
-                        : `Estimated by ${formatTime(currentOrder.estimatedDeliveryAt)} · ${meta.description}`}
+                        : isInconsistent
+                          ? 'Order and delivery states conflict. This is shown explicitly instead of hiding it.'
+                          : snapshot.estimatedArrivalAt
+                            ? `Estimated by ${formatTime(snapshot.estimatedArrivalAt)} · ${meta.description}`
+                            : 'A reliable arrival estimate appears once a driver is assigned.'}
                   </p>
                 </div>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cream text-terracotta ring-1 ring-inset ring-olive-900/8">
@@ -201,6 +232,21 @@ export default function OrderTrackingPage() {
           </div>
         </div>
       </section>
+
+      {isInconsistent ? (
+        <div className="shell pt-6">
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-2xl border border-danger/25 bg-danger/5 px-4 py-3.5 text-[0.8125rem] leading-relaxed text-danger"
+          >
+            <RefreshCw aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              The order status and delivery status do not agree. Savora never presents this as a completed delivery;
+              operations must reconcile the two records in the backend.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="shell grid items-start gap-6 py-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(19rem,1fr)] lg:gap-7 lg:py-10">
         <div className="min-w-0 space-y-6">

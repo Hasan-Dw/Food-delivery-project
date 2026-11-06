@@ -1,12 +1,13 @@
 import { Check, Clock3, XCircle } from 'lucide-react';
-import type { DeliveryStatus, OrderStatusEvent } from '@/types';
+import type { TrackingEvent } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { formatTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import type { TrackingPhase } from '@/lib/order-lifecycle';
 
 /**
- * Status timeline. Completed steps come from the order service; the active
- * step is derived from the current delivery status. Future timestamps are
+ * Status timeline. Completed steps come from the order and delivery services;
+ * the active step is the resolved tracking phase. Future timestamps are
  * labelled as estimates rather than presented as facts.
  */
 export function TrackingTimeline({
@@ -14,10 +15,11 @@ export function TrackingTimeline({
   currentStatus,
   lastUpdated,
 }: {
-  events: OrderStatusEvent[];
-  currentStatus: DeliveryStatus;
+  events: TrackingEvent[];
+  currentStatus: TrackingPhase;
   lastUpdated: string;
 }) {
+  const isDelivered = currentStatus === 'DELIVERED' || currentStatus === 'COMPLETED';
   const activeIndex = events.findIndex((event) => event.status === currentStatus);
   const fallbackIndex = events.reduce((last, event, index) => (event.completed ? index : last), -1);
   const highlightIndex = activeIndex >= 0 ? activeIndex : fallbackIndex;
@@ -41,10 +43,20 @@ export function TrackingTimeline({
       </div>
 
       <div className="px-5 py-6 sm:px-6">
-        {currentStatus === 'cancelled' ? (
+        {currentStatus === 'CANCELLED' ? (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-[0.8125rem] text-danger">
             <XCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
             <p>This order was cancelled. The timeline shows the stages it reached before cancellation.</p>
+          </div>
+        ) : null}
+
+        {currentStatus === 'INCONSISTENT' ? (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-[0.8125rem] text-danger">
+            <XCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              The order and delivery records disagree. The timeline is shown as recorded, without treating either
+              state as a successful completion.
+            </p>
           </div>
         ) : null}
 
@@ -56,7 +68,7 @@ export function TrackingTimeline({
 
           <ol>
             {events.map((event, index) => {
-            const isCurrent = index === highlightIndex && currentStatus !== 'delivered';
+            const isCurrent = index === highlightIndex && !isDelivered;
             const isComplete = event.completed;
             const isFuture = !isComplete && index > highlightIndex;
 
@@ -91,7 +103,7 @@ export function TrackingTimeline({
                         {event.label}
                       </p>
                       {isCurrent ? <Badge tone="gold">Now</Badge> : null}
-                      {currentStatus === 'delivered' && event.status === 'delivered' ? (
+                      {isDelivered && event.status === 'DELIVERED' ? (
                         <Badge tone="success">Complete</Badge>
                       ) : null}
                     </div>

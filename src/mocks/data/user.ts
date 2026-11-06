@@ -7,7 +7,8 @@ export const demoUser: User = {
   phone: '+1 (718) 555-0148',
   avatarKey: 'avatar-maya',
   memberSince: '2023-04-12T00:00:00.000Z',
-  role: 'customer',
+  role: 'CUSTOMER',
+  accountStatus: 'APPROVED',
   preferences: {
     dietary: ['vegetarian'],
     emailReceipts: true,

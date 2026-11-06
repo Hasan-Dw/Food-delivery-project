@@ -5,6 +5,7 @@ import { Logo } from '@/components/ui/Logo';
 import { Image } from '@/components/ui/Image';
 import { site } from '@/config/site';
 import { ROUTES } from '@/config/routes';
+import { cn } from '@/lib/cn';
 
 interface AuthPanel {
   imageKey: string;
@@ -59,7 +60,7 @@ export function AuthLayout() {
         </header>
 
         <main className="flex flex-1 items-center py-10 sm:py-14">
-          <div className="mx-auto w-full max-w-[27rem]">
+          <div className={cn('mx-auto w-full', pathname === ROUTES.register ? 'max-w-[36rem]' : 'max-w-[27rem]')}>
             <Outlet />
           </div>
         </main>
