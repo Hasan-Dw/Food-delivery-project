@@ -4,8 +4,7 @@ import CartItem from "../components/CartItem";
 import CartSummary from "../components/CartSummary";
 import EmptyCart from "../components/EmptyCart";
 
-import { useCartStore } from "../store/cart-store";
-
+import { useCartStore } from "@/stores/cart-store";
 function CartPage() {
   const navigate = useNavigate();
 
