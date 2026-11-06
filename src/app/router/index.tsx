@@ -19,7 +19,7 @@ const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
 const OrderTrackingPage = lazy(() => import('@/features/tracking/pages/OrderTrackingPage'));
 const RestaurantPage = lazy(() => import('@/features/Restaurant/RestaurantPage'));
 const CartPage = lazy(() => import('@/features/cart/pages/CartPage'));
-
+const CheckoutPage = lazy(() => import('@/features/checkout/pages/CheckoutPage'));
 /* Role workspaces. Each owns an isolated layout and its own guard. */
 const RestaurantOverviewPage = lazy(
   () => import('@/features/restaurant-dashboard/pages/RestaurantOverviewPage'),
@@ -75,6 +75,7 @@ export function AppRouter() {
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path={ROUTES.restaurantDetails()} element={<RestaurantPage />} />
           <Route path={ROUTES.cart} element={<CartPage />} />
+          <Route path={ROUTES.checkout} element={<CheckoutPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>
