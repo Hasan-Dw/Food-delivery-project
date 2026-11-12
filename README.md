@@ -2,38 +2,31 @@
 
 **Discover. Order. Enjoy.**
 
-Savora is a cinematic, multi-restaurant food-delivery marketplace frontend. It pairs an editorial, warm-ivory visual system with a production-shaped React architecture: typed service contracts, a central API client, isolated mocks, and clear boundaries for auth, tracking and maps.
+Savora is a cinematic, multi-restaurant food-delivery marketplace. It pairs an editorial, warm-ivory visual system with a production-shaped React architecture: typed service contracts, a central API client, isolated preview data, and clear boundaries for auth, tracking and maps. A NestJS/MongoDB API in `backend/` powers authentication, profiles, restaurants, menus, checkout pricing, orders, deliveries, driver assignment, promotions and tracking snapshots.
 
-This repository is the **Team Member 1** slice of a four-person build. It implements **six pages** and intentionally leaves the other eleven pages to teammates.
-
-![Savora homepage — full-page design reference](docs/design-references/my-pages/01-home.png)
+The frontend includes customer ordering flows plus role-scoped workspaces for restaurant owners, drivers and administrators. Reviews and ratings remain a separate teammate-owned area.
 
 ---
 
 ## What is implemented
 
-| Route | Page | Notes |
-| --- | --- | --- |
-| `/` | Home | Discovery, category filters, restaurant rail, popular dishes, offers, delivery story |
-| `/login` | Login | Demo credentials, validation, redirect-back, demo disclosure |
-| `/register` | Register | Creates a per-user mock profile and session |
-| `/forgot-password` | Forgot password | Generic, non-enumerating mock response |
-| `/profile` | Profile | Protected route; personal details, addresses, preferences, payment methods (read-only) |
-| `/orders/:orderId` | Order tracking | Public shareable link, demo map, timeline, driver and receipt |
+| Route | Page |
+| --- | --- |
+| `/` | Home: discovery, category filters, restaurant rail, popular dishes, offers, delivery story |
+| `/login`, `/register`, `/forgot-password` | Authentication, registration and password reset |
+| `/restaurants/:restaurantName` | Restaurant detail and menu |
+| `/cart`, `/checkout` | Cart and server-priced checkout |
+| `/order-confirmation/:orderId`, `/orders`, `/orders/:orderId` | Confirmation, history and protected order tracking |
+| `/profile` | Protected profile, addresses, preferences and payment methods |
+| `/restaurant/dashboard`, `/restaurant/orders`, `/restaurant/orders/:orderId`, `/restaurant/analytics` | Restaurant-owner workspace |
+| `/driver/dashboard`, `/driver/active-delivery`, `/driver/history`, `/driver/availability` | Driver workspace |
+| `/admin/dashboard`, `/admin/accounts`, `/admin/drivers`, `/admin/deliveries`, `/admin/orders` | Admin workspace |
 
-Demo order: **`/orders/ord_10482`** (ETA 14 min, status `on_the_way`).
+Reviews and ratings are owned by another teammate and are not part of this branch.
 
-Demo account: **`maya@example.com`** / **`Savora123!`**
+### Data modes
 
-### Deliberately not implemented
-
-These routes are reserved in `src/config/routes.ts` and documented for handoff, but are **not mounted** and have no placeholder pages or components:
-
-- Team Member 2 — `/cart`, `/checkout`, `/order-confirmation/:orderId`, `/orders`
-- Team Member 3 — `/restaurant/dashboard`, `/restaurant/orders`, `/restaurant/menu`, `/restaurant/categories`, `/restaurant/settings`
-- Team Member 4 — `/restaurants`, `/restaurants/:restaurantId`
-
-Visiting one of these paths renders the friendly 404, which explains that the page belongs to another teammate. There are no stub routes, fake dashboards or hidden placeholders.
+The app runs fully in browser-local preview mode by default. Set `VITE_DATA_SOURCE=http` and `VITE_API_BASE_URL` to use the NestJS API for auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions and tracking. The admin dashboard and restaurant analytics remain preview fixtures.
 
 ---
 
@@ -69,7 +62,7 @@ Copy `.env.example` to `.env` only when you need to override defaults. All value
 | `VITE_API_BASE_URL` | empty | Backend origin, no trailing slash. Empty keeps the app on mocks. |
 | `VITE_API_TIMEOUT_MS` | `15000` | Per-request timeout for the HTTP client |
 | `VITE_DATA_SOURCE` | `mock` | `mock` or `http`. If omitted, `http` is selected only when a base URL exists. |
-| `VITE_MAP_PROVIDER` | `demo` | Reserved map boundary: `demo`, `google` or `mapbox` |
+| `VITE_MAP_PROVIDER` | `preview` | Reserved map boundary: `preview`, `google` or `mapbox` |
 | `VITE_MAP_TOKEN` | empty | Reserved token for a future map provider |
 | `VITE_LIVE_TRACKING` | `false` | Enables the HTTP tracking adapter's SSE subscription |
 
@@ -100,8 +93,8 @@ Service interface  (src/services/*/*Service.ts)
 
 - **Server state:** TanStack Query. Query keys live in `src/lib/query-keys.ts`.
 - **Client state:** Zustand for cart, selected delivery area, discovery filters and toasts.
-- **Auth:** `AuthProvider` owns session hydration, token attachment and 401 handling. The mock session is explicitly a frontend demo, not security.
-- **Composition root:** `src/services/index.ts` chooses mock or HTTP implementations once.
+- **Auth:** `AuthProvider` owns session hydration, token attachment and 401 handling. In preview mode the session is browser-only; when the API is enabled, the token is issued and verified by the server.
+- **Composition root:** `src/services/index.ts` chooses preview or HTTP implementations once, per domain. Auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions and tracking use the API when configured; admin and analytics read models stay local.
 - **Code splitting:** every page is lazy-loaded; the shell paints immediately.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full map.
@@ -162,18 +155,65 @@ npm run design:serve
 
 ---
 
-## Backend readiness
+## Backend
 
-The app is built to switch data sources without touching a page:
+A NestJS 11 + MongoDB (Mongoose 8) API lives in `backend/`. It implements:
+
+- authentication, roles and approval guards;
+- profiles, addresses and read-only payment methods;
+- restaurants, categories, menu items and option groups;
+- server-authoritative checkout quotes;
+- orders with idempotent creation, status history and lifecycle transitions;
+- deliveries with driver assignment, transport lifecycle and completion;
+- driver availability and location snapshots;
+- percentage and fixed promotions with usage and per-customer limits;
+- a scoped, read-only tracking snapshot.
+
+Start it:
+
+```bash
+cd backend
+npm ci
+cp .env.example .env
+# set MONGODB_URI, JWT_ACCESS_SECRET and the SEED_*_PASSWORD values
+npm run seed
+npm run start:dev
+```
+
+`MONGODB_URI` may point at a local MongoDB instance or at MongoDB Atlas. For the
+shared team cluster use the SRV form and keep the database name `savora`:
 
 ```env
-VITE_API_BASE_URL=https://api.example.com
+MONGODB_URI=mongodb+srv://<db_user>:<url-encoded-password>@savora-cluster.p1fm9sm.mongodb.net/savora?retryWrites=true&w=majority&appName=savora-cluster
+JWT_ACCESS_SECRET=<random value of at least 32 characters>
+```
+
+Never commit `backend/.env`; it is ignored. The API listens on
+`http://localhost:3000/api/v1`; OpenAPI is at `http://localhost:3000/api/docs`.
+
+Point the frontend at it:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000/api/v1
 VITE_DATA_SOURCE=http
 ```
 
-The HTTP adapters already implement the endpoint shape used by the services. See [docs/BACKEND-INTEGRATION.md](docs/BACKEND-INTEGRATION.md) for the request/response contract, auth flow, SSE tracking channel, error envelope and migration checklist.
+Validation:
 
-**Security note:** mock auth stores a demo session in Web Storage and compares a plain-text demo password. It is not authentication. A real deployment must issue server-side sessions (preferably httpOnly cookies), hash credentials, rate-limit login and reset, and never trust client state.
+```bash
+cd backend
+npm run typecheck
+npm run build
+npm test
+npm run test:e2e
+```
+
+**Security note:** preview mode keeps a browser-only session and must never be
+treated as authentication. With the API enabled, credentials are hashed with
+bcrypt, access tokens are signed with a server-side secret, and role/approval
+checks run on every request. A production deployment should still add
+rate-limiting, httpOnly refresh cookies, email delivery for password reset and
+secret rotation.
 
 ---
 
@@ -188,7 +228,7 @@ The HTTP adapters already implement the endpoint shape used by the services. See
 - Touch targets are at least 44 px where the layout allows.
 - Tested at 390 px, 768 px and 1440 px with no horizontal overflow.
 
-The tracking map is a hand-drawn SVG explicitly labelled **Demo map** and **Illustrative route, not live GPS**. It requests no location permission and simulates no GPS timer.
+The tracking map is a hand-drawn SVG explicitly labelled **Sample map** and **Illustrative route, not live GPS**. It requests no location permission and simulates no GPS timer.
 
 ---
 
@@ -214,15 +254,16 @@ src/
   app/            providers, router, layouts
   components/     shared chrome and UI primitives
   config/         env, routes, navigation, site constants, images
-  features/       auth, home, profile, search, tracking (pages + local components)
+  features/       auth, home, profile, search, tracking and dashboards
   hooks/          small reusable hooks
   lib/            formatting, validation, storage, query keys
-  mocks/          isolated demo data and service implementations
+  mocks/          isolated preview data and service implementations
   services/       contracts, HTTP adapters, API client
   stores/         cart, location, discovery, search dialog, toast
   styles/         Tailwind entry and font faces
   types/          shared domain contracts
-docs/             architecture, design system, backend, handoff, references
+backend/          NestJS API, MongoDB schemas, seed script, tests, docs
+docs/             architecture, design system, handoff, references
 public/           fonts and generated image assets
 scripts/          asset build, screenshot, design server (dev only)
 ```
@@ -239,17 +280,22 @@ scripts/          asset build, screenshot, design server (dev only)
 | [docs/TEAM-HANDOFF.md](docs/TEAM-HANDOFF.md) | Ownership, shared boundaries, integration steps |
 | [docs/DESIGN-REFERENCES.md](docs/DESIGN-REFERENCES.md) | All 17 references, mapping and generation |
 
+Backend design notes are kept alongside the API in `backend/docs/` for local
+development.
+
 ---
 
 ## Known limitations
 
-- Authentication, orders, profile data and tracking are **mock/demo** implementations.
-- The demo map is illustrative; no live GPS or map tiles are connected.
-- Payment methods are displayed but not editable; no payment provider is integrated.
+- Auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions and tracking are API-backed when `VITE_DATA_SOURCE=http`; in preview mode they use browser-local data.
+- The admin dashboard and restaurant analytics read models remain local preview fixtures.
+- Tracking is a polled snapshot; no live GPS, Socket.IO or map tiles are connected.
+- Payments record a method snapshot but no gateway is integrated and no card is charged.
+- Reviews and ratings are owned by another teammate and are not part of this branch.
+- Owner and driver approval has no admin endpoint yet; only the seed script creates approved fixtures.
+- Email delivery for password reset is not configured.
 - Images are licensed stock photography of dishes and venues, not photographs of real Savora partners.
-- The other eleven pages are design references only, not application code.
-- The app is a frontend deliverable; no backend, database or deployment configuration is included.
 
 ---
 
-© 2026 Savora. A demo marketplace built as a frontend portfolio project.
+© 2026 Savora. A food-delivery marketplace built as a portfolio project.
