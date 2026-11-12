@@ -115,7 +115,7 @@ export default function AdminAccountsPage() {
         <StatCard
           label="All accounts"
           value={counts.ALL}
-          hint="Every role in the demo directory"
+          hint="Every role in the directory"
           icon={<Users aria-hidden="true" className="h-4 w-4" />}
         />
         <StatCard

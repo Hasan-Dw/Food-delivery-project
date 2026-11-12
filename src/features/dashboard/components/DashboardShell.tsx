@@ -55,7 +55,7 @@ export function DashboardShell({ nav, roleLabel, workspaceLabel, children }: Das
 
   const handleSignOut = async () => {
     await signOut();
-    notify({ tone: 'info', title: 'Signed out', description: 'Your demo workspace session has ended.' });
+    notify({ tone: 'info', title: 'Signed out', description: 'Your workspace session has ended.' });
     navigate(ROUTES.home, { replace: true });
   };
 

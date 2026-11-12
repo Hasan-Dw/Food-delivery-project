@@ -4,11 +4,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { services } from '@/services';
 import type { Order } from '@/types';
 import { useCartStore } from '@/stores/cart-store';
-import type {
-  CheckoutDeliveryServiceExtension,
-  CheckoutOrderInput,
-  CheckoutOrderServiceExtension,
-} from '../checkout-service-contract';
+import type { CheckoutOrderInput } from '../checkout-service-contract';
 
 type CheckoutInput = Omit<CheckoutOrderInput, 'idempotencyKey'>;
 
@@ -27,34 +23,27 @@ export function useCheckout() {
   const [idempotencyKey] = useState(getIdempotencyKey);
   const [partialOrder, setPartialOrder] = useState<Order | null>(null);
   const partialOrderRef = useRef<Order | null>(null);
-  const orderCreator = (services.orders as typeof services.orders & Partial<CheckoutOrderServiceExtension>).create;
-  const deliveryCreator = (
-    services.deliveries as typeof services.deliveries & Partial<CheckoutDeliveryServiceExtension>
-  ).createForOrder;
-  const isSubmissionReady =
-    typeof orderCreator === 'function' && typeof deliveryCreator === 'function';
 
   const mutation = useMutation({
     mutationFn: async (input: CheckoutInput) => {
-      if (!isSubmissionReady || !orderCreator || !deliveryCreator) {
-        throw new Error(
-          'Checkout is ready, but order and delivery creation still need to be added to the shared service adapters.',
-        );
-      }
-
+      // The order endpoint is idempotent on `idempotencyKey`. If the order was
+      // created but delivery setup failed, the retry reuses it instead of
+      // placing a second order.
       const order =
         partialOrderRef.current ??
-        (await orderCreator.call(services.orders, { ...input, idempotencyKey }));
+        (await services.orders.create({ ...input, idempotencyKey }));
       if (!partialOrderRef.current) {
         partialOrderRef.current = order;
         setPartialOrder(order);
       }
 
-      const delivery = await deliveryCreator.call(services.deliveries, {
+      // The backend already creates the delivery with the order; this call is
+      // idempotent there and creates it explicitly in preview mode.
+      const delivery = await services.deliveries.createForOrder({
         idempotencyKey,
         orderId: order.id,
       });
-      return { ...order, deliveryId: delivery.id };
+      return { ...order, deliveryId: order.deliveryId ?? delivery.id };
     },
     onSuccess: (order) => {
       useCartStore.getState().clear();
@@ -84,5 +73,5 @@ export function useCheckout() {
     },
   });
 
-  return { mutation, partialOrder, isSubmissionReady };
+  return { mutation, partialOrder, isSubmissionReady: true };
 }

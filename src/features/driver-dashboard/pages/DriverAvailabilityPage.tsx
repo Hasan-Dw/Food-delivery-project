@@ -154,7 +154,7 @@ export default function DriverAvailabilityPage() {
               }
             />
             <Row
-              label="Demo earnings"
+              label="Sample earnings"
               value={
                 <span className="inline-flex items-center gap-1">
                   <Wallet aria-hidden="true" className="h-3 w-3 text-olive-500" />

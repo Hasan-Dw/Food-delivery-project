@@ -78,7 +78,7 @@ export default function RestaurantOrdersPage() {
     return (
       <ErrorState
         title="Orders could not be loaded"
-        description="The demo order service did not respond."
+        description="The order service did not respond."
         action={
           <Button type="button" variant="outline" size="sm" onClick={() => void orders.refetch()}>
             Try again
@@ -153,7 +153,7 @@ export default function RestaurantOrdersPage() {
                       </td>
                       <td className="px-5 py-4">
                         <p className="text-olive-800">{order.customerName ?? 'Savora customer'}</p>
-                        <p className="mt-0.5 text-[0.6875rem] text-olive-500">{order.customerPhone ?? 'Demo contact'}</p>
+                        <p className="mt-0.5 text-[0.6875rem] text-olive-500">{order.customerPhone ?? 'Contact not supplied'}</p>
                       </td>
                       <td className="px-5 py-4 text-olive-600">
                         {itemCount} {pluralise(itemCount, 'item')}

@@ -32,7 +32,7 @@ export function NotFoundPage() {
           variant="outline"
           iconLeft={<Compass className="h-4 w-4" />}
         >
-          See a demo delivery
+          See a sample delivery
         </ButtonLink>
       </div>
 

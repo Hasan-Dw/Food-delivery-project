@@ -108,7 +108,7 @@ export function AuthLayout() {
             <div className="mt-10 grid grid-cols-3 gap-3 border-t border-cream/15 pt-6">
               <MiniStat icon={<Timer className="h-4 w-4" />} value="28 min" label="Average delivery" />
               <MiniStat icon={<Star className="h-4 w-4" />} value="240+" label="Independent kitchens" />
-              <MiniStat icon={<FlaskConical className="h-4 w-4" />} value="Demo" label="Simulated sign-in" />
+              <MiniStat icon={<FlaskConical className="h-4 w-4" />} value="Preview" label="Browser-only sign-in" />
             </div>
           </div>
         </div>

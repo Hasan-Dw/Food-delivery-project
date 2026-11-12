@@ -1,5 +1,7 @@
-import { CreditCard, Info } from 'lucide-react';
+import { Banknote, CreditCard, Info } from 'lucide-react';
 import type { PaymentMethod } from '@/types';
+
+export const CASH_ON_DELIVERY_ID = 'cash-on-delivery';
 
 export function PaymentMethodSelector({
   methods,
@@ -57,14 +59,35 @@ export function PaymentMethodSelector({
           ))}
         </fieldset>
       ) : (
-        <p className="rounded-xl border border-dashed border-olive-900/15 bg-ivory/60 p-4 text-sm text-olive-600">
-          No saved payment method is available. Add one from your profile before placing this order.
-        </p>
+        <label
+          className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+            selectedId === CASH_ON_DELIVERY_ID
+              ? 'border-olive-700 bg-olive-900/[0.04]'
+              : 'border-olive-900/10 hover:border-olive-900/25'
+          } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+        >
+          <input
+            type="radio"
+            name="paymentMethod"
+            value={CASH_ON_DELIVERY_ID}
+            checked={selectedId === CASH_ON_DELIVERY_ID}
+            onChange={() => onChange(CASH_ON_DELIVERY_ID)}
+            disabled={disabled}
+            className="accent-olive-700"
+          />
+          <Banknote aria-hidden="true" className="h-4 w-4 text-olive-600" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-olive-900">Cash on delivery</span>
+            <span className="mt-0.5 block text-xs text-olive-500">
+              No saved card on file. Pay the driver when your order arrives.
+            </span>
+          </span>
+        </label>
       )}
       {error ? <p className="mt-2 text-xs text-danger" role="alert">{error}</p> : null}
       <p className="mt-4 flex gap-2 rounded-xl bg-ivory px-3.5 py-3 text-xs leading-relaxed text-olive-500">
         <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-terracotta" />
-        Demo checkout only. No payment is processed and no card details are collected.
+        No payment gateway is connected yet. No card details are collected or charged.
       </p>
     </section>
   );

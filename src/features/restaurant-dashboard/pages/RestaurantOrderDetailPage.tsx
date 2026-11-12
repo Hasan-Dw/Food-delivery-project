@@ -43,13 +43,14 @@ export default function RestaurantOrderDetailPage() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<OrderAction | null>(null);
 
-  const drivers = useQuery({
-    queryKey: queryKeys.drivers,
-    queryFn: () => services.drivers.list(),
-    enabled: Boolean(delivery.data?.driverId),
+  const tracking = useQuery({
+    queryKey: queryKeys.tracking(orderId),
+    queryFn: () => services.tracking.getSnapshot(orderId),
+    enabled: Boolean(orderId && delivery.data?.driverId),
+    retry: false,
   });
 
-  const assignedDriver = drivers.data?.find((driver) => driver.id === delivery.data?.driverId);
+  const assignedDriver = tracking.data?.driver;
   useDocumentTitle(order.data ? `Order ${order.data.code}` : 'Order details');
 
   if (order.isLoading || history.isLoading) return <PageLoader label="Opening order details…" />;
@@ -58,7 +59,7 @@ export default function RestaurantOrderDetailPage() {
     return (
       <ErrorState
         title="Order not found"
-        description={getErrorMessage(order.error, 'This order may no longer exist in the demo service.')}
+        description={getErrorMessage(order.error, 'This order may no longer exist in the order service.')}
         action={
           <Link
             to={ROUTES.dashboardOrders}
@@ -227,7 +228,7 @@ export default function RestaurantOrderDetailPage() {
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[0.75rem] text-olive-500">
                   <Phone aria-hidden="true" className="h-3 w-3" />
-                  {current.customerPhone ?? 'Demo contact not supplied'}
+                  {current.customerPhone ?? 'Contact not supplied'}
                 </p>
               </div>
             </div>

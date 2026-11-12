@@ -94,7 +94,7 @@ export default function DriverOverviewPage() {
           icon={<Star aria-hidden="true" className="h-4 w-4" />}
         />
         <StatCard
-          label="Demo earnings"
+          label="Sample earnings"
           value={formatCurrency(driver.totalEarnings)}
           hint="Illustrative payout total, not a real ledger"
           icon={<Wallet aria-hidden="true" className="h-4 w-4" />}
@@ -140,7 +140,7 @@ export default function DriverOverviewPage() {
                   <p className="mt-1.5 text-[0.9375rem] font-medium text-olive-900">
                     {snapshot ? formatEta(snapshot.etaMinutes) : 'Awaiting route'}
                   </p>
-                  <p className="mt-1 text-[0.6875rem] text-olive-500">Demo ETA, not live GPS</p>
+                  <p className="mt-1 text-[0.6875rem] text-olive-500">Estimated ETA, not live GPS</p>
                 </div>
                 <div className="rounded-xl border border-olive-900/10 bg-ivory-50/60 p-3.5">
                   <p className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-olive-500">

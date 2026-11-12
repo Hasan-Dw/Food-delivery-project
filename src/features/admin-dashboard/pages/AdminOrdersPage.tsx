@@ -144,7 +144,7 @@ export default function AdminOrdersPage() {
         <StatCard
           label="Completed value"
           value={formatCurrency(completedRevenue(orders.data ?? []))}
-          hint="Demo figure, not a settlement ledger"
+          hint="Sample figure, not a settlement ledger"
           icon={<ClipboardList aria-hidden="true" className="h-4 w-4" />}
         />
       </div>

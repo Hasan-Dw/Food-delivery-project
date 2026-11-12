@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
 	ArrowLeft,
 	Clock3,
@@ -21,15 +22,15 @@ import { Rating } from '@/components/ui/Rating';
 import { Reveal } from '@/components/ui/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorState } from '@/components/ui/StatePanel';
 import { ROUTES } from '@/config/routes';
-import { productCategories, productsForRestaurant } from '@/mocks/data/products';
-import { restaurants } from '@/mocks/data/restaurants';
+import { queryKeys } from '@/lib/query-keys';
+import { getErrorMessage } from '@/services/api';
+import { services } from '@/services';
 import { useCartStore } from '@/stores/cart-store';
 import { cn } from '@/lib/cn';
 import { formatCurrency } from '@/lib/format';
 import type { Product } from '@/types';
-
-const fallbackRestaurant = restaurants[0];
 
 const sectionLinks = [
 	{ id: 'menu', label: 'Menu' },
@@ -202,20 +203,33 @@ export default function RestaurantPage() {
 	const [activeSection, setActiveSection] = useState('menu');
 	const [saved, setSaved] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const restaurant = restaurants.find((item) => item.slug === restaurantName) ?? fallbackRestaurant;
-	const restaurantProducts = useMemo(() => productsForRestaurant(restaurant.id), [restaurant.id]);
-	const menuGroups = useMemo(
-		() => productCategories.filter((category) => category.restaurantId === restaurant.id),
-		[restaurant.id],
-	);
-	const hasUnknownRestaurant = restaurantName !== undefined && !restaurants.some((item) => item.slug === restaurantName);
 
-	useEffect(() => {
-		setIsLoading(true);
-		const timer = window.setTimeout(() => setIsLoading(false), 350);
-		return () => window.clearTimeout(timer);
-	}, [restaurantName]);
+	const slug = restaurantName ?? '';
+	const restaurantQuery = useQuery({
+		queryKey: queryKeys.restaurant(slug),
+		queryFn: () => services.restaurants.getById(slug),
+		enabled: Boolean(slug),
+		retry: false,
+	});
+
+	const restaurantId = restaurantQuery.data?.id ?? slug;
+	const productsQuery = useQuery({
+		queryKey: queryKeys.restaurantProducts(restaurantId),
+		queryFn: () => services.products.listByRestaurant(restaurantId),
+		enabled: Boolean(restaurantQuery.data),
+	});
+	const categoriesQuery = useQuery({
+		queryKey: queryKeys.productCategories(restaurantId),
+		queryFn: () => services.products.listCategories(restaurantId),
+		enabled: Boolean(restaurantQuery.data),
+	});
+
+	const restaurant = restaurantQuery.data;
+	const restaurantProducts = useMemo(
+		() => (productsQuery.data ?? []).filter((product) => product.available),
+		[productsQuery.data],
+	);
+	const menuGroups = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
 	useEffect(() => {
 		if (!menuGroups.some((group) => group.id === activeGroup)) {
@@ -246,13 +260,49 @@ export default function RestaurantPage() {
 		};
 	}, []);
 
+	const isLoading =
+		restaurantQuery.isLoading ||
+		(restaurant !== undefined && (productsQuery.isLoading || categoriesQuery.isLoading));
+
 	if (isLoading) return <RestaurantSkeleton />;
+
+	if (restaurantQuery.isError || productsQuery.isError || categoriesQuery.isError || !restaurant) {
+		const error = restaurantQuery.error ?? productsQuery.error ?? categoriesQuery.error;
+		return (
+			<div className="pb-20">
+				<section className="shell pt-5 sm:pt-8">
+					<Link to={ROUTES.home} className="link-underline text-xs text-olive-500">
+						<ArrowLeft className="h-3.5 w-3.5" /> All restaurants
+					</Link>
+				</section>
+				<div className="shell pt-10">
+					<ErrorState
+						title="We could not open this restaurant"
+						description={getErrorMessage(
+							error,
+							'That restaurant is no longer available. It may have closed or not be approved yet.',
+						)}
+						action={
+							<Button
+								onClick={() => {
+									void restaurantQuery.refetch();
+									void productsQuery.refetch();
+									void categoriesQuery.refetch();
+								}}
+							>
+								Try again
+							</Button>
+						}
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="pb-20">
 			<section className="shell pt-5 sm:pt-8">
 				<Link to={ROUTES.home} className="link-underline text-xs text-olive-500"><ArrowLeft className="h-3.5 w-3.5" /> All restaurants</Link>
-				{hasUnknownRestaurant ? <p className="mt-3 text-xs text-olive-500">That restaurant is not in this demo, so here is Savora&apos;s featured kitchen.</p> : null}
 			</section>
 
 			<section className="shell grid gap-8 pb-10 pt-8 lg:grid-cols-[1fr_1.08fr] lg:items-center lg:gap-16 lg:pb-16 lg:pt-12">
@@ -286,7 +336,7 @@ export default function RestaurantPage() {
 				</aside>
 			</main>
 
-			<section id="reviews" className="shell pt-16"><SectionHeading eyebrow="The table talk" title="What people say" description={`${restaurant.reviewCount.toLocaleString()} reviews · ${restaurant.rating} average`} /><div className="mt-7 grid gap-4 sm:grid-cols-2"><Reveal><div className="rounded-card border border-olive-900/10 bg-cream p-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Aggregate rating</p><div className="mt-4 flex items-center gap-3"><Rating rating={restaurant.rating} showReviews={false} /><span className="font-display text-3xl font-normal text-olive-900">{restaurant.rating}</span></div><p className="mt-3 text-sm leading-6 text-olive-600">The restaurant mock provides an aggregate rating rather than individual review text.</p></div></Reveal><Reveal delay={100}><div className="rounded-card border border-olive-900/10 bg-cream p-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Reviews recorded</p><p className="mt-3 font-display text-3xl font-normal text-olive-900">{restaurant.reviewCount.toLocaleString()}</p><p className="mt-3 text-sm leading-6 text-olive-600">Review count from the selected restaurant&apos;s mock record.</p></div></Reveal></div></section>
+			<section id="reviews" className="shell pt-16"><SectionHeading eyebrow="The table talk" title="What people say" description={`${restaurant.reviewCount.toLocaleString()} reviews · ${restaurant.rating} average`} /><div className="mt-7 grid gap-4 sm:grid-cols-2"><Reveal><div className="rounded-card border border-olive-900/10 bg-cream p-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Aggregate rating</p><div className="mt-4 flex items-center gap-3"><Rating rating={restaurant.rating} showReviews={false} /><span className="font-display text-3xl font-normal text-olive-900">{restaurant.rating}</span></div><p className="mt-3 text-sm leading-6 text-olive-600">Aggregate rating from verified Savora orders.</p></div></Reveal><Reveal delay={100}><div className="rounded-card border border-olive-900/10 bg-cream p-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Reviews recorded</p><p className="mt-3 font-display text-3xl font-normal text-olive-900">{restaurant.reviewCount.toLocaleString()}</p><p className="mt-3 text-sm leading-6 text-olive-600">Every rating comes from a delivered order.</p></div></Reveal></div></section>
 			<div className="shell mt-16"><div className="flex items-center gap-3 border-t border-olive-900/10 pt-5 text-xs text-olive-500"><Users className="h-4 w-4 text-terracotta-600" /> A neighbourhood favourite, delivered with care.</div></div>
 			{selectedProduct ? <DishDialog product={selectedProduct} restaurantName={restaurant.name} deliveryFee={restaurant.deliveryFee} onClose={() => setSelectedProduct(null)} /> : null}
 		</div>

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CreditCard,
-  FlaskConical,
   Leaf,
   LogOut,
   MapPin,
+  ShieldCheck,
   SlidersHorizontal,
   UserRound,
 } from 'lucide-react';
@@ -21,7 +21,9 @@ import { PaymentMethodsPanel } from '@/features/profile/components/PaymentMethod
 import { useProfileData } from '@/features/profile/hooks/useProfileData';
 import { useToast } from '@/stores/toast-store';
 import { formatMemberSince } from '@/lib/format';
+import { roleLabels } from '@/lib/permissions';
 import { scrollToSection } from '@/lib/scroll';
+import { env } from '@/config/env';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { cn } from '@/lib/cn';
@@ -39,6 +41,13 @@ const dietaryLabels: Record<string, string> = {
   'gluten-free': 'Gluten-free',
   halal: 'Halal',
 };
+
+const accountStatusLabels = {
+  PENDING_APPROVAL: 'Awaiting approval',
+  APPROVED: 'Approved',
+  REJECTED: 'Not approved',
+  SUSPENDED: 'Suspended',
+} as const;
 
 export default function ProfilePage() {
   useDocumentTitle('Your profile');
@@ -81,7 +90,7 @@ export default function ProfilePage() {
     setSigningOut(true);
     try {
       await signOut();
-      notify({ tone: 'info', title: 'Signed out', description: 'Your demo session has ended on this device.' });
+      notify({ tone: 'info', title: 'Signed out', description: 'You have been signed out on this device.' });
       navigate(ROUTES.home, { replace: true });
     } finally {
       setSigningOut(false);
@@ -118,8 +127,11 @@ export default function ProfilePage() {
                   {person.email} · Member since {formatMemberSince(person.memberSince)}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge tone="gold" icon={<FlaskConical className="h-3 w-3" />}>
-                    Demo account
+                  <Badge tone="gold" icon={<ShieldCheck className="h-3 w-3" />}>
+                    {roleLabels[person.role]}
+                  </Badge>
+                  <Badge tone={person.accountStatus === 'APPROVED' ? 'success' : 'outline'}>
+                    {accountStatusLabels[person.accountStatus]}
                   </Badge>
                   {person.preferences.dietary.map((preference) => (
                     <Badge key={preference} tone="outline" icon={<Leaf className="h-3 w-3" />}>
@@ -137,7 +149,7 @@ export default function ProfilePage() {
                 size="sm"
                 iconLeft={<MapPin aria-hidden="true" className="h-3.5 w-3.5" />}
               >
-                Track a demo order
+                Open sample tracking
               </ButtonLink>
               <Button
                 type="button"
@@ -155,7 +167,7 @@ export default function ProfilePage() {
           {profile.isError ? (
             <div className="mt-6 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-[0.8125rem] text-danger">
               <p>
-                We could not refresh your profile from the demo service. Your signed-in details are shown instead.
+                We could not refresh your profile from the server. Your signed-in details are shown instead.
               </p>
               <button
                 type="button"
@@ -197,18 +209,20 @@ export default function ProfilePage() {
           <section className="rounded-panel border border-gold-300/50 bg-gold-50/60 p-6 sm:p-7">
             <div className="flex items-start gap-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-200/70 text-gold-700">
-                <FlaskConical aria-hidden="true" className="h-5 w-5" />
+                <ShieldCheck aria-hidden="true" className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="text-[1.2rem] text-olive-900">This is a demo account</h2>
+                <h2 className="text-[1.2rem] text-olive-900">
+                  {env.useMocks ? 'Preview account' : 'Account & session'}
+                </h2>
                 <p className="mt-1.5 max-w-2xl text-[0.8125rem] leading-relaxed text-olive-600">
-                  Your session is stored in this browser and is not encrypted or verified by a server. Changes persist
-                  for this tab only. Authentication, payments and live delivery data are deliberately simulated; no
-                  real orders or charges are created.
+                  {env.useMocks
+                    ? 'Your session is stored in this browser and is not verified by a server. Changes persist for this tab only, and no real orders or charges are created.'
+                    : 'Your profile changes are saved through the Savora API. Your role, approval status and restaurant ownership are set by the platform and cannot be changed from this page.'}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <Button type="button" variant="outline" size="sm" onClick={handleSignOut} isLoading={signingOut}>
-                    Sign out of demo
+                    Sign out
                   </Button>
                   <a
                     href={`mailto:hello@savora.co`}

@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Info, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Info, ShieldCheck, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Skeleton';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { queryKeys } from '@/lib/query-keys';
-import { calculateCartTotals, useCartStore } from '@/stores/cart-store';
-import { useQuery } from '@tanstack/react-query';
+import { useCartStore } from '@/stores/cart-store';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { services } from '@/services';
 import { getErrorMessage } from '@/services/api/errors';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { Address, AddressLabel } from '@/types';
 import { DeliveryAddressForm } from '../components/DeliveryAddressForm';
 import { OrderReview } from '../components/OrderReview';
-import { PaymentMethodSelector } from '../components/PaymentMethodSelector';
+import { PaymentMethodSelector, CASH_ON_DELIVERY_ID } from '../components/PaymentMethodSelector';
 import { CheckoutSummary } from '../components/CheckoutSummary';
 import { useCheckout } from '../hooks/useCheckout';
 
@@ -46,15 +46,18 @@ export default function CheckoutPage() {
   const items = useCartStore((state) => state.items);
   const restaurantId = useCartStore((state) => state.restaurantId);
   const restaurantName = useCartStore((state) => state.restaurantName);
-  const deliveryFee = useCartStore((state) => state.deliveryFee);
   const couponCode = useCartStore((state) => state.couponCode);
-  const { mutation, partialOrder, isSubmissionReady } = useCheckout();
+  const setCoupon = useCartStore((state) => state.setCoupon);
+  const removeCoupon = useCartStore((state) => state.removeCoupon);
+  const { mutation, partialOrder } = useCheckout();
   const [address, setAddress] = useState<Address>(() => createAddress(user?.id ?? 'guest'));
   const [addressEdited, setAddressEdited] = useState(false);
   const [customerName, setCustomerName] = useState(user?.fullName ?? '');
   const [customerPhone, setCustomerPhone] = useState(user?.phone ?? '');
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [couponInput, setCouponInput] = useState(couponCode ?? '');
+  const [couponFeedback, setCouponFeedback] = useState<string | null>(null);
   const [errors, setErrors] = useState<CheckoutErrors>({});
 
   useDocumentTitle('Checkout');
@@ -74,25 +77,83 @@ export default function CheckoutPage() {
     queryFn: () => services.users.listPaymentMethods(),
     enabled: isAuthenticated,
   });
-  const totals = useMemo(
+  const quoteSignature = useMemo(
     () =>
-      calculateCartTotals({
-        items,
-        deliveryFee: restaurant.data?.deliveryFee ?? deliveryFee,
-        couponCode,
-      }),
-    [items, restaurant.data?.deliveryFee, deliveryFee, couponCode],
+      items
+        .map(
+          (item) =>
+            `${item.productId}x${item.quantity}:${item.selectedOptions
+              .map((option) => option.optionId)
+              .sort()
+              .join(',')}`,
+        )
+        .join('|'),
+    [items],
   );
+  const localSubtotal = useMemo(
+    () => items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    [items],
+  );
+  const quote = useQuery({
+    queryKey: queryKeys.checkoutQuote(
+      restaurantId ?? 'none',
+      quoteSignature,
+      couponCode ?? 'none',
+    ),
+    queryFn: () =>
+      services.checkout.quote({
+        restaurantId: restaurantId ?? '',
+        items: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          selectedOptions: item.selectedOptions,
+          notes: item.notes,
+        })),
+        couponCode: couponCode ?? undefined,
+      }),
+    enabled:
+      Boolean(restaurantId && items.length) &&
+      isAuthenticated &&
+      user?.role === 'CUSTOMER',
+  });
+  const appliedCoupon = quote.data?.promotion;
+  const couponMutation = useMutation({
+    mutationFn: (code: string) =>
+      services.promotions.validate({
+        code,
+        restaurantId: restaurantId ?? undefined,
+        subtotal: quote.data?.subtotal ?? localSubtotal,
+      }),
+    onSuccess: (result) => {
+      if (result.valid) {
+        setCoupon(result.code);
+        setCouponInput(result.code);
+        setCouponFeedback(
+          result.message ?? `${result.title ?? 'Promotion'} applied to this order.`,
+        );
+      } else {
+        removeCoupon();
+        setCouponFeedback(result.message ?? 'That code cannot be used for this order.');
+      }
+    },
+    onError: (error) => {
+      setCouponFeedback(getErrorMessage(error, 'We could not check that code. Please try again.'));
+    },
+  });
   const lockedAfterOrder = Boolean(partialOrder);
   const busy = mutation.isPending;
+  const paymentMethodSelected = paymentMethods.data?.length
+    ? Boolean(paymentMethodId && paymentMethods.data.some((method) => method.id === paymentMethodId))
+    : paymentMethodId === CASH_ON_DELIVERY_ID;
   const canSubmit =
     Boolean(user && user.role === 'CUSTOMER') &&
     items.length > 0 &&
     Boolean(restaurantId && restaurant.data) &&
-    Boolean(paymentMethodId && paymentMethods.data?.some((method) => method.id === paymentMethodId)) &&
-    isSubmissionReady &&
+    Boolean(quote.data) &&
+    !quote.isLoading &&
+    !quote.isError &&
+    paymentMethodSelected &&
     !busy;
-
   useEffect(() => {
     if (!addressEdited && addresses.data?.length) {
       const selected = addresses.data.find((entry) => entry.isDefault) ?? addresses.data[0];
@@ -101,10 +162,16 @@ export default function CheckoutPage() {
   }, [addressEdited, addresses.data]);
 
   useEffect(() => {
-    if (!paymentMethodId && paymentMethods.data?.length) {
-      setPaymentMethodId(
-        (paymentMethods.data.find((method) => method.isDefault) ?? paymentMethods.data[0]).id,
-      );
+    if (!paymentMethods.data) return;
+    if (paymentMethods.data.length) {
+      const stillValid = paymentMethods.data.some((method) => method.id === paymentMethodId);
+      if (!stillValid) {
+        setPaymentMethodId(
+          (paymentMethods.data.find((method) => method.isDefault) ?? paymentMethods.data[0]).id,
+        );
+      }
+    } else if (paymentMethodId !== CASH_ON_DELIVERY_ID) {
+      setPaymentMethodId(CASH_ON_DELIVERY_ID);
     }
   }, [paymentMethodId, paymentMethods.data]);
 
@@ -147,8 +214,20 @@ export default function CheckoutPage() {
       if (!address[field].trim()) addressErrors[field] = 'This field is required.';
     }
     if (Object.keys(addressErrors).length) nextErrors.address = addressErrors;
-    if (!paymentMethodId || !paymentMethods.data?.some((method) => method.id === paymentMethodId)) {
-      nextErrors.paymentMethodId = 'Choose an available saved payment method.';
+    if (!paymentMethodSelected) {
+      nextErrors.paymentMethodId = paymentMethods.data?.length
+        ? 'Choose an available saved payment method.'
+        : 'Cash on delivery could not be selected. Reload the page and try again.';
+    }
+    if (quote.isError || !quote.data) {
+      nextErrors.form =
+        'We could not confirm current prices with the restaurant. Wait a moment and try again.';
+    } else if (quote.data.subtotal < quote.data.minOrder) {
+      nextErrors.form = 'This order is below the restaurant minimum. Add another item to continue.';
+    }
+    if (appliedCoupon && !appliedCoupon.valid) {
+      nextErrors.form =
+        appliedCoupon.message ?? 'Remove the promotion code before placing this order.';
     }
 
     setErrors(nextErrors);
@@ -306,19 +385,89 @@ export default function CheckoutPage() {
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-28">
+            <section className="rounded-2xl border border-olive-900/10 bg-white/70 p-5 shadow-soft sm:p-6">
+              <div className="flex items-center gap-2">
+                <Tag aria-hidden="true" className="h-4 w-4 text-terracotta-700" />
+                <h2 className="font-display text-[1.4rem] text-olive-900">Promotion</h2>
+              </div>
+              {couponCode ? (
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-olive-900/[0.04] px-3 py-2.5 text-sm">
+                  <span className="font-semibold tracking-wide text-olive-800">{couponCode}</span>
+                  <button
+                    type="button"
+                    className="rounded-full p-1 text-olive-500 transition hover:bg-olive-900/10 hover:text-olive-800"
+                    aria-label="Remove promotion code"
+                    disabled={busy || lockedAfterOrder}
+                    onClick={() => {
+                      removeCoupon();
+                      setCouponInput('');
+                      setCouponFeedback(null);
+                    }}
+                  >
+                    <X aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={couponInput}
+                    onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                    placeholder="Promo code"
+                    autoComplete="off"
+                    disabled={busy || lockedAfterOrder}
+                    className="min-w-0 flex-1 rounded-xl border border-olive-900/15 bg-ivory/70 px-3.5 py-2.5 text-sm uppercase tracking-wide text-olive-900 outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-olive-400 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 disabled:opacity-60"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      !couponInput.trim() || couponMutation.isPending || busy || lockedAfterOrder
+                    }
+                    onClick={() => couponMutation.mutate(couponInput.trim())}
+                  >
+                    {couponMutation.isPending ? 'Checking…' : 'Apply'}
+                  </Button>
+                </div>
+              )}
+              {couponFeedback ? (
+                <p className="mt-2.5 text-xs leading-5 text-olive-600">{couponFeedback}</p>
+              ) : null}
+              {appliedCoupon && !appliedCoupon.valid && appliedCoupon.message ? (
+                <p className="mt-2.5 text-xs leading-5 text-danger" role="alert">
+                  {appliedCoupon.message}
+                </p>
+              ) : null}
+              {quote.data && quote.data.subtotal < quote.data.minOrder ? (
+                <p className="mt-2.5 text-xs leading-5 text-danger" role="alert">
+                  This restaurant has a minimum order of{' '}
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                  }).format(quote.data.minOrder)}
+                  .
+                </p>
+              ) : null}
+            </section>
+
             <CheckoutSummary
-              subtotal={totals.subtotal}
-              deliveryFee={totals.deliveryFee}
-              serviceFee={totals.serviceFee}
-              discount={totals.discount}
-              tax={0}
-              total={totals.total}
+              subtotal={quote.data?.subtotal ?? 0}
+              deliveryFee={quote.data?.deliveryFee ?? 0}
+              serviceFee={quote.data?.serviceFee ?? 0}
+              discount={quote.data?.discount ?? 0}
+              tax={quote.data?.tax ?? 0}
+              total={quote.data?.total ?? 0}
               disabled={!canSubmit || Boolean(partialOrder && busy)}
               isSubmitting={busy}
             />
-            {!isSubmissionReady ? (
-              <div className="rounded-xl border border-olive-900/10 bg-white/70 p-4 text-xs leading-5 text-olive-600" role="status">
-                Order submission is ready to connect. The order and delivery creation methods still need to be added to the shared services.
+            {quote.isLoading ? (
+              <p className="px-1 text-xs text-olive-500" role="status">
+                Confirming current prices with the restaurant…
+              </p>
+            ) : null}
+            {quote.isError ? (
+              <div className="flex gap-2 rounded-xl border border-danger/20 bg-danger/5 p-4 text-xs leading-5 text-danger" role="alert">
+                <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{getErrorMessage(quote.error, 'We could not confirm current prices.')}</p>
               </div>
             ) : null}
             {errors.form ? (
