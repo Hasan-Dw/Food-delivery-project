@@ -13,6 +13,7 @@ import { services } from '@/services';
 import { queryKeys } from '@/lib/query-keys';
 import { getErrorMessage } from '@/services/api/errors';
 import { profileSchema, type ProfileValues } from '@/lib/validation';
+import { env } from '@/config/env';
 
 export function PersonalInfoForm({ user }: { user: User }) {
   const { updateUser } = useAuth();
@@ -43,7 +44,9 @@ export function PersonalInfoForm({ user }: { user: User }) {
       notify({
         tone: 'success',
         title: 'Profile saved',
-        description: 'Your details are up to date for this demo session.',
+        description: env.useMocks
+          ? 'Your details are up to date for this preview session.'
+          : 'Your details are saved to your Savora account.',
       });
     },
   });
@@ -88,7 +91,11 @@ export function PersonalInfoForm({ user }: { user: User }) {
             label="Email address"
             type="email"
             autoComplete="email"
-            hint="In this prototype, changing your email only updates the local demo account."
+            hint={
+              env.useMocks
+                ? 'In preview mode, changing your email only updates this browser session.'
+                : 'Changing your email updates your sign-in address after the server accepts it.'
+            }
             error={errors.email?.message}
             {...register('email')}
           />

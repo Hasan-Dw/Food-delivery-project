@@ -530,6 +530,48 @@ export interface Promotion {
   restaurantId?: ID;
 }
 
+/** Server evaluation of a coupon code at checkout. */
+export interface PromotionValidation {
+  valid: boolean;
+  code: string;
+  title?: string;
+  description?: string;
+  discount: number;
+  message?: string;
+}
+
+/** One priced line returned by the checkout quote endpoint. */
+export interface CheckoutQuoteLineItem {
+  productId: ID;
+  name: string;
+  imageKey: string;
+  quantity: number;
+  unitPrice: number;
+  selectedOptions: SelectedOption[];
+  notes?: string;
+}
+
+/**
+ * Server-authoritative cart totals. The browser's own calculation is only a
+ * draft; totals shown at checkout come from this response.
+ */
+export interface CheckoutQuote {
+  restaurantId: ID;
+  restaurantName: string;
+  restaurantImageKey: string;
+  items: CheckoutQuoteLineItem[];
+  subtotal: number;
+  deliveryFee: number;
+  serviceFee: number;
+  discount: number;
+  tax: number;
+  total: number;
+  minOrder: number;
+  currency: 'USD';
+  couponCode?: string;
+  promotion?: PromotionValidation;
+}
+
 /* ── Auth ───────────────────────────────────────────────────────────────── */
 
 export interface LoginCredentials {

@@ -37,7 +37,7 @@ export function TrackingTimeline({
           </h2>
         </div>
         <div className="text-right">
-          <Badge tone="outline">Demo events</Badge>
+          <Badge tone="outline">Sample events</Badge>
           <p className="mt-2 text-[0.625rem] text-olive-500">Updated {formatTime(lastUpdated)}</p>
         </div>
       </div>
@@ -131,7 +131,7 @@ export function TrackingTimeline({
         </div>
 
         <p className="mt-6 border-t border-olive-900/8 pt-4 text-[0.6875rem] leading-relaxed text-olive-500">
-          Timestamps come from the demo order service. Future times are estimates, not promises.
+          Timestamps come from the sample order service. Future times are estimates, not promises.
         </p>
       </div>
     </section>

@@ -7,6 +7,7 @@ import type {
 } from '@/types';
 import { deliveries } from '@/mocks/data/deliveries';
 import { drivers } from '@/mocks/data/drivers';
+import { orders } from '@/mocks/data/orders';
 import { upsertDriverLocation } from '@/mocks/data/driver-locations';
 import {
   canTransitionDeliveryStatus,
@@ -129,6 +130,39 @@ export class MockDeliveryService implements DeliveryService {
           delivery.status !== 'CANCELLED',
       ) ?? null
     );
+  }
+
+  async createForOrder(input: { idempotencyKey?: string; orderId: string }): Promise<Delivery> {
+    await delay(220);
+
+    const existing = deliveries.find((entry) => entry.orderId === input.orderId);
+    if (existing) return existing;
+
+    const order = orders.find((entry) => entry.id === input.orderId);
+    if (!order) {
+      throw new ApiError(
+        { code: 'order_not_found', message: 'That order could not be found.' },
+        404,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const delivery: Delivery = {
+      id: `dlv_new_${Date.now()}`,
+      orderId: order.id,
+      driverId: null,
+      restaurantId: order.restaurantId,
+      customerId: order.customerId,
+      status: 'PENDING_ASSIGNMENT',
+      driverLocation: null,
+      assignmentHistory: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    deliveries.unshift(delivery);
+    order.deliveryId = delivery.id;
+    return delivery;
   }
 
   async assign(

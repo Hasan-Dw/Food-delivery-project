@@ -20,7 +20,7 @@ export const site = {
     diners: '48k',
     averageRating: '4.8',
   },
-  demo: {
+  previewAccount: {
     email: 'maya@example.com',
     password: 'Savora123!',
   },

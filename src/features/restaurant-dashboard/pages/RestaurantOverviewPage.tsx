@@ -31,7 +31,7 @@ export default function RestaurantOverviewPage() {
     return (
       <ErrorState
         title="We could not load your orders"
-        description="The demo order service did not respond. Try again in a moment."
+        description="The order service did not respond. Try again in a moment."
         action={
           <button
             type="button"
@@ -60,7 +60,7 @@ export default function RestaurantOverviewPage() {
       <DashboardPageHeader
         eyebrow="Today at a glance"
         title="Restaurant overview"
-        description="Live demo snapshot of your kitchen queue, revenue and recent order activity."
+        description="Live snapshot of your kitchen queue, revenue and recent order activity."
         actions={
           <ButtonLink to={ROUTES.dashboardOrders} size="sm" variant="secondary">
             Manage orders

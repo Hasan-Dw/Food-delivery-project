@@ -78,7 +78,7 @@ export default function DriverHistoryPage() {
         <StatCard
           label="Delivered"
           value={delivered.length}
-          hint="Completed drops in this demo dataset"
+          hint="Completed drops in this sample dataset"
           icon={<CheckCircle2 aria-hidden="true" className="h-4 w-4" />}
           tone="success"
         />
@@ -92,7 +92,7 @@ export default function DriverHistoryPage() {
         <StatCard
           label="Order value delivered"
           value={formatCurrency(deliveredValue)}
-          hint={`Lifetime demo earnings ${formatCurrency(driver.totalEarnings)}`}
+          hint={`Lifetime sample earnings ${formatCurrency(driver.totalEarnings)}`}
           icon={<History aria-hidden="true" className="h-4 w-4" />}
         />
       </div>

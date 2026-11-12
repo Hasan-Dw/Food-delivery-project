@@ -72,7 +72,7 @@ export function DeliveryExperience() {
             <div className="absolute -bottom-7 left-0 w-[17.5rem] rounded-2xl border border-olive-900/10 bg-cream/95 p-4 shadow-lift backdrop-blur lg:-left-8">
               <div className="flex items-center justify-between gap-2">
                 <Badge tone="gold" size="sm">
-                  Demo route
+                  Sample route
                 </Badge>
                 <span className="text-[0.625rem] text-olive-500">Illustrative</span>
               </div>
@@ -121,7 +121,7 @@ export function DeliveryExperience() {
               to={ROUTES.orderTracking('ord_10482')}
               iconRight={<ArrowUpRight aria-hidden="true" className="h-4 w-4" />}
             >
-              Follow a demo delivery
+              Follow a sample delivery
             </ButtonLink>
             <button
               type="button"
@@ -133,7 +133,7 @@ export function DeliveryExperience() {
           </div>
 
           <p className="mt-5 text-[0.6875rem] leading-relaxed text-olive-500">
-            The order page map is a hand-drawn illustration of the final experience, clearly labelled demo mode. No
+            The order page map is a hand-drawn illustration of the final experience, clearly labelled preview mode. No
             GPS permission is requested and no location is tracked.
           </p>
         </Reveal>

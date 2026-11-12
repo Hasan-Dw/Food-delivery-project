@@ -37,7 +37,7 @@ export const MOCK_OPERATIONAL_COST_MODEL: OperationalCostModel = {
   platformCommissionRateOfTotal: 0.15,
   fixedOverheadPerDay: 0,
   currency: 'USD',
-  note: 'Illustrative demo assumptions: 32% of the item subtotal for ingredients, $0.85 packaging per completed order, 15% platform commission on the customer total, and no fixed overhead. Replace with the restaurant accounting feed before using these figures for decisions.',
+  note: 'Illustrative assumptions: 32% of the item subtotal for ingredients, $0.85 packaging per completed order, 15% platform commission on the customer total, and no fixed overhead. Replace with the restaurant accounting feed before using these figures for decisions.',
 };
 
 export const ANALYTICS_RANGE_LABELS: Record<AnalyticsRange, string> = {

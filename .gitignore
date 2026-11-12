@@ -24,8 +24,8 @@ dist-ssr/
 # Test coverage
 coverage/
 
-# Documentation
-docs/
+# Documentation (root design references only)
+/docs/
 
 # Operating system
 .DS_Store

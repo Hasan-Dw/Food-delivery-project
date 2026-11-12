@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { PasswordInput } from '@/features/auth/components/PasswordInput';
-import { DemoAccountNotice } from '@/features/auth/components/DemoAccountNotice';
+import { AuthModeNotice } from '@/features/auth/components/AuthModeNotice';
 import { FormAlert } from '@/components/ui/FormAlert';
 import {
   getPasswordStrength,
@@ -167,7 +167,7 @@ export default function RegisterPage() {
         reviewed by platform operations before dashboard access is granted.
       </p>
 
-      <DemoAccountNotice variant="register" className="mt-6" />
+      <AuthModeNotice variant="register" className="mt-6" />
 
       <fieldset className="mt-7">
         <legend className="text-[0.8125rem] font-medium text-olive-800">Account type</legend>
@@ -394,8 +394,8 @@ export default function RegisterPage() {
       </p>
 
       <p className="mt-6 border-t border-olive-900/10 pt-5 text-center text-[0.6875rem] leading-relaxed text-olive-500">
-        By creating a demo account you agree that this is a prototype, not a real service. Accounts exist only for this
-        browser tab and are cleared when it closes. The selected role is a request, never an authorization claim.
+        The account type you choose is a request. Savora assigns the authoritative role and approval status, and
+        customer accounts are active immediately.
       </p>
     </div>
   );

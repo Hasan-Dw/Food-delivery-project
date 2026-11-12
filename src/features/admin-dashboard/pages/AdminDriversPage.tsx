@@ -134,7 +134,7 @@ export default function AdminDriversPage() {
         <StatCard
           label="Drivers"
           value={counts.ALL}
-          hint="Every profile in the demo directory"
+          hint="Every profile in the directory"
           icon={<Users aria-hidden="true" className="h-4 w-4" />}
         />
         <StatCard
@@ -234,7 +234,7 @@ export default function AdminDriversPage() {
                           {formatRating(driver.rating)} · {driver.completedDeliveries} deliveries
                         </p>
                         <p className="mt-0.5 text-[0.625rem] text-olive-500">
-                          {formatCurrency(driver.totalEarnings)} demo earnings
+                          {formatCurrency(driver.totalEarnings)} sample earnings
                         </p>
                       </td>
                       <td className="px-5 py-4">

@@ -77,7 +77,7 @@ export function Categories() {
           <ErrorState
             className="mt-10"
             title="The categories did not load"
-            description="This is a demo data source. Try again, or explore the full restaurant rail below."
+            description="The category list did not load. Try again, or explore the full restaurant rail below."
             action={
               <Button variant="outline" size="sm" onClick={() => categories.refetch()}>
                 Try again

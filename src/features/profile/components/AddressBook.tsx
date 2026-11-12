@@ -16,6 +16,7 @@ import { services } from '@/services';
 import { queryKeys } from '@/lib/query-keys';
 import { getErrorMessage } from '@/services/api/errors';
 import { addressSchema, type AddressValues } from '@/lib/validation';
+import { env } from '@/config/env';
 import { cn } from '@/lib/cn';
 
 interface AddressBookProps {
@@ -103,7 +104,9 @@ export function AddressBook({ addresses, isLoading, isError, onRetry }: AddressB
               <div>
                 <h3 className="text-[1.1rem] text-olive-900">{editing === 'new' ? 'New address' : 'Edit address'}</h3>
                 <p className="mt-1 text-[0.8125rem] text-olive-500">
-                  Used only for delivery in this demo. Nothing is sent to a map provider.
+                  {env.useMocks
+                    ? 'Used only for delivery in this preview. Nothing is sent to a map provider.'
+                    : 'Used to route delivery to this address once the ordering flow ships.'}
                 </p>
               </div>
               <button
@@ -294,7 +297,7 @@ function AddressForm({
         <Button type="submit" size="sm" isLoading={isSubmitting}>
           Save address
         </Button>
-        <p className="text-[0.6875rem] text-olive-500">Demo address · stored for this session only.</p>
+        <p className="text-[0.6875rem] text-olive-500">Sample address · stored for this session only.</p>
       </div>
     </form>
   );

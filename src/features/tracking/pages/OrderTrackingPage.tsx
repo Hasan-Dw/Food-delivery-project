@@ -64,14 +64,14 @@ export default function OrderTrackingPage() {
       <div className="shell py-16">
         <ErrorState
           title="We could not find that delivery"
-          description={getErrorMessage(error, 'The order link may be incomplete, or this demo order does not exist.')}
+          description={getErrorMessage(error, 'The order link may be incomplete, or this sample order does not exist.')}
           action={
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button variant="outline" size="sm" onClick={() => { order.refetch(); tracking.refetch(); history.refetch(); }}>
                 Try again
               </Button>
               <ButtonLink to={ROUTES.orderTracking('ord_10482')} size="sm">
-                Open the demo order
+                Open the sample order
               </ButtonLink>
             </div>
           }
@@ -111,7 +111,7 @@ export default function OrderTrackingPage() {
       notify({
         tone: 'info',
         title: 'Tracking refreshed',
-        description: 'This demo snapshot is illustrative and does not advance on its own.',
+        description: 'This sample snapshot is illustrative and does not advance on its own.',
       });
     } finally {
       setRefreshing(false);
@@ -141,7 +141,7 @@ export default function OrderTrackingPage() {
             </Link>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-300/50 bg-gold-50 px-3 py-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-gold-700">
               <FlaskConical aria-hidden="true" className="h-3 w-3" />
-              Demo tracking
+              Sample tracking
             </span>
           </div>
 
@@ -160,8 +160,8 @@ export default function OrderTrackingPage() {
                 <span>
                   Order {currentOrder.code} · placed {formatTime(currentOrder.placedAt)}
                 </span>
-                {searchParams.get('demo') === 'true' ? (
-                  <span className="text-[0.6875rem] text-olive-500">Opened from a demo link</span>
+                {searchParams.get('sample') === 'true' ? (
+                  <span className="text-[0.6875rem] text-olive-500">Opened from a sample link</span>
                 ) : null}
               </div>
             </div>
@@ -198,7 +198,7 @@ export default function OrderTrackingPage() {
                   </p>
                   <p className="mt-2 text-[0.6875rem] leading-relaxed text-olive-500">
                     {isDelivered
-                      ? 'Enjoy your meal. This receipt stays available in the demo.'
+                      ? 'Enjoy your meal. This receipt stays available in this preview.'
                       : isCancelled
                         ? 'No delivery is in progress for this order.'
                         : isInconsistent
@@ -266,7 +266,7 @@ export default function OrderTrackingPage() {
             <p className="flex items-start gap-2.5 text-[0.75rem] leading-relaxed text-olive-500">
               <FlaskConical aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-gold-600" />
               <span>
-                This page uses static demo tracking data. In production it subscribes to the{' '}
+                This page uses static sample tracking data. In production it subscribes to the{' '}
                 <span className="font-medium text-olive-700">TrackingService</span> channel for live driver updates.
               </span>
             </p>

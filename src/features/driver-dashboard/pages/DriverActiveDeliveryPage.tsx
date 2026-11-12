@@ -217,7 +217,7 @@ export default function DriverActiveDeliveryPage() {
                 currentOrder.items.reduce((sum, item) => sum + item.quantity, 0),
                 'item',
               )} for ${currentOrder.customerName ?? 'a Savora customer'} · ${formatCurrency(currentOrder.totals.total)}`
-            : 'Assigned delivery details are loading from the demo service.'
+            : 'Assigned delivery details are loading from the delivery service.'
         }
         actions={<StatusBadge status={delivery.status} />}
       />
@@ -250,11 +250,11 @@ export default function DriverActiveDeliveryPage() {
           {snapshot ? (
             <DeliveryMap snapshot={snapshot} />
           ) : tracking.isLoading ? (
-            <PageLoader label="Preparing the demo map…" />
+            <PageLoader label="Preparing the route map…" />
           ) : (
             <DashboardPanel eyebrow="Route" title="Map unavailable">
               <p className="text-[0.8125rem] leading-relaxed text-olive-500">
-                {getErrorMessage(tracking.error, 'The demo tracking snapshot could not be loaded.')}
+                {getErrorMessage(tracking.error, 'The tracking snapshot could not be loaded.')}
               </p>
             </DashboardPanel>
           )}
@@ -364,8 +364,8 @@ export default function DriverActiveDeliveryPage() {
                   {blockedByKitchen ? 'Waiting for the kitchen' : next.label}
                 </Button>
                 <p className="text-[0.625rem] leading-relaxed text-olive-500">
-                  Actions are checked against your driver profile and the current delivery status. Demo services
-                  enforce the same rules a backend must apply.
+                  Actions are checked against your driver profile and the current delivery status. The service enforces
+                  the same rules a backend must apply.
                 </p>
               </div>
             ) : (
@@ -386,12 +386,12 @@ export default function DriverActiveDeliveryPage() {
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[0.75rem] text-olive-500">
                   <Phone aria-hidden="true" className="h-3 w-3" />
-                  {currentOrder?.customerPhone ?? 'Demo contact not supplied'}
+                  {currentOrder?.customerPhone ?? 'Contact not supplied'}
                 </p>
               </div>
             </div>
             <p className="mt-4 rounded-xl bg-gold-50/70 px-3.5 py-3 text-[0.6875rem] leading-relaxed text-olive-600">
-              Contact details are seeded demo data. In production, phone numbers should be masked or proxied until the
+              Contact details are seeded sample data. In production, phone numbers should be masked or proxied until the
               delivery is active.
             </p>
           </DashboardPanel>

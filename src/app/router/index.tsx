@@ -20,6 +20,10 @@ const OrderTrackingPage = lazy(() => import('@/features/tracking/pages/OrderTrac
 const RestaurantPage = lazy(() => import('@/features/Restaurant/RestaurantPage'));
 const CartPage = lazy(() => import('@/features/cart/pages/CartPage'));
 const CheckoutPage = lazy(() => import('@/features/checkout/pages/CheckoutPage'));
+const OrderConfirmationPage = lazy(
+  () => import('@/features/checkout/pages/OrderConfirmationPage'),
+);
+const OrderHistoryPage = lazy(() => import('@/features/checkout/pages/OrderHistoryPage'));
 /* Role workspaces. Each owns an isolated layout and its own guard. */
 const RestaurantOverviewPage = lazy(
   () => import('@/features/restaurant-dashboard/pages/RestaurantOverviewPage'),
@@ -70,9 +74,11 @@ export function AppRouter() {
 
           <Route element={<ProtectedRoute />}>
             <Route path={ROUTES.profile} element={<ProfilePage />} />
+            <Route path={ROUTES.orderConfirmation()} element={<OrderConfirmationPage />} />
+            <Route path={ROUTES.orderHistory} element={<OrderHistoryPage />} />
+            <Route path={ROUTES.orderTracking()} element={<OrderTrackingPage />} />
           </Route>
 
-          <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path={ROUTES.restaurantDetails()} element={<RestaurantPage />} />
           <Route path={ROUTES.cart} element={<CartPage />} />
           <Route path={ROUTES.checkout} element={<CheckoutPage />} />

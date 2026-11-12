@@ -124,7 +124,7 @@ export function PopularRestaurants() {
           <ErrorState
             className="mt-9"
             title="We could not bring the restaurants to the table"
-            description="The demo data source did not respond. Nothing you have saved has been lost."
+            description="The restaurant catalogue did not respond. Nothing you have saved has been lost."
             action={
               <Button variant="outline" size="sm" onClick={() => restaurants.refetch()}>
                 Try again

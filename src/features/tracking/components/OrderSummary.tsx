@@ -101,7 +101,7 @@ export function OrderSummary({ order }: { order: Order }) {
           <a href="#support" className="text-[0.75rem] font-medium text-olive-600 underline-offset-4 hover:underline">
             Need help with this order?
           </a>
-          <span className="text-[0.625rem] text-olive-500">Demo receipt</span>
+          <span className="text-[0.625rem] text-olive-500">Sample receipt</span>
         </div>
       </div>
     </section>

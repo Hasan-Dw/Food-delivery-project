@@ -20,6 +20,8 @@ export default tseslint.config(
       'public',
       'coverage',
       '*.tsbuildinfo',
+      // The API is a separate package with its own TypeScript build and tests.
+      'backend',
     ],
   },
   js.configs.recommended,

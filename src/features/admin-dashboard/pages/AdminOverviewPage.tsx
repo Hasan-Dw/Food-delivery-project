@@ -142,7 +142,7 @@ export default function AdminOverviewPage() {
         <StatCard
           label="Completed order value"
           value={formatCurrency(completedRevenue(allOrders))}
-          hint="Demo figure from completed orders"
+          hint="Sample figure from completed orders"
           icon={<CheckCircle2 aria-hidden="true" className="h-4 w-4" />}
           tone="success"
         />

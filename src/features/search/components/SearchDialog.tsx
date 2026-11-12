@@ -209,7 +209,7 @@ export function SearchDialog() {
             <div className="px-3 py-10 text-center">
               <p className="font-display text-xl text-olive-900">Search is taking a moment</p>
               <p className="mx-auto mt-2 max-w-sm text-[0.8125rem] leading-relaxed text-olive-500">
-                The demo catalogue did not respond. Your existing filters are unchanged.
+                The catalogue did not respond. Your existing filters are unchanged.
               </p>
               <button
                 type="button"

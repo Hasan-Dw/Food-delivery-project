@@ -104,7 +104,7 @@ export function DeliveryMap({ snapshot }: { snapshot: TrackingSnapshot }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-olive-900/8 px-5 py-4">
         <div className="flex flex-wrap items-center gap-2.5">
-          <Badge tone="gold">Demo map</Badge>
+          <Badge tone="gold">Sample map</Badge>
           <span id="map-heading" className="text-[0.75rem] font-medium text-olive-600">
             Illustrative route · not live GPS
           </span>
@@ -131,7 +131,7 @@ export function DeliveryMap({ snapshot }: { snapshot: TrackingSnapshot }) {
           <title>Illustrative delivery route</title>
           <desc>
             A hand-drawn map showing {restaurantLabel} at the start of the route, a driver moving along the route, and{' '}
-            {homeLabel} at the destination. This is demo data, not live GPS.
+            {homeLabel} at the destination. This is sample data, not live GPS.
           </desc>
 
           <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill={palette.ground} />
@@ -350,7 +350,7 @@ export function DeliveryMap({ snapshot }: { snapshot: TrackingSnapshot }) {
           <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-terracotta" />
           Hand-drawn illustration of the delivery route. No location permission is requested and no GPS is tracked.
         </p>
-        <span className="shrink-0 uppercase tracking-[0.12em] text-olive-500">Demo mode</span>
+        <span className="shrink-0 uppercase tracking-[0.12em] text-olive-500">Sample mode</span>
       </div>
     </section>
   );

@@ -34,6 +34,8 @@ export interface DeliveryService {
   getById(deliveryId: string): Promise<Delivery>;
   getByOrderId(orderId: string): Promise<Delivery>;
   getActiveForDriver(driverId: string): Promise<Delivery | null>;
+  /** Idempotently create the delivery record for a freshly placed order. */
+  createForOrder(input: { idempotencyKey?: string; orderId: string }): Promise<Delivery>;
   assign(
     deliveryId: string,
     driverId: string,
