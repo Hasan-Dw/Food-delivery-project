@@ -22,7 +22,7 @@ export const env = {
   apiBaseUrl: rawBaseUrl,
   apiTimeoutMs: Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 15000) || 15000,
   dataSource,
-  mapProvider: import.meta.env.VITE_MAP_PROVIDER ?? 'demo',
+  mapProvider: import.meta.env.VITE_MAP_PROVIDER ?? 'preview',
   mapToken: import.meta.env.VITE_MAP_TOKEN ?? '',
   isDev: import.meta.env.DEV,
   useMocks: dataSource === 'mock' || !rawBaseUrl,

@@ -1,7 +1,17 @@
-import type { Order, OrderAction, TrackingEvent } from '@/types';
+import type {
+  Address,
+  AddressLabel,
+  Order,
+  OrderAction,
+  OrderItem,
+  TrackingEvent,
+} from '@/types';
 import { orders } from '@/mocks/data/orders';
 import { findDeliveryByOrder } from '@/mocks/data/deliveries';
 import { drivers } from '@/mocks/data/drivers';
+import { products } from '@/mocks/data/products';
+import { restaurants } from '@/mocks/data/restaurants';
+import { paymentMethods } from '@/mocks/data/user';
 import { buildStatusHistory } from '@/mocks/data/tracking';
 import {
   canTransitionOrderStatus,
@@ -10,8 +20,13 @@ import {
 } from '@/lib/order-lifecycle';
 import { delay } from '@/mocks/utils/delay';
 import { ApiError } from '@/services/api/errors';
-import type { OrderListQuery, OrderService } from '@/services/orders/OrderService';
+import type {
+  CreateOrderInput,
+  OrderListQuery,
+  OrderService,
+} from '@/services/orders/OrderService';
 import { attemptAutoAssignment, retryPendingAssignmentsForDriver } from './assignment-engine';
+import { evaluatePreviewCoupon } from './preview-coupons';
 
 export class MockOrderService implements OrderService {
   async list(query?: OrderListQuery): Promise<Order[]> {
@@ -50,6 +65,135 @@ export class MockOrderService implements OrderService {
       throw new ApiError({ code: 'order_not_found', message: 'Order not found.' }, 404);
     }
     return history;
+  }
+
+  async create(input: CreateOrderInput): Promise<Order> {
+    await delay(360);
+
+    const restaurant = restaurants.find((entry) => entry.id === input.restaurantId);
+    if (!restaurant) {
+      throw new ApiError(
+        { code: 'restaurant_unavailable', message: 'That restaurant is not available.' },
+        404,
+      );
+    }
+
+    const items: OrderItem[] = input.items.map((requested, index) => {
+      const product = products.find((entry) => entry.id === requested.productId);
+      if (!product || product.restaurantId !== restaurant.id) {
+        throw new ApiError(
+          { code: 'menu_item_unavailable', message: 'An item in your cart is unavailable.' },
+          409,
+        );
+      }
+      if (!product.available) {
+        throw new ApiError(
+          { code: 'menu_item_unavailable', message: `${product.name} is currently unavailable.` },
+          409,
+        );
+      }
+
+      let unitPrice = product.price;
+      const selectedOptions = (requested.selectedOptions ?? []).map((selection) => {
+        const group = product.optionGroups?.find((entry) => entry.id === selection.groupId);
+        const option = group?.options.find((entry) => entry.id === selection.optionId);
+        if (!group || !option) {
+          throw new ApiError(
+            { code: 'menu_option_unavailable', message: `An option for ${product.name} is no longer available.` },
+            409,
+          );
+        }
+        unitPrice += option.priceDelta;
+        return {
+          groupId: group.id,
+          groupName: group.name,
+          optionId: option.id,
+          optionName: option.name,
+          priceDelta: option.priceDelta,
+        };
+      });
+
+      return {
+        id: `oi_new_${Date.now()}_${index}`,
+        productId: product.id,
+        name: product.name,
+        imageKey: product.imageKey,
+        quantity: requested.quantity,
+        unitPrice: Math.round(unitPrice * 100) / 100,
+        selectedOptions,
+      };
+    });
+
+    const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const deliveryFee = restaurant.deliveryFee;
+    const serviceFee = 2.5;
+
+    let discount = 0;
+    if (input.couponCode) {
+      const evaluation = evaluatePreviewCoupon(input.couponCode, subtotal, deliveryFee);
+      if (!evaluation.valid) {
+        throw new ApiError(
+          { code: 'promotion_invalid', message: evaluation.message ?? 'That promotion cannot be used.' },
+          409,
+        );
+      }
+      discount = evaluation.discount;
+    }
+
+    const now = new Date().toISOString();
+    const sequence = 10500 + orders.length;
+    const address: Address = {
+      id: `addr_checkout_${Date.now()}`,
+      label: input.deliveryAddress.label as AddressLabel,
+      line1: input.deliveryAddress.line1,
+      ...(input.deliveryAddress.line2 ? { line2: input.deliveryAddress.line2 } : {}),
+      city: input.deliveryAddress.city,
+      state: input.deliveryAddress.state,
+      postalCode: input.deliveryAddress.postalCode,
+      country: input.deliveryAddress.country,
+      ...(input.deliveryAddress.instructions
+        ? { instructions: input.deliveryAddress.instructions }
+        : {}),
+      isDefault: false,
+      ...(input.deliveryAddress.coordinates
+        ? { coordinates: input.deliveryAddress.coordinates }
+        : {}),
+    };
+
+    const order: Order = {
+      id: `ord_new_${Date.now()}`,
+      code: `SV-${sequence}`,
+      customerId: input.customerId ?? 'usr_maya_bennett',
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      restaurantImageKey: restaurant.imageKey,
+      items,
+      status: 'PENDING',
+      placedAt: now,
+      deliveryAddress: address,
+      totals: {
+        subtotal: Math.round(subtotal * 100) / 100,
+        deliveryFee,
+        serviceFee,
+        discount: Math.round(discount * 100) / 100,
+        tax: 0,
+        total: Math.round((subtotal + deliveryFee + serviceFee - discount) * 100) / 100,
+      },
+      paymentMethod:
+        paymentMethods.find((method) => method.id === input.paymentMethodId) ?? {
+          id: input.paymentMethodId,
+          type: 'cash',
+          label: 'Cash on delivery',
+          isDefault: false,
+        },
+      ...(input.couponCode ? { couponCode: input.couponCode.trim().toUpperCase() } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+    };
+
+    orders.unshift(order);
+    return order;
   }
 
   async transition(orderId: string, action: OrderAction): Promise<Order> {

@@ -8,6 +8,8 @@ export const queryKeys = {
   restaurantProducts: (restaurantId: string) => ['products', 'restaurant', restaurantId] as const,
   productCategories: (restaurantId: string) => ['product-categories', restaurantId] as const,
   promotions: ['promotions'] as const,
+  checkoutQuote: (restaurantId: string, signature: string, couponCode: string) =>
+    ['checkout', 'quote', restaurantId, signature, couponCode] as const,
   orders: ['orders'] as const,
   activeOrder: ['orders', 'active'] as const,
   order: (orderId: string) => ['orders', orderId] as const,

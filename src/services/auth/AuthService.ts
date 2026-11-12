@@ -6,9 +6,8 @@ export interface PasswordResetResult {
 }
 
 /**
- * Authentication contract. The mock implementation is intentionally obvious
- * about being a demo; a future HTTP implementation can replace it without any
- * page changing.
+ * Authentication contract. The mock implementation exists for preview mode;
+ * the HTTP implementation talks to the Savora API without any page changing.
  */
 export interface AuthService {
   login(credentials: LoginCredentials): Promise<AuthSession>;

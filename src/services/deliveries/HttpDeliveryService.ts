@@ -44,6 +44,14 @@ export class HttpDeliveryService implements DeliveryService {
     return response.data ?? null;
   }
 
+  async createForOrder(input: { idempotencyKey?: string; orderId: string }): Promise<Delivery> {
+    const response = await this.client.post<Delivery>('/deliveries', {
+      orderId: input.orderId,
+      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
+    });
+    return response.data;
+  }
+
   async assign(
     deliveryId: string,
     driverId: string,

@@ -123,7 +123,7 @@ export class MockAuthService implements AuthService {
       throw new ApiError(
         {
           code: 'invalid_credentials',
-          message: 'That email and password do not match. Try the demo account below.',
+          message: 'That email and password do not match. Try the preview account below.',
         },
         401,
       );

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CartItem, Product, SelectedOption } from '@/types';
+import { PREVIEW_COUPONS, evaluatePreviewCoupon } from '@/mocks/services/preview-coupons';
 
 interface AddProductInput {
   product: Product;
@@ -21,6 +22,8 @@ interface CartState {
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   applyCoupon: (code: string) => boolean;
+  /** Store a server-validated code (or clear it). */
+  setCoupon: (code: string | null) => void;
   removeCoupon: () => void;
   clear: () => void;
 }
@@ -29,12 +32,7 @@ function signature(productId: string, selectedOptions: SelectedOption[] = []): s
   return [productId, ...selectedOptions.map((option) => option.optionId).sort()].join('|');
 }
 
-const COUPONS: Record<string, { label: string; kind: 'percent' | 'free_delivery'; value: number }> = {
-  HELLO25: { label: 'Free delivery', kind: 'free_delivery', value: 1 },
-  SLICE20: { label: '20% off', kind: 'percent', value: 0.2 },
-  SWEET6: { label: 'Free cookie box', kind: 'percent', value: 0 },
-  GREENS3: { label: '$3 off', kind: 'percent', value: 0 },
-};
+const COUPONS = PREVIEW_COUPONS;
 
 /**
  * Shared cart state.
@@ -121,6 +119,9 @@ export const useCartStore = create<CartState>()(
         return true;
       },
 
+      setCoupon: (code) =>
+        set({ couponCode: code ? code.trim().toUpperCase() : null }),
+
       removeCoupon: () => set({ couponCode: null }),
 
       clear: () =>
@@ -156,15 +157,16 @@ export function calculateCartTotals(
 ): { subtotal: number; deliveryFee: number; serviceFee: number; discount: number; total: number } {
   const subtotal = state.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const serviceFee = subtotal > 0 ? 2.5 : 0;
-  const coupon = state.couponCode ? COUPONS[state.couponCode] : undefined;
 
-  let discount = 0;
+  const evaluation = state.couponCode
+    ? evaluatePreviewCoupon(state.couponCode, subtotal, state.deliveryFee)
+    : null;
+
+  const coupon = state.couponCode ? COUPONS[state.couponCode] : undefined;
+  const discount = evaluation?.valid ? evaluation.discount : 0;
   let deliveryFee = state.deliveryFee;
   if (coupon?.kind === 'free_delivery') {
-    discount = deliveryFee;
     deliveryFee = 0;
-  } else if (coupon?.kind === 'percent') {
-    discount = subtotal * coupon.value;
   }
 
   return {
