@@ -1,0 +1,869 @@
+[
+  {
+    "key": "hero-dining-table",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "An overhead table filled with shared dishes, fresh herbs and warm bread",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "editorial-table",
+    "folder": "banners",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "A long communal table laid with seasonal plates",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "kitchen-craft",
+    "folder": "delivery",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "A chef finishing a plate in a warm, softly lit kitchen",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "kitchen-team",
+    "folder": "delivery",
+    "ratio": [
+      3,
+      2
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 867,
+    "alt": "Restaurant kitchen team preparing orders together",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "delivery-courier",
+    "folder": "delivery",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "A delivery courier carrying a thermal backpack through the city",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "delivery-spread",
+    "folder": "delivery",
+    "ratio": [
+      3,
+      2
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 867,
+    "alt": "Freshly prepared dishes arranged for delivery",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "auth-kitchen",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "A warmly lit restaurant dining room with set tables",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "auth-table",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "A generous spread of grilled dishes and fresh sides",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "auth-dessert",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "A plated dessert finished with cream and berries",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-saffron-oak",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Elegant dining room of Saffron & Oak with linen-set tables and soft daylight",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-nonna-lucia",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Bright neighbourhood trattoria Nonna Lucia with plants and marble tables",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-koji-sushi",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Intimate sushi counter at Kōji Sushi lit by low pendant lamps",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-patty-club",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Industrial bar seating inside The Patty Club",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-green-bowl",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Light-filled dining room at Green Bowl Co. with pale wood furniture and plants",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-smoke-honey",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Moody dining room at Smoke & Honey with leather booths",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-casa-veracruz",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Street-side terrace of Casa Veracruz in the early evening",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "restaurant-creme-crust",
+    "folder": "restaurants",
+    "ratio": [
+      16,
+      10
+    ],
+    "widths": [
+      480,
+      900,
+      1400
+    ],
+    "masterWidth": 1400,
+    "masterHeight": 875,
+    "alt": "Crème & Crust bakery counter filled with freshly baked bread",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-truffle-pizza",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Truffle mushroom pizza with melted cheese and fresh herbs",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-brisket",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Slow-smoked brisket with charred vegetables",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-salmon-nigiri",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Salmon nigiri and maki rolls arranged on a dark ceramic plate",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-saffron-bowl",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Saffron chicken bowl with grains, greens and soft egg",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-smash-burger",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Double smash burger with melted cheese and pickles",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-burrata",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Burrata with heirloom tomatoes, basil and olive oil",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-chicken-sandwich",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Crispy chicken sandwich with slaw on toasted bread",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-green-goddess",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Green goddess bowl with avocado, grains and leafy greens",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-chipotle-salmon",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Seared salmon with a smoky chipotle glaze and greens",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-tonkotsu",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Tonkotsu ramen with soft egg, greens and sliced pork",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-chocolate-torte",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Dark chocolate torte with cocoa dust and cream",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-pesto-rigatoni",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Rigatoni tossed in bright green pesto with parmesan",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-butter-chicken",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Creamy butter chicken served with rice and herbs",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-birria-tacos",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Three birria tacos with lime, coriander and salsa",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "dish-cookies",
+    "folder": "products",
+    "ratio": [
+      4,
+      3
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 975,
+    "alt": "Freshly baked chocolate chip cookies on parchment",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-burgers",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Stacked burger with fries and a drink",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-pizza",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Pizza fresh from the oven with blistered crust",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-sushi",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Assorted sushi rolls on a wooden board",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-fried-chicken",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Golden fried chicken in a paper basket",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-desserts",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Layered dessert with cream and berries",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-healthy",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Colourful healthy bowl with grains and vegetables",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-pasta",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Fresh pasta twirled with tomato sauce",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "category-sandwiches",
+    "folder": "categories",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Toasted sandwich cut in half with greens",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "offer-table-spread",
+    "folder": "banners",
+    "ratio": [
+      16,
+      9
+    ],
+    "widths": [
+      640,
+      1100,
+      1600
+    ],
+    "masterWidth": 1600,
+    "masterHeight": 900,
+    "alt": "Overhead spread of colourful bowls and shared plates",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "offer-pizza-night",
+    "folder": "banners",
+    "ratio": [
+      16,
+      9
+    ],
+    "widths": [
+      640,
+      1100,
+      1600
+    ],
+    "masterWidth": 1600,
+    "masterHeight": 900,
+    "alt": "Pizza on a wooden board with a glass of wine",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "offer-sweet-tooth",
+    "folder": "banners",
+    "ratio": [
+      16,
+      9
+    ],
+    "widths": [
+      640,
+      1100,
+      1600
+    ],
+    "masterWidth": 1600,
+    "masterHeight": 900,
+    "alt": "Dessert table with cakes and pastries",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "feature-koji-platter",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "Sushi platter prepared at Kōji Sushi",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "feature-nonna-pasta",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "Handmade pasta plated at Nonna Lucia",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "feature-saffron-plate",
+    "folder": "banners",
+    "ratio": [
+      4,
+      5
+    ],
+    "widths": [
+      480,
+      900,
+      1300
+    ],
+    "masterWidth": 1300,
+    "masterHeight": 1625,
+    "alt": "Saffron & Oak seasonal plate",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "avatar-maya",
+    "folder": "people",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Portrait of Maya Bennett",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "avatar-driver",
+    "folder": "people",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Portrait of delivery partner Daniel Okafor",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "avatar-diner-1",
+    "folder": "people",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Portrait of a Savora customer",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "avatar-diner-2",
+    "folder": "people",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Portrait of a Savora customer",
+    "credit": "Unsplash"
+  },
+  {
+    "key": "avatar-diner-3",
+    "folder": "people",
+    "ratio": [
+      1,
+      1
+    ],
+    "widths": [
+      320,
+      600,
+      900
+    ],
+    "masterWidth": 900,
+    "masterHeight": 900,
+    "alt": "Portrait of a Savora customer",
+    "credit": "Unsplash"
+  }
+]
