@@ -67,6 +67,8 @@ export function toRestaurantResponse(document: RestaurantDocument): RestaurantRe
 
   if (document.featured) response.featured = true;
   if (document.offerLabel) response.offerLabel = document.offerLabel;
+  if (document.logoKey) response.logoKey = document.logoKey;
+  if (document.description) response.description = document.description;
 
   return response;
 }

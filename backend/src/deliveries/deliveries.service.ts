@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import { FilterQuery, Model, Types } from 'mongoose';
 import {
   AssignmentSource,
@@ -22,10 +23,14 @@ import { OrderStatus } from '../common/enums/order.enum';
 import { AccountStatus, DriverAvailability, UserRole } from '../common/enums/user.enum';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import {
-  estimateTravelMinutes,
-  haversineDistanceKm,
+  DEFAULT_PREP_MINUTES,
+  HANDOVER_BUFFER_MINUTES,
+  PICKUP_BUFFER_MINUTES,
   serviceAreasCompatible,
+  type CoordinatesInput,
 } from '../common/utils/geo.util';
+import { RoutingService, type RouteSource } from '../routing/routing.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 import { Order, type OrderDocument } from '../orders/schemas/order.schema';
 import {
   Restaurant,
@@ -67,6 +72,17 @@ interface RankedDriver {
   distanceKm: number | null;
   etaMinutes: number | null;
   recentAssignments: number;
+  routeSource?: RouteSource;
+}
+
+/** Normalises a mongoose subdocument coordinate pair. */
+function coordinatesOf(
+  value: { lat?: number; lng?: number } | null | undefined,
+): CoordinatesInput | null {
+  if (!value || typeof value.lat !== 'number' || typeof value.lng !== 'number') {
+    return null;
+  }
+  return { lat: value.lat, lng: value.lng };
 }
 
 function isDuplicateKey(error: unknown): boolean {
@@ -81,6 +97,7 @@ function isDuplicateKey(error: unknown): boolean {
 @Injectable()
 export class DeliveriesService {
   private readonly logger = new Logger(DeliveriesService.name);
+  private readonly maxLocationAgeMinutes: number;
 
   constructor(
     @InjectModel(Delivery.name)
@@ -93,7 +110,13 @@ export class DeliveriesService {
     private readonly userModel: Model<UserDocument>,
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
-  ) {}
+    private readonly routing: RoutingService,
+    private readonly trackingGateway: TrackingGateway,
+    config: ConfigService,
+  ) {
+    this.maxLocationAgeMinutes =
+      config.get<number>('tracking.maxLocationAgeMinutes') ?? 10;
+  }
 
   /**
    * Create the delivery for a freshly placed order. Safe to call more than once
@@ -394,6 +417,7 @@ export class DeliveriesService {
 
     // The order remains active; a released driver should not bounce straight
     // back, so attempt a replacement that excludes them.
+    void this.trackingGateway.broadcast(updated.orderId.toString());
     try {
       await this.attemptAutomaticAssignment(delivery._id.toString(), {
         trigger: AutoAssignmentTrigger.AFTER_UNASSIGN,
@@ -410,6 +434,84 @@ export class DeliveriesService {
 
     const refreshed = await this.getDocument(deliveryId);
     return toDeliveryResponse(refreshed);
+  }
+
+  /**
+   * Exceptional platform release used when an account is suspended or rejected.
+   * Unlike a manual unassign it also clears an in-transit handover so the
+   * customer's order is not stranded. The order itself is never cancelled.
+   */
+  async releaseAssignmentForAccountStatus(
+    actor: AuthenticatedUser,
+    deliveryId: string,
+    reason: string,
+  ): Promise<void> {
+    const delivery = await this.getDocument(deliveryId);
+    const driverId = delivery.driverId;
+
+    if (!driverId) return;
+
+    const releasableStatuses: readonly string[] = [
+      DeliveryStatus.ASSIGNED,
+      DeliveryStatus.PICKED_UP,
+      DeliveryStatus.ON_THE_WAY,
+    ];
+    if (!releasableStatuses.includes(delivery.status)) return;
+
+    const now = new Date();
+    const updated = await this.deliveryModel
+      .findOneAndUpdate(
+        { _id: delivery._id, driverId, status: delivery.status },
+        {
+          $set: {
+            status: DeliveryStatus.PENDING_ASSIGNMENT,
+            driverId: null,
+            driverLocation: null,
+          },
+          $unset: { assignedAt: '', estimatedArrivalAt: '', pickedUpAt: '' },
+          $push: {
+            assignmentHistory: {
+              action: DeliveryAssignmentAction.UNASSIGNED,
+              source: AssignmentSource.MANUAL,
+              previousDriverId: driverId,
+              newDriverId: null,
+              driverId,
+              driverName: await this.driverName(driverId),
+              adminId: Types.ObjectId.isValid(actor.id)
+                ? new Types.ObjectId(actor.id)
+                : null,
+              reason,
+              at: now,
+            },
+          },
+        },
+        { new: true },
+      )
+      .exec();
+
+    if (!updated) {
+      throw new ConflictException({
+        code: 'delivery_assignment_changed',
+        message: 'The delivery changed while releasing the assignment. Refresh and try again.',
+      });
+    }
+
+    await this.releaseDriver(driverId, delivery._id);
+    void this.trackingGateway.broadcast(updated.orderId.toString());
+
+    try {
+      await this.attemptAutomaticAssignment(delivery._id.toString(), {
+        trigger: AutoAssignmentTrigger.AFTER_UNASSIGN,
+        adminId: actor.id,
+        excludeDriverIds: [driverId.toString()],
+        force: true,
+        reason: `Automatic replacement after account release: ${reason}`,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Replacement assignment failed after account release: ${(error as Error).message}`,
+      );
+    }
   }
 
   async reassign(
@@ -453,7 +555,12 @@ export class DeliveriesService {
 
     const now = new Date();
     const previousDriverId = delivery.driverId;
-    const { estimatedArrivalAt, location } = this.computeEta(driver, restaurant, now);
+    const { estimatedArrivalAt, location } = await this.computeEta(
+      driver,
+      restaurant,
+      order,
+      now,
+    );
 
     const updated = await this.deliveryModel
       .findOneAndUpdate(
@@ -623,6 +730,7 @@ export class DeliveriesService {
     }
 
     const refreshed = await this.getDocument(deliveryId);
+    await this.trackingGateway.broadcast(refreshed.orderId.toString());
     return toDeliveryResponse(refreshed);
   }
 
@@ -694,6 +802,7 @@ export class DeliveriesService {
       .updateOne({ _id: delivery.driverId }, { $set: { lastLocation: location } })
       .exec();
 
+    void this.trackingGateway.broadcast(updated.orderId.toString());
     return toDeliveryResponse(updated);
   }
 
@@ -905,14 +1014,15 @@ export class DeliveriesService {
     if (!reserved) return null;
 
     const now = new Date();
-    const { estimatedArrivalAt, location } = this.computeEta(
+    const { estimatedArrivalAt, location } = await this.computeEta(
       input.driver,
       restaurant,
+      input.order,
       now,
     );
 
     try {
-      return await this.deliveryModel
+      const updated = await this.deliveryModel
         .findOneAndUpdate(
           {
             _id: new Types.ObjectId(input.deliveryId),
@@ -946,6 +1056,11 @@ export class DeliveriesService {
           { new: true },
         )
         .exec();
+
+      if (updated) {
+        void this.trackingGateway.broadcast(updated.orderId.toString());
+      }
+      return updated;
     } finally {
       // A failed compare-and-set means someone else claimed the delivery; the
       // reserved driver must be released so they are not stuck ON_DELIVERY.
@@ -1054,6 +1169,7 @@ export class DeliveriesService {
       await this.releaseDriver(releasedDriverId, delivery._id);
     }
 
+    void this.trackingGateway.broadcast(updated.orderId.toString());
     return toDeliveryResponse(updated);
   }
 
@@ -1125,34 +1241,52 @@ export class DeliveriesService {
     const names = new Map(users.map((user) => [user._id.toString(), user.fullName]));
 
     const counts = await this.assignmentCounts();
-    const coordinates = restaurant?.address?.coordinates ?? null;
+    const coordinates = coordinatesOf(restaurant?.address?.coordinates);
     const restaurantArea = restaurant?.address?.city ?? null;
+    const maxAgeMs = this.maxLocationAgeMinutes * 60_000;
+    const now = Date.now();
 
-    const candidates: RankedDriver[] = [];
+    // Travel time is the ranking signal, so a driver without a usable GPS fix
+    // cannot be ranked and is excluded rather than guessed at.
+    const candidates = (
+      await Promise.all(
+        drivers.map(async (driver): Promise<RankedDriver | null> => {
+          if (!serviceAreasCompatible(driver.serviceArea, restaurantArea)) return null;
 
-    for (const driver of drivers) {
-      if (!serviceAreasCompatible(driver.serviceArea, restaurantArea)) continue;
+          const lastLocation = driver.lastLocation;
+          if (!lastLocation) return null;
+          if (now - lastLocation.updatedAt.getTime() > maxAgeMs) return null;
 
-      const location = driver.lastLocation
-        ? { lat: driver.lastLocation.lat, lng: driver.lastLocation.lng }
-        : null;
-      const distanceKm =
-        location && coordinates
-          ? haversineDistanceKm(coordinates, location)
-          : null;
-      const etaMinutes =
-        distanceKm !== null ? estimateTravelMinutes(distanceKm, driver.vehicle) : null;
+          const location = { lat: lastLocation.lat, lng: lastLocation.lng };
+          const recentAssignments = counts.get(driver._id.toString()) ?? 0;
+          const name = names.get(driver.userId.toString()) ?? 'Driver';
 
-      candidates.push({
-        driver,
-        name: names.get(driver.userId.toString()) ?? 'Driver',
-        distanceKm,
-        etaMinutes,
-        recentAssignments: counts.get(driver._id.toString()) ?? 0,
-      });
-    }
+          if (!coordinates) {
+            return { driver, name, distanceKm: null, etaMinutes: null, recentAssignments };
+          }
+
+          const travel = await this.routing.travelTime(
+            location,
+            coordinates,
+            driver.vehicle,
+          );
+
+          return {
+            driver,
+            name,
+            distanceKm: travel.distanceKm,
+            etaMinutes: travel.minutes,
+            recentAssignments,
+            routeSource: travel.source,
+          };
+        }),
+      )
+    ).filter((candidate): candidate is RankedDriver => candidate !== null);
 
     return candidates.sort((a, b) => {
+      if (a.etaMinutes !== null && b.etaMinutes !== null && a.etaMinutes !== b.etaMinutes) {
+        return a.etaMinutes - b.etaMinutes;
+      }
       if (a.distanceKm !== null && b.distanceKm === null) return -1;
       if (a.distanceKm === null && b.distanceKm !== null) return 1;
       if (
@@ -1161,13 +1295,6 @@ export class DeliveriesService {
         a.distanceKm !== b.distanceKm
       ) {
         return a.distanceKm - b.distanceKm;
-      }
-      if (
-        a.etaMinutes !== null &&
-        b.etaMinutes !== null &&
-        a.etaMinutes !== b.etaMinutes
-      ) {
-        return a.etaMinutes - b.etaMinutes;
       }
       if (a.recentAssignments !== b.recentAssignments) {
         return a.recentAssignments - b.recentAssignments;
@@ -1228,12 +1355,22 @@ export class DeliveriesService {
     }
   }
 
-  private computeEta(
+  /**
+   * ETA for a freshly assigned driver:
+   *   max(driver → restaurant, remaining kitchen time) + pickup + restaurant → customer
+   * Driver travel and preparation run in parallel, so they are never summed.
+   */
+  private async computeEta(
     driver: DriverProfileDocument,
     restaurant: RestaurantDocument | null,
+    order: OrderDocument,
     now: Date,
-  ): { estimatedArrivalAt: Date; location: { lat: number; lng: number; updatedAt: Date } | null } {
-    const coordinates = restaurant?.address?.coordinates ?? null;
+  ): Promise<{
+    estimatedArrivalAt: Date;
+    location: { lat: number; lng: number; updatedAt: Date } | null;
+    etaMinutes: number;
+    source: RouteSource | 'none';
+  }> {
     const location = driver.lastLocation
       ? {
           lat: driver.lastLocation.lat,
@@ -1242,21 +1379,73 @@ export class DeliveriesService {
         }
       : null;
 
-    let minutes: number;
-    if (location && coordinates) {
-      const distance = haversineDistanceKm(coordinates, location);
-      minutes = estimateTravelMinutes(distance, driver.vehicle);
+    const restaurantCoordinates = coordinatesOf(restaurant?.address?.coordinates);
+    const destination = coordinatesOf(order.deliveryAddress?.coordinates);
+    const position = location ? { lat: location.lat, lng: location.lng } : null;
+
+    const prepRemaining = this.remainingPrepMinutes(order, now);
+    let pickupReadyIn = prepRemaining;
+    let toCustomerMinutes: number | null = null;
+    const sources: Array<RouteSource | 'none'> = [];
+
+    if (restaurantCoordinates && destination) {
+      const finalLeg = await this.routing.getRoute(
+        restaurantCoordinates,
+        destination,
+        driver.vehicle,
+      );
+      toCustomerMinutes = finalLeg.durationMinutes;
+      sources.push(finalLeg.source);
+    }
+
+    if (position && restaurantCoordinates) {
+      const toRestaurant = await this.routing.getRoute(
+        position,
+        restaurantCoordinates,
+        driver.vehicle,
+      );
+      pickupReadyIn = Math.max(prepRemaining, toRestaurant.durationMinutes);
+      sources.push(toRestaurant.source);
+    }
+
+    let etaMinutes: number;
+    if (pickupReadyIn > 0 || toCustomerMinutes !== null) {
+      etaMinutes =
+        pickupReadyIn + PICKUP_BUFFER_MINUTES + (toCustomerMinutes ?? 0);
     } else {
+      // No coordinates at all: fall back to the restaurant's own delivery window
+      // so a driver is never promised an invented zero-minute delivery.
       const estimate = restaurant?.estimatedDeliveryMinutes ?? [25, 40];
-      const low = estimate[0] ?? 25;
-      const high = estimate[1] ?? low;
-      minutes = Math.max(5, Math.round((low + high) / 2));
+      etaMinutes = Math.max(
+        5,
+        Math.round(((estimate[0] ?? 25) + (estimate[1] ?? 40)) / 2),
+      );
+      sources.push('none');
     }
 
     return {
-      estimatedArrivalAt: new Date(now.getTime() + minutes * 60_000),
+      estimatedArrivalAt: new Date(now.getTime() + etaMinutes * 60_000),
       location,
+      etaMinutes,
+      source: sources.includes('none')
+        ? 'none'
+        : sources.includes('straight-line')
+          ? 'straight-line'
+          : 'osrm',
     };
+  }
+
+  /** Kitchen time still required, measured from the last status change. */
+  private remainingPrepMinutes(order: OrderDocument, now: Date): number {
+    if (order.status === OrderStatus.COMPLETED) return 0;
+    if (order.status === OrderStatus.READY) return 0;
+    if (order.status === OrderStatus.PREPARING) {
+      const startedAt = (order.updatedAt ?? order.placedAt ?? now).getTime();
+      const elapsed = Math.max(0, (now.getTime() - startedAt) / 60_000);
+      return Math.max(2, Math.round(DEFAULT_PREP_MINUTES - elapsed));
+    }
+    if (order.status === OrderStatus.PENDING) return DEFAULT_PREP_MINUTES + 5;
+    return DEFAULT_PREP_MINUTES;
   }
 
   private async driverName(driverId: Types.ObjectId): Promise<string | null> {
@@ -1270,9 +1459,11 @@ export class DeliveriesService {
   }
 
   private candidateRationale(candidate: RankedDriver): string {
-    return candidate.distanceKm !== null
-      ? `${candidate.distanceKm.toFixed(1)} km away · about ${candidate.etaMinutes} min`
-      : `Matched by service area${candidate.driver.serviceArea ? ` (${candidate.driver.serviceArea})` : ''}`;
+    if (candidate.distanceKm === null) {
+      return `Matched by service area${candidate.driver.serviceArea ? ` (${candidate.driver.serviceArea})` : ''}`;
+    }
+    const suffix = candidate.routeSource === 'straight-line' ? ' (estimated)' : '';
+    return `${candidate.distanceKm.toFixed(1)} km by road · about ${candidate.etaMinutes} min${suffix}`;
   }
 
   private targetStatus(action: DeliveryAction): DeliveryStatus {

@@ -50,8 +50,12 @@ export class MenuItem {
   @Prop({ required: true, min: 0 })
   priceCents: number;
 
-  @Prop({ required: true, trim: true, maxlength: 120, default: 'product-default' })
+  @Prop({ required: true, trim: true, maxlength: 500, default: 'product-default' })
   imageKey: string;
+
+  /** Cloudinary public id, used to clean up replaced or removed images. */
+  @Prop({ trim: true, maxlength: 300 })
+  imagePublicId?: string;
 
   @Prop({ min: 0, max: 5000 })
   calories?: number;

@@ -4,6 +4,7 @@ import { DriverProfile, DriverProfileSchema } from './schemas/driver-profile.sch
 import { User, UserSchema } from './schemas/user.schema';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { UsersService } from './users.service';
       { name: User.name, schema: UserSchema },
       { name: DriverProfile.name, schema: DriverProfileSchema },
     ]),
+    UploadsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

@@ -5,8 +5,9 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
-
+import { setServers } from 'node:dns';
 async function bootstrap(): Promise<void> {
+   setServers(['1.1.1.1', '8.8.8.8']);
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 

@@ -30,6 +30,7 @@ import {
   type DeliveryDocument,
 } from '../deliveries/schemas/delivery.schema';
 import { PromotionsService } from '../promotions/promotions.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 import { UsersService } from '../users/users.service';
 import type { UserDocument } from '../users/schemas/user.schema';
 import type { CreateOrderDto, OrderQueryDto } from './dto/order.dto';
@@ -72,6 +73,7 @@ export class OrdersService {
     private readonly deliveriesService: DeliveriesService,
     private readonly promotionsService: PromotionsService,
     private readonly usersService: UsersService,
+    private readonly trackingGateway: TrackingGateway,
   ) {}
 
   async create(actor: AuthenticatedUser, dto: CreateOrderDto): Promise<OrderResponse> {
@@ -393,6 +395,10 @@ export class OrdersService {
         );
       }
     }
+
+    // Order-only changes (accepted, preparing, closed) belong to live tracking
+    // too; delivery changes already broadcast, and repeating this is harmless.
+    await this.trackingGateway.broadcast(updated._id.toString());
 
     return toOrderResponse(updated);
   }

@@ -26,6 +26,8 @@ export interface RestaurantResponse {
   cuisines: string[];
   categorySlugs: string[];
   imageKey: string;
+  /** Optional logo used in compact restaurant surfaces. */
+  logoKey?: string;
   rating: number;
   reviewCount: number;
   deliveryFee: number;
@@ -39,6 +41,8 @@ export interface RestaurantResponse {
   openingHours: OpeningHoursResponse[];
   featured?: boolean;
   offerLabel?: string;
+  /** Optional public description shown on the restaurant page. */
+  description?: string;
 }
 
 export interface RestaurantCategoryResponse {

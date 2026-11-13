@@ -101,6 +101,10 @@ describe('Savora API (e2e)', () => {
     process.env.JWT_ACCESS_SECRET = 'test-secret-value-that-is-long-enough-for-validation';
     process.env.JWT_ACCESS_EXPIRES_IN = '1h';
     process.env.CORS_ORIGINS = 'http://localhost:5173';
+    // The e2e app is created with `init()` and never listens on a socket, so
+    // snapshots correctly report that no live channel is attached.
+    process.env.LIVE_TRACKING_ENABLED = 'false';
+    process.env.ROUTING_ENABLED = 'false';
 
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -575,6 +579,8 @@ describe('Savora API (e2e)', () => {
     const session = response.body.data as RegisteredSession;
     const driverId = session.user.driverId as string;
 
+    // Assignment ranks by real GPS freshness, so a usable driver always has a
+    // recent location near the test restaurant.
     await driverModel.updateOne(
       { _id: driverId },
       {
@@ -582,6 +588,11 @@ describe('Savora API (e2e)', () => {
           accountStatus: AccountStatus.APPROVED,
           availability: 'AVAILABLE',
           serviceArea: 'All boroughs',
+          lastLocation: {
+            lat: 40.719 + Math.random() * 0.004,
+            lng: -73.956 + Math.random() * 0.004,
+            updatedAt: new Date(),
+          },
         },
       },
     );
@@ -1009,4 +1020,475 @@ describe('Savora API (e2e)', () => {
       .expect(403);
     expect(forbidden.body.code).toBe('forbidden');
   });
+
+  /* ── Phase 3: authorization, image uploads and live delivery data ─────── */
+
+  /** Header-only JPEG: enough for the byte signature check. */
+  const SMALL_JPEG = Buffer.from([
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+  ]);
+
+  it('rejects unauthenticated access to every protected surface', async () => {
+    const server = () => request(app.getHttpServer());
+
+    const unauthenticated = [
+      () => server().get('/api/v1/me'),
+      () => server().get('/api/v1/orders'),
+      () => server().get('/api/v1/orders/active'),
+      () => server().get('/api/v1/deliveries'),
+      () => server().post('/api/v1/restaurants/000000000000000000000000/image'),
+      () => server().post('/api/v1/menu-items/000000000000000000000000/image'),
+      () => server().post('/api/v1/me/profile-image'),
+      () => server().put('/api/v1/deliveries/000000000000000000000000/location'),
+    ];
+
+    for (const send of unauthenticated) {
+      const response = await send().expect(401);
+      expect(response.body.code).toBe('unauthorized');
+    }
+  });
+
+  it('never provisions administrators through public registration', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        fullName: 'Sneaky Admin',
+        email: uniqueEmail('admin'),
+        password: PASSWORD,
+        role: 'ADMIN',
+      })
+      .expect(400);
+
+    expect(response.body.code).toBe('validation_failed');
+    expect(response.body.details.role).toBeDefined();
+    expect(await userModel.countDocuments({ role: 'ADMIN' })).toBe(0);
+  });
+
+  it('validates uploads by content and reports unconfigured image storage', async () => {
+    const { owner, restaurantId } = await setupRestaurantWithMenu();
+    const endpoint = `/api/v1/restaurants/${restaurantId}/image`;
+
+    const missing = await request(app.getHttpServer())
+      .post(endpoint)
+      .set(bearer(owner.accessToken))
+      .expect(400);
+    expect(missing.body.code).toBe('image_required');
+
+    const wrongType = await request(app.getHttpServer())
+      .post(endpoint)
+      .set(bearer(owner.accessToken))
+      .attach('image', Buffer.from('just some text'), {
+        filename: 'notes.txt',
+        contentType: 'text/plain',
+      })
+      .expect(400);
+    expect(wrongType.body.code).toBe('unsupported_image_type');
+
+    // A client-declared JPEG that is not actually a JPEG is rejected.
+    const disguised = await request(app.getHttpServer())
+      .post(endpoint)
+      .set(bearer(owner.accessToken))
+      .attach('image', Buffer.from('not really an image'), {
+        filename: 'cover.jpg',
+        contentType: 'image/jpeg',
+      })
+      .expect(400);
+    expect(disguised.body.code).toBe('invalid_image_file');
+
+    const oversized = await request(app.getHttpServer())
+      .post(endpoint)
+      .set(bearer(owner.accessToken))
+      .attach('image', Buffer.alloc(6 * 1024 * 1024, 1), {
+        filename: 'huge.jpg',
+        contentType: 'image/jpeg',
+      })
+      .expect(413);
+    expect(oversized.body.code).toBe('image_too_large');
+
+    // The bytes are valid, but this environment has no Cloudinary credentials.
+    const unconfigured = await request(app.getHttpServer())
+      .post(endpoint)
+      .set(bearer(owner.accessToken))
+      .attach('image', SMALL_JPEG, {
+        filename: 'cover.jpg',
+        contentType: 'image/jpeg',
+      })
+      .expect(503);
+    expect(unconfigured.body.code).toBe('image_service_unconfigured');
+  }, 60000);
+
+  it('scopes restaurant, menu and profile image changes to their owner', async () => {
+    const ownerA = await setupRestaurantWithMenu();
+    const ownerB = await registerOwner(uniqueEmail('p3-owner'), 'Other Kitchen');
+    await approveUser(ownerB.user.email);
+    const customer = await registerCustomer();
+
+    const crossCover = await request(app.getHttpServer())
+      .post(`/api/v1/restaurants/${ownerA.restaurantId}/image`)
+      .set(bearer(ownerB.accessToken))
+      .attach('image', SMALL_JPEG, { filename: 'asset.jpg', contentType: 'image/jpeg' })
+      .expect(403);
+    expect(crossCover.body.code).toBe('restaurant_not_owned');
+
+    const crossLogo = await request(app.getHttpServer())
+      .post(`/api/v1/restaurants/${ownerA.restaurantId}/logo`)
+      .set(bearer(ownerB.accessToken))
+      .attach('image', SMALL_JPEG, { filename: 'asset.jpg', contentType: 'image/jpeg' })
+      .expect(403);
+    expect(crossLogo.body.code).toBe('restaurant_not_owned');
+
+    const crossItem = await request(app.getHttpServer())
+      .post(`/api/v1/menu-items/${ownerA.itemId}/image`)
+      .set(bearer(ownerB.accessToken))
+      .attach('image', SMALL_JPEG, { filename: 'asset.jpg', contentType: 'image/jpeg' })
+      .expect(403);
+    expect(crossItem.body.code).toBe('restaurant_not_owned');
+
+    // A customer cannot use the owner-only upload endpoints at all.
+    const customerAttempt = await request(app.getHttpServer())
+      .post(`/api/v1/restaurants/${ownerA.restaurantId}/image`)
+      .set(bearer(customer.accessToken))
+      .attach('image', SMALL_JPEG, { filename: 'asset.jpg', contentType: 'image/jpeg' })
+      .expect(403);
+    expect(customerAttempt.body.code).toBe('forbidden');
+
+    // The profile endpoint has no id parameter: it always targets the token
+    // holder, and it reaches real image storage only when configured.
+    const profile = await request(app.getHttpServer())
+      .post('/api/v1/me/profile-image')
+      .set(bearer(customer.accessToken))
+      .attach('image', SMALL_JPEG, { filename: 'asset.jpg', contentType: 'image/jpeg' })
+      .expect(503);
+    expect(profile.body.code).toBe('image_service_unconfigured');
+  }, 60000);
+
+  it('skips stale-GPS drivers and accepts location only from the assigned driver', async () => {
+    const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const staleDriver = await registerDriverSession();
+    const secondDriver = await registerDriverSession();
+
+    // Both drivers exist, but neither has a usable recent fix.
+    await driverModel.updateOne(
+      { _id: staleDriver.driverId },
+      { $set: { 'lastLocation.updatedAt': new Date(Date.now() - 60 * 60_000) } },
+    );
+    await driverModel.updateOne(
+      { _id: secondDriver.driverId },
+      { $set: { 'lastLocation.updatedAt': new Date(Date.now() - 60 * 60_000) } },
+    );
+
+    const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+    await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+
+    const pending = await request(app.getHttpServer())
+      .get(`/api/v1/deliveries/by-order/${order.id}`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+    expect(pending.body.data.status).toBe('PENDING_ASSIGNMENT');
+
+    const admin = await loginAsAdmin();
+    const deliveryId = pending.body.data.id as string;
+
+    const noDriver = await request(app.getHttpServer())
+      .post(`/api/v1/deliveries/${deliveryId}/auto-assign`)
+      .set(bearer(admin.accessToken))
+      .send({ force: true })
+      .expect(201);
+    expect(noDriver.body.data.assigned).toBe(false);
+    expect(noDriver.body.data.status).toBe('NO_ELIGIBLE_DRIVER');
+
+    // A fresh fix makes the same driver eligible; the route is still a road
+    // distance (labelled estimate while routing is disabled in tests).
+    await driverModel.updateOne(
+      { _id: staleDriver.driverId },
+      {
+        $set: {
+          lastLocation: {
+            lat: 40.7192,
+            lng: -73.9561,
+            updatedAt: new Date(),
+          },
+        },
+      },
+    );
+
+    const assigned = await request(app.getHttpServer())
+      .post(`/api/v1/deliveries/${deliveryId}/auto-assign`)
+      .set(bearer(admin.accessToken))
+      .send({ force: true })
+      .expect(201);
+    expect(assigned.body.data.assigned).toBe(true);
+    expect(assigned.body.data.driverId).toBe(staleDriver.driverId);
+    expect(assigned.body.data.etaMinutes).toBeGreaterThan(0);
+
+    const tracking = await request(app.getHttpServer())
+      .get(`/api/v1/orders/${order.id}/tracking`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+    expect(tracking.body.data.etaSource).toBe('straight-line');
+    expect(tracking.body.data.remainingDistanceKm).toBeGreaterThan(0);
+    expect(tracking.body.data.route.points.length).toBeGreaterThanOrEqual(2);
+    expect(tracking.body.data.driverLocation.driverId).toBe(staleDriver.driverId);
+
+    // Only the assigned driver may publish a location for this delivery.
+    const impostor = await request(app.getHttpServer())
+      .put(`/api/v1/deliveries/${deliveryId}/location`)
+      .set(bearer(secondDriver.accessToken))
+      .send({ lat: 40.72, lng: -73.95 })
+      .expect(403);
+    expect(impostor.body.code).toBe('forbidden');
+
+    const published = await request(app.getHttpServer())
+      .put(`/api/v1/deliveries/${deliveryId}/location`)
+      .set(bearer(staleDriver.accessToken))
+      .send({ lat: 40.7211, lng: -73.9542, heading: 45 })
+      .expect(200);
+    expect(published.body.data.driverLocation).toMatchObject({
+      lat: 40.7211,
+      lng: -73.9542,
+      heading: 45,
+    });
+
+    const moved = await request(app.getHttpServer())
+      .get(`/api/v1/orders/${order.id}/tracking`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+    expect(moved.body.data.driverLocation).toMatchObject({
+      lat: 40.7211,
+      lng: -73.9542,
+    });
+  }, 60000);
+
+  it('returns owner analytics calculated from the restaurant orders in MongoDB', async () => {
+    const { owner, restaurantId, itemId } = await setupRestaurantWithMenu(12.5);
+    const customer = await registerCustomer();
+
+    const completed = await placeOrder(customer.accessToken, restaurantId, itemId);
+    const cancelled = await placeOrder(customer.accessToken, restaurantId, itemId);
+    await placeOrder(customer.accessToken, restaurantId, itemId);
+
+    await orderModel.updateOne(
+      { _id: completed.id },
+      { $set: { status: 'COMPLETED', completedAt: new Date() } },
+    );
+    await orderModel.updateOne(
+      { _id: cancelled.id },
+      { $set: { status: 'CANCELLED', cancelledAt: new Date() } },
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics?range=30d')
+      .set(bearer(owner.accessToken))
+      .expect(200);
+
+    const analytics = response.body.data;
+    expect(analytics.restaurantId).toBe(restaurantId);
+    expect(analytics.range).toBe('30d');
+    expect(analytics.granularity).toBe('day');
+    expect(analytics.series).toHaveLength(30);
+    expect(analytics.weeklySales).toHaveLength(8);
+    expect(analytics.monthlySales).toHaveLength(12);
+
+    expect(analytics.summary).toMatchObject({
+      totalOrders: 3,
+      completedOrders: 1,
+      cancelledOrders: 1,
+      pendingOrders: 1,
+      activeOrders: 0,
+      revenueGrowthPercent: null,
+      previousRevenue: 0,
+    });
+    expect(analytics.summary.revenue).toBeCloseTo(completed.totals.total, 2);
+    expect(analytics.summary.averageOrderValue).toBeCloseTo(completed.totals.total, 2);
+    expect(analytics.summary.completionRatePercent).toBeCloseTo(33.3, 1);
+    expect(analytics.summary.cancellationRatePercent).toBeCloseTo(33.3, 1);
+
+    expect(analytics.orderDistribution).toEqual(
+      expect.arrayContaining([
+        { status: 'COMPLETED', count: 1 },
+        { status: 'CANCELLED', count: 1 },
+        { status: 'PENDING', count: 1 },
+      ]),
+    );
+
+    expect(analytics.popularItems).toHaveLength(1);
+    expect(analytics.popularItems[0]).toMatchObject({
+      productId: itemId,
+      name: 'Phase 2 Bowl',
+      quantitySold: 2,
+    });
+    expect(analytics.popularItems[0].revenue).toBeCloseTo(
+      completed.items[0].unitPrice * 2,
+      2,
+    );
+    expect(analytics.costModel.source).toBe('MOCK_ASSUMPTION');
+  }, 60000);
+
+  it('returns zeroed analytics for a restaurant with no orders', async () => {
+    const owner = await registerOwner(uniqueEmail('empty-owner'), 'Empty Kitchen');
+    await approveUser(owner.user.email);
+    const restaurantId = owner.user.restaurantId as string;
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics?range=7d')
+      .set(bearer(owner.accessToken))
+      .expect(200);
+
+    expect(response.body.data.restaurantId).toBe(restaurantId);
+    expect(response.body.data.summary).toMatchObject({
+      revenue: 0,
+      totalOrders: 0,
+      completedOrders: 0,
+      cancelledOrders: 0,
+      averageOrderValue: 0,
+      completionRatePercent: 0,
+      cancellationRatePercent: 0,
+      revenueGrowthPercent: null,
+    });
+    expect(response.body.data.popularItems).toEqual([]);
+    expect(response.body.data.orderDistribution).toEqual([]);
+    expect(
+      response.body.data.series.every(
+        (point: { revenue: number; totalOrders: number }) =>
+          point.revenue === 0 && point.totalOrders === 0,
+      ),
+    ).toBe(true);
+  }, 60000);
+
+  it('enforces analytics tenant isolation and the existing admin policy', async () => {
+    const ownerA = await setupRestaurantWithMenu();
+    const ownerB = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const driver = await registerDriverSession();
+    const admin = await loginAsAdmin();
+
+    const mine = await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics')
+      .set(bearer(ownerA.owner.accessToken))
+      .expect(200);
+    expect(mine.body.data.restaurantId).toBe(ownerA.restaurantId);
+
+    const crossTenant = await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${ownerB.restaurantId}/analytics`)
+      .set(bearer(ownerA.owner.accessToken))
+      .expect(403);
+    expect(crossTenant.body.code).toBe('restaurant_not_owned');
+
+    const adminRead = await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${ownerA.restaurantId}/analytics`)
+      .set(bearer(admin.accessToken))
+      .expect(200);
+    expect(adminRead.body.data.restaurantId).toBe(ownerA.restaurantId);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${ownerA.restaurantId}/analytics`)
+      .set(bearer(customer.accessToken))
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${ownerA.restaurantId}/analytics`)
+      .set(bearer(driver.accessToken))
+      .expect(403);
+    await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics')
+      .set(bearer(customer.accessToken))
+      .expect(403);
+    await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics')
+      .set(bearer(driver.accessToken))
+      .expect(403);
+  }, 60000);
+
+  it('rejects unbounded or unknown analytics ranges', async () => {
+    const { owner } = await setupRestaurantWithMenu();
+
+    await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics?range=365d')
+      .set(bearer(owner.accessToken))
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine/analytics?range=2020-01-01..2026-01-01')
+      .set(bearer(owner.accessToken))
+      .expect(400);
+  }, 60000);
+
+  it('lets the owner update and persist the restaurant description', async () => {
+    const { owner, restaurantId } = await setupRestaurantWithMenu();
+    const description =
+      'Seasonal Brooklyn cooking with a wood-fired oven and a short, changing menu.';
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${restaurantId}`)
+      .set(bearer(owner.accessToken))
+      .send({ description })
+      .expect(200);
+    expect(updated.body.data.description).toBe(description);
+
+    const publicRead = await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${restaurantId}`)
+      .expect(200);
+    expect(publicRead.body.data.description).toBe(description);
+
+    // An unrelated update must not wipe the saved description.
+    const unrelated = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${restaurantId}`)
+      .set(bearer(owner.accessToken))
+      .send({ isOpen: false })
+      .expect(200);
+    expect(unrelated.body.data.description).toBe(description);
+
+    const persisted = await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${restaurantId}`)
+      .expect(200);
+    expect(persisted.body.data.description).toBe(description);
+  }, 60000);
+
+  it('scopes description updates to the owning restaurant and allows admins', async () => {
+    const ownerA = await setupRestaurantWithMenu();
+    const ownerB = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const driver = await registerDriverSession();
+    const admin = await loginAsAdmin();
+
+    const crossTenant = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${ownerA.restaurantId}`)
+      .set(bearer(ownerB.owner.accessToken))
+      .send({ description: 'Not my restaurant.' })
+      .expect(403);
+    expect(crossTenant.body.code).toBe('restaurant_not_owned');
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${ownerA.restaurantId}`)
+      .set(bearer(customer.accessToken))
+      .send({ description: 'Customer edit.' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${ownerA.restaurantId}`)
+      .set(bearer(driver.accessToken))
+      .send({ description: 'Driver edit.' })
+      .expect(403);
+
+    const adminUpdate = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${ownerA.restaurantId}`)
+      .set(bearer(admin.accessToken))
+      .send({ description: 'Admin-reviewed description.' })
+      .expect(200);
+    expect(adminUpdate.body.data.description).toBe('Admin-reviewed description.');
+  }, 60000);
+
+  it('rejects invalid and excessively long restaurant descriptions', async () => {
+    const { owner, restaurantId } = await setupRestaurantWithMenu();
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${restaurantId}`)
+      .set(bearer(owner.accessToken))
+      .send({ description: 'x'.repeat(1001) })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/restaurants/${restaurantId}`)
+      .set(bearer(owner.accessToken))
+      .send({ description: 42 })
+      .expect(400);
+  }, 60000);
 });

@@ -13,6 +13,12 @@ export const VEHICLE_SPEED_KPH: Record<VehicleType, number> = {
 
 export const PICKUP_BUFFER_MINUTES = 4;
 
+/** Used when an order has no explicit preparation record yet. */
+export const DEFAULT_PREP_MINUTES = 15;
+
+/** Doorstep handover allowance after the driver reaches the customer. */
+export const HANDOVER_BUFFER_MINUTES = 3;
+
 const EARTH_RADIUS_KM = 6371;
 
 export interface CoordinatesInput {

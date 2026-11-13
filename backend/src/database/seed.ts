@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AppModule } from '../app.module';
+import { setServers } from 'node:dns';
 import {
   AccountStatus,
   AddressLabel,
@@ -246,6 +247,73 @@ const RESTAURANTS: SeedRestaurant[] = [
     badges: ['Offer'],
     featured: false,
   },
+  {
+    name: 'Casa Veracruz',
+    tagline: 'Coastal Mexican, charcoal and citrus.',
+    cuisines: ['Mexican', 'Latin American'],
+    categorySlugs: ['healthy', 'sandwiches'],
+    imageKey: 'restaurant-casa-veracruz',
+    deliveryFee: 1.49,
+    minOrder: 12,
+    priceLevel: 2,
+    estimatedDeliveryMinutes: [20, 30],
+    isOpen: true,
+    description:
+      'A coastal kitchen folding fresh tortillas by hand, grilling over charcoal and squeezing citrus over everything.',
+    offerLabel: 'Taco Tuesday: 15% off',
+    address: {
+      line1: '171 Essex Street',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10002',
+      country: 'USA',
+      latitude: 40.7187,
+      longitude: -73.9882,
+    },
+    openingHours: [
+      { day: 'Mon - Thu', open: '11:30', close: '22:00' },
+      { day: 'Fri - Sat', open: '11:30', close: '23:30' },
+      { day: 'Sunday', open: '12:00', close: '21:00' },
+    ],
+    rating: 4.7,
+    reviewCount: 534,
+    distanceKm: 1.4,
+    badges: ['Offer'],
+    featured: true,
+  },
+  {
+    name: 'Smoke & Honey',
+    tagline: 'Low-and-slow barbecue with a honey finish.',
+    cuisines: ['American', 'Barbecue'],
+    categorySlugs: ['burgers', 'fried-chicken'],
+    imageKey: 'restaurant-smoke-honey',
+    deliveryFee: 2.99,
+    minOrder: 15,
+    priceLevel: 3,
+    estimatedDeliveryMinutes: [30, 45],
+    isOpen: true,
+    description:
+      'A backyard pit room smoking brisket overnight, glazing ribs with wildflower honey and serving pie by the slice.',
+    address: {
+      line1: '410 Tompkins Avenue',
+      city: 'Brooklyn',
+      state: 'NY',
+      postalCode: '11216',
+      country: 'USA',
+      latitude: 40.6879,
+      longitude: -73.9442,
+    },
+    openingHours: [
+      { day: 'Tue - Thu', open: '12:00', close: '22:00' },
+      { day: 'Fri - Sat', open: '12:00', close: '23:30' },
+      { day: 'Sunday', open: '12:00', close: '20:30' },
+    ],
+    rating: 4.8,
+    reviewCount: 689,
+    distanceKm: 2.1,
+    badges: ['Top rated'],
+    featured: true,
+  },
 ];
 
 const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
@@ -298,6 +366,17 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       isVegetarian: true,
     },
     {
+      category: 'Starters',
+      name: 'Smoked Aubergine Dip',
+      description: 'Charred aubergine, tahini, lemon and warm sesame flatbread.',
+      price: 11,
+      imageKey: 'dish-green-goddess',
+      calories: 320,
+      rating: 4.6,
+      reviewCount: 63,
+      isVegetarian: true,
+    },
+    {
       category: 'Mains',
       name: 'Saffron Roast Chicken',
       description: 'Half chicken roasted with saffron butter, served with charred lemon.',
@@ -306,6 +385,39 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       calories: 810,
       rating: 4.8,
       reviewCount: 137,
+    },
+    {
+      category: 'Sides',
+      name: 'Saffron Rice',
+      description: 'Basmati rice steamed with saffron, toasted almonds and herbs.',
+      price: 6,
+      imageKey: 'dish-saffron-bowl',
+      calories: 310,
+      rating: 4.5,
+      reviewCount: 54,
+      isVegetarian: true,
+    },
+    {
+      category: 'Sides',
+      name: 'Warm Sesame Flatbread',
+      description: 'Wood-fired flatbread brushed with sesame butter and sea salt.',
+      price: 5,
+      imageKey: 'dish-truffle-pizza',
+      calories: 290,
+      rating: 4.7,
+      reviewCount: 71,
+      isVegetarian: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Dark Chocolate Torte',
+      description: 'Bittersweet chocolate torte with orange cream and cocoa nibs.',
+      price: 9,
+      imageKey: 'dish-chocolate-torte',
+      calories: 470,
+      rating: 4.8,
+      reviewCount: 102,
+      isVegetarian: true,
     },
   ],
   'Nonna Lucia': [
@@ -357,6 +469,28 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       isVegetarian: true,
     },
     {
+      category: 'Starters',
+      name: 'Garlic Focaccia',
+      description: 'Warm focaccia with roasted garlic, rosemary and olive oil.',
+      price: 8,
+      imageKey: 'dish-truffle-pizza',
+      calories: 410,
+      rating: 4.6,
+      reviewCount: 77,
+      isVegetarian: true,
+    },
+    {
+      category: 'Mains',
+      name: 'Rigatoni alla Vodka',
+      description: 'Rigatoni in a creamy tomato vodka sauce with parmesan.',
+      price: 20,
+      imageKey: 'dish-pesto-rigatoni',
+      calories: 790,
+      rating: 4.7,
+      reviewCount: 143,
+      isVegetarian: true,
+    },
+    {
       category: 'Desserts',
       name: 'Chocolate Torte',
       description: 'Dark chocolate torte with espresso cream and cocoa nibs.',
@@ -365,6 +499,28 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       calories: 480,
       rating: 4.8,
       reviewCount: 164,
+      isVegetarian: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Cannoli Trio',
+      description: 'Three crisp cannoli filled with ricotta, pistachio and orange zest.',
+      price: 7,
+      imageKey: 'dish-cookies',
+      calories: 380,
+      rating: 4.7,
+      reviewCount: 95,
+      isVegetarian: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Tiramisu al Caffè',
+      description: 'Espresso-soaked savoiardi layered with mascarpone and cocoa.',
+      price: 8,
+      imageKey: 'dish-chocolate-torte',
+      calories: 460,
+      rating: 4.8,
+      reviewCount: 121,
       isVegetarian: true,
     },
   ],
@@ -415,8 +571,63 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       reviewCount: 74,
       isVegetarian: true,
     },
+    {
+      category: 'Starters',
+      name: 'Edamame with Sea Salt',
+      description: 'Steamed edamame pods finished with flaky sea salt.',
+      price: 6,
+      imageKey: 'dish-green-goddess',
+      calories: 190,
+      rating: 4.5,
+      reviewCount: 88,
+      isVegetarian: true,
+    },
+    {
+      category: 'Sides',
+      name: 'Sesame Rice',
+      description: 'Short-grain rice with toasted sesame and pickled ginger.',
+      price: 5,
+      imageKey: 'dish-saffron-bowl',
+      calories: 260,
+      rating: 4.4,
+      reviewCount: 45,
+      isVegetarian: true,
+    },
+    {
+      category: 'Sides',
+      name: 'Pickled Cucumber',
+      description: 'Crunchy cucumber with rice vinegar, chilli and sesame.',
+      price: 5,
+      imageKey: 'dish-green-goddess',
+      calories: 90,
+      rating: 4.3,
+      reviewCount: 39,
+      isVegetarian: true,
+      isSpicy: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Matcha Cookie Box',
+      description: 'Four soft matcha cookies with white chocolate and sea salt.',
+      price: 7,
+      imageKey: 'dish-cookies',
+      calories: 360,
+      rating: 4.6,
+      reviewCount: 57,
+      isVegetarian: true,
+    },
   ],
   'The Patty Club': [
+    {
+      category: 'Starters',
+      name: 'Loaded Brisket Fries',
+      description: 'Crispy fries piled with smoked brisket, cheese sauce and pickles.',
+      price: 10,
+      imageKey: 'dish-brisket',
+      calories: 720,
+      rating: 4.7,
+      reviewCount: 112,
+    },
     {
       category: 'Mains',
       name: 'Smash Burger',
@@ -475,6 +686,29 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       reviewCount: 126,
     },
     {
+      category: 'Sides',
+      name: 'House Slaw',
+      description: 'Crunchy cabbage, carrot and apple in a tangy buttermilk dressing.',
+      price: 5,
+      imageKey: 'dish-green-goddess',
+      calories: 180,
+      rating: 4.4,
+      reviewCount: 48,
+      isVegetarian: true,
+    },
+    {
+      category: 'Sides',
+      name: 'Pickle Plate',
+      description: 'House-pickled cucumbers, onions and jalapenos.',
+      price: 4,
+      imageKey: 'dish-green-goddess',
+      calories: 70,
+      rating: 4.5,
+      reviewCount: 36,
+      isVegetarian: true,
+      isSpicy: true,
+    },
+    {
       category: 'Desserts',
       name: 'Chocolate Chip Cookies',
       description: 'Four warm cookies with sea salt and dark chocolate.',
@@ -483,6 +717,231 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
       calories: 420,
       rating: 4.9,
       reviewCount: 211,
+      isVegetarian: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Chocolate Torte',
+      description: 'A dense slice of dark chocolate torte with vanilla cream.',
+      price: 8,
+      imageKey: 'dish-chocolate-torte',
+      calories: 480,
+      rating: 4.8,
+      reviewCount: 134,
+      isVegetarian: true,
+    },
+  ],
+  'Casa Veracruz': [
+    {
+      category: 'Starters',
+      name: 'Guacamole & Warm Chips',
+      description: 'Hand-mashed avocado, lime, coriander and warm blue corn chips.',
+      price: 9,
+      imageKey: 'dish-green-goddess',
+      calories: 340,
+      rating: 4.7,
+      reviewCount: 143,
+      isVegetarian: true,
+    },
+    {
+      category: 'Starters',
+      name: 'Charred Corn Elote',
+      description: 'Grilled corn, chipotle crema, cotija and lime.',
+      price: 7,
+      imageKey: 'dish-green-goddess',
+      calories: 260,
+      rating: 4.6,
+      reviewCount: 88,
+      isVegetarian: true,
+      isSpicy: true,
+    },
+    {
+      category: 'Mains',
+      name: 'Birria Tacos',
+      description: 'Slow-braised beef, melted cheese and consommé for dipping.',
+      price: 16,
+      imageKey: 'dish-brisket',
+      calories: 720,
+      rating: 4.9,
+      reviewCount: 264,
+      isPopular: true,
+      optionGroups: [
+        {
+          name: 'Salsa',
+          required: false,
+          minSelections: 0,
+          maxSelections: 2,
+          options: [
+            { name: 'Salsa verde', priceDelta: 0, isDefault: true },
+            { name: 'Habanero', priceDelta: 0.5 },
+            { name: 'Smoky chipotle', priceDelta: 0.5 },
+          ],
+        },
+      ],
+    },
+    {
+      category: 'Mains',
+      name: 'Grilled Fish Tacos',
+      description: 'Charred white fish, cabbage slaw, pickled onion and lime crema.',
+      price: 15,
+      imageKey: 'dish-chipotle-salmon',
+      calories: 540,
+      rating: 4.7,
+      reviewCount: 119,
+      isPopular: true,
+    },
+    {
+      category: 'Mains',
+      name: 'Chicken Tinga Bowl',
+      description: 'Chipotle chicken, rice, black beans, avocado and crisp tortillas.',
+      price: 14,
+      imageKey: 'dish-butter-chicken',
+      calories: 680,
+      rating: 4.6,
+      reviewCount: 97,
+    },
+    {
+      category: 'Sides',
+      name: 'Cilantro Rice',
+      description: 'Steamed rice tossed with lime, coriander and toasted pepitas.',
+      price: 4,
+      imageKey: 'dish-saffron-bowl',
+      calories: 240,
+      rating: 4.4,
+      reviewCount: 42,
+      isVegetarian: true,
+    },
+    {
+      category: 'Sides',
+      name: 'Black Beans',
+      description: 'Slow-simmered black beans with cumin and orange peel.',
+      price: 4,
+      imageKey: 'dish-saffron-bowl',
+      calories: 210,
+      rating: 4.5,
+      reviewCount: 38,
+      isVegetarian: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Churros con Chocolate',
+      description: 'Cinnamon-sugar churros with thick dark chocolate sauce.',
+      price: 7,
+      imageKey: 'dish-cookies',
+      calories: 430,
+      rating: 4.8,
+      reviewCount: 156,
+      isVegetarian: true,
+    },
+    {
+      category: 'Drinks',
+      name: 'Hibiscus Agua Fresca',
+      description: 'Chilled hibiscus tea with lime and a touch of cane sugar.',
+      price: 4,
+      imageKey: 'dish-green-goddess',
+      calories: 90,
+      rating: 4.6,
+      reviewCount: 61,
+      isVegetarian: true,
+    },
+  ],
+  'Smoke & Honey': [
+    {
+      category: 'Starters',
+      name: 'Pit-Smoked Wings',
+      description: 'Oak-smoked wings glazed with honey, chilli and cider vinegar.',
+      price: 11,
+      imageKey: 'dish-chicken-sandwich',
+      calories: 620,
+      rating: 4.8,
+      reviewCount: 174,
+      isPopular: true,
+      isSpicy: true,
+    },
+    {
+      category: 'Starters',
+      name: 'Brisket Loaded Fries',
+      description: 'Crispy fries, chopped brisket, cheese sauce and pickled jalapeno.',
+      price: 12,
+      imageKey: 'dish-brisket',
+      calories: 780,
+      rating: 4.7,
+      reviewCount: 132,
+    },
+    {
+      category: 'Mains',
+      name: 'Honey-Glazed Half Chicken',
+      description: 'Slow-smoked half chicken finished over the fire with honey glaze.',
+      price: 19,
+      imageKey: 'dish-butter-chicken',
+      calories: 860,
+      rating: 4.9,
+      reviewCount: 208,
+      isPopular: true,
+    },
+    {
+      category: 'Mains',
+      name: 'Smoked Brisket Plate',
+      description: 'Twelve-hour brisket, pickles, onions and a slice of white bread.',
+      price: 24,
+      imageKey: 'dish-brisket',
+      calories: 980,
+      rating: 4.9,
+      reviewCount: 246,
+      isPopular: true,
+    },
+    {
+      category: 'Mains',
+      name: 'Pulled Pork Sandwich',
+      description: 'Smoked pork shoulder, tangy slaw and Alabama white sauce.',
+      price: 14,
+      imageKey: 'dish-smash-burger',
+      calories: 740,
+      rating: 4.6,
+      reviewCount: 118,
+    },
+    {
+      category: 'Sides',
+      name: 'Charred Broccolini',
+      description: 'Fire-charred broccolini with lemon, garlic and toasted almonds.',
+      price: 6,
+      imageKey: 'dish-green-goddess',
+      calories: 180,
+      rating: 4.5,
+      reviewCount: 47,
+      isVegetarian: true,
+    },
+    {
+      category: 'Sides',
+      name: 'Skillet Cornbread',
+      description: 'Buttermilk cornbread baked in a cast-iron skillet with honey butter.',
+      price: 6,
+      imageKey: 'dish-cookies',
+      calories: 390,
+      rating: 4.7,
+      reviewCount: 83,
+      isVegetarian: true,
+    },
+    {
+      category: 'Desserts',
+      name: 'Pecan Pie Slice',
+      description: 'Brown-butter pecan pie with a flaky crust and vanilla cream.',
+      price: 8,
+      imageKey: 'dish-chocolate-torte',
+      calories: 520,
+      rating: 4.8,
+      reviewCount: 96,
+      isVegetarian: true,
+    },
+    {
+      category: 'Drinks',
+      name: 'Sweet Tea Lemonade',
+      description: 'Brewed black tea, fresh lemon and a little brown sugar.',
+      price: 4,
+      imageKey: 'dish-green-goddess',
+      calories: 110,
+      rating: 4.5,
+      reviewCount: 52,
       isVegetarian: true,
     },
   ],
@@ -496,6 +955,11 @@ function requiredEnv(name: string): string {
     );
   }
   return value;
+}
+
+function optionalEnv(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  return value || fallback;
 }
 
 async function ensureCategories(model: Model<RestaurantCategoryDocument>): Promise<void> {
@@ -532,34 +996,96 @@ async function ensureAccount(
   return created;
 }
 
-async function ensureCustomerExtras(user: UserDocument): Promise<void> {
+async function ensureCustomerExtras(
+  user: UserDocument,
+  extras: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    instructions?: string;
+    coordinates?: { lat: number; lng: number };
+    cardLast4?: string;
+  } = {},
+): Promise<void> {
   if ((user.addresses ?? []).length === 0) {
     user.addresses.push({
       label: AddressLabel.HOME,
-      line1: '214 Bedford Avenue',
-      line2: 'Apt 3B',
-      city: 'Brooklyn',
-      state: 'NY',
-      postalCode: '11211',
-      country: 'USA',
-      instructions: 'Buzzer 3B',
+      line1: extras.line1 ?? '214 Bedford Avenue',
+      line2: extras.line2 ?? 'Apt 3B',
+      city: extras.city ?? 'Brooklyn',
+      state: extras.state ?? 'NY',
+      postalCode: extras.postalCode ?? '11211',
+      country: extras.country ?? 'USA',
+      instructions: extras.instructions ?? 'Buzzer 3B',
       isDefault: true,
-      coordinates: { lat: 40.7178, lng: -73.9573 },
+      coordinates: extras.coordinates ?? { lat: 40.7178, lng: -73.9573 },
     } as Address);
   }
 
   if ((user.paymentMethods ?? []).length === 0) {
+    const last4 = extras.cardLast4 ?? '4242';
     user.paymentMethods.push({
       type: PaymentType.CARD,
-      label: 'Visa ending 4242',
+      label: `Visa ending ${last4}`,
       brand: PaymentBrand.VISA,
-      last4: '4242',
+      last4,
       expiry: '12/29',
       isDefault: true,
     } as PaymentMethod);
   }
 
   await user.save();
+}
+
+async function ensureDriverProfile(
+  driverModel: Model<DriverProfileDocument>,
+  usersService: UsersService,
+  user: UserDocument,
+  profile: {
+    status: AccountStatus;
+    availability: DriverAvailability;
+    vehicle: VehicleType;
+    serviceArea: string;
+    rating: number;
+    completedDeliveries: number;
+    totalEarningsCents: number;
+    approvedAt?: Date;
+  },
+): Promise<void> {
+  let document = await driverModel.findOne({ userId: user._id }).exec();
+
+  if (!document) {
+    await usersService.createDriverProfile(user._id.toString(), {
+      phone: user.phone,
+      serviceArea: profile.serviceArea,
+      vehicle: profile.vehicle,
+    });
+    document = await driverModel.findOne({ userId: user._id }).exec();
+    Logger.log(`Created driver profile for ${user.email}`, 'Seed');
+  }
+
+  if (!document) {
+    throw new Error(`Driver profile for ${user.email} could not be created.`);
+  }
+
+  await driverModel.updateOne(
+    { _id: document._id },
+    {
+      $set: {
+        serviceArea: profile.serviceArea,
+        phone: user.phone,
+        accountStatus: profile.status,
+        availability: profile.availability,
+        rating: profile.rating,
+        completedDeliveries: profile.completedDeliveries,
+        totalEarningsCents: profile.totalEarningsCents,
+        approvedAt: profile.approvedAt ?? new Date('2024-01-01T00:00:00.000Z'),
+      },
+    },
+  );
 }
 
 async function ensureRestaurant(
@@ -627,51 +1153,56 @@ async function seedMenu(
   restaurant: RestaurantDocument,
   items: SeedItem[],
 ): Promise<void> {
-  const existing = await menuItemModel.countDocuments({ restaurantId: restaurant._id });
-  if (existing > 0) {
-    Logger.log(`Menu already exists: ${restaurant.name}`, 'Seed');
-    return;
-  }
-
   const categories = await menuCategoryModel.find({ restaurantId: restaurant._id });
   const byName = new Map(categories.map((category) => [category.name, category._id]));
 
-  const documents = items.map((item) => {
+  const operations = items.map((item) => {
     const categoryId = byName.get(item.category);
     if (!categoryId) {
       throw new Error(`Menu category "${item.category}" is missing for ${restaurant.name}.`);
     }
 
     return {
-      restaurantId: restaurant._id,
-      categoryId,
-      name: item.name,
-      description: item.description,
-      priceCents: Math.round(item.price * 100),
-      imageKey: item.imageKey,
-      calories: item.calories,
-      rating: item.rating,
-      reviewCount: item.reviewCount,
-      isPopular: item.isPopular ?? false,
-      isVegetarian: item.isVegetarian ?? false,
-      isSpicy: item.isSpicy ?? false,
-      available: item.available ?? true,
-      optionGroups: (item.optionGroups ?? []).map((group) => ({
-        name: group.name,
-        required: group.required,
-        minSelections: group.minSelections,
-        maxSelections: group.maxSelections,
-        options: group.options.map((option) => ({
-          name: option.name,
-          priceDeltaCents: Math.round(option.priceDelta * 100),
-          isDefault: option.isDefault ?? false,
-        })),
-      })),
+      updateOne: {
+        filter: { restaurantId: restaurant._id, name: item.name },
+        update: {
+          $setOnInsert: {
+            restaurantId: restaurant._id,
+            categoryId,
+            name: item.name,
+            description: item.description,
+            priceCents: Math.round(item.price * 100),
+            imageKey: item.imageKey,
+            calories: item.calories,
+            rating: item.rating,
+            reviewCount: item.reviewCount,
+            isPopular: item.isPopular ?? false,
+            isVegetarian: item.isVegetarian ?? false,
+            isSpicy: item.isSpicy ?? false,
+            available: item.available ?? true,
+            optionGroups: (item.optionGroups ?? []).map((group) => ({
+              name: group.name,
+              required: group.required,
+              minSelections: group.minSelections,
+              maxSelections: group.maxSelections,
+              options: group.options.map((option) => ({
+                name: option.name,
+                priceDeltaCents: Math.round(option.priceDelta * 100),
+                isDefault: option.isDefault ?? false,
+              })),
+            })),
+          },
+        },
+        upsert: true,
+      },
     };
   });
 
-  await menuItemModel.insertMany(documents);
-  Logger.log(`Created ${documents.length} menu items for ${restaurant.name}`, 'Seed');
+  const result = await menuItemModel.bulkWrite(operations);
+  Logger.log(
+    `Ensured ${items.length} menu items for ${restaurant.name} (${result.upsertedCount} new)`,
+    'Seed',
+  );
 }
 
 const SEED_PROMOTIONS = [
@@ -746,10 +1277,16 @@ async function ensurePromotions(
 }
 
 async function main(): Promise<void> {
+  setServers(['1.1.1.1', '8.8.8.8']);
   const customerPassword = requiredEnv('SEED_CUSTOMER_PASSWORD');
   const ownerPassword = requiredEnv('SEED_OWNER_PASSWORD');
   const driverPassword = requiredEnv('SEED_DRIVER_PASSWORD');
   const adminPassword = requiredEnv('SEED_ADMIN_PASSWORD');
+  // Admins are provisioned only through the seed script, never through public
+  // registration. Set SEED_ADMIN_EMAIL/SEED_ADMIN_NAME in the environment to
+  // bootstrap the real operations account; the defaults keep local dev working.
+  const adminEmail = optionalEnv('SEED_ADMIN_EMAIL', 'admin@example.com').toLowerCase();
+  const adminName = optionalEnv('SEED_ADMIN_NAME', 'Priya Raman');
 
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['error', 'warn', 'log'],
@@ -791,6 +1328,56 @@ async function main(): Promise<void> {
     });
     await ensureCustomerExtras(customer);
 
+    const noah = await ensureAccount(usersService, {
+      email: 'noah@example.com',
+      password: customerPassword,
+      fullName: 'Noah Kim',
+      role: UserRole.CUSTOMER,
+      status: AccountStatus.APPROVED,
+      phone: '+1 (917) 555-0172',
+      preferences: {
+        dietary: [],
+        emailReceipts: true,
+        orderUpdates: true,
+        marketing: false,
+      },
+    });
+    await ensureCustomerExtras(noah, {
+      line1: '76 Grand Street',
+      line2: 'Floor 2',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10013',
+      instructions: 'Leave with the front desk.',
+      coordinates: { lat: 40.7189, lng: -74.0021 },
+      cardLast4: '1881',
+    });
+
+    const ava = await ensureAccount(usersService, {
+      email: 'ava@example.com',
+      password: customerPassword,
+      fullName: 'Ava Patel',
+      role: UserRole.CUSTOMER,
+      status: AccountStatus.APPROVED,
+      phone: '+1 (646) 555-0129',
+      preferences: {
+        dietary: ['vegan'],
+        emailReceipts: true,
+        orderUpdates: true,
+        marketing: true,
+      },
+    });
+    await ensureCustomerExtras(ava, {
+      line1: '320 Atlantic Avenue',
+      line2: 'Apt 5C',
+      city: 'Brooklyn',
+      state: 'NY',
+      postalCode: '11201',
+      instructions: 'Call on arrival. No contact delivery preferred.',
+      coordinates: { lat: 40.6912, lng: -73.9865 },
+      cardLast4: '3320',
+    });
+
     const owner = await ensureAccount(usersService, {
       email: 'owner@example.com',
       password: ownerPassword,
@@ -798,6 +1385,24 @@ async function main(): Promise<void> {
       role: UserRole.RESTAURANT_OWNER,
       status: AccountStatus.APPROVED,
       phone: '+1 (718) 555-0188',
+    });
+
+    const ownerTwo = await ensureAccount(usersService, {
+      email: 'owner2@example.com',
+      password: ownerPassword,
+      fullName: 'Priya Desai',
+      role: UserRole.RESTAURANT_OWNER,
+      status: AccountStatus.APPROVED,
+      phone: '+1 (646) 555-0177',
+    });
+
+    await ensureAccount(usersService, {
+      email: 'owner3@example.com',
+      password: ownerPassword,
+      fullName: 'Liam Chen',
+      role: UserRole.RESTAURANT_OWNER,
+      status: AccountStatus.PENDING_APPROVAL,
+      phone: '+1 (917) 555-0110',
     });
 
     const driver = await ensureAccount(usersService, {
@@ -809,57 +1414,94 @@ async function main(): Promise<void> {
       phone: '+1 (917) 555-0119',
     });
 
-    await ensureAccount(usersService, {
-      email: 'admin@example.com',
+    const driverTwo = await ensureAccount(usersService, {
+      email: 'driver2@example.com',
+      password: driverPassword,
+      fullName: 'Aisha Bell',
+      role: UserRole.DRIVER,
+      status: AccountStatus.APPROVED,
+      phone: '+1 (347) 555-0183',
+    });
+
+    const driverThree = await ensureAccount(usersService, {
+      email: 'driver3@example.com',
+      password: driverPassword,
+      fullName: 'Marco Silva',
+      role: UserRole.DRIVER,
+      status: AccountStatus.PENDING_APPROVAL,
+      phone: '+1 (929) 555-0148',
+    });
+
+    const adminAccount = await ensureAccount(usersService, {
+      email: adminEmail,
       password: adminPassword,
-      fullName: 'Priya Raman',
+      fullName: adminName,
       role: UserRole.ADMIN,
       status: AccountStatus.APPROVED,
       phone: '+1 (212) 555-0100',
     });
 
-    const admin = await usersService.findByEmail('admin@example.com');
-
-    if (!driver.driverId) {
-      const profile = await usersService.createDriverProfile(driver._id.toString(), {
-        phone: driver.phone,
-        serviceArea: 'All boroughs',
-        vehicle: VehicleType.SCOOTER,
-      });
-      await driverModel.updateOne(
-        { _id: profile._id },
-        {
-          $set: {
-            accountStatus: AccountStatus.APPROVED,
-            availability: DriverAvailability.AVAILABLE,
-          },
-        },
-      );
-      Logger.log('Created driver application record', 'Seed');
+    // Older databases may have bootstrapped the operations email as a customer
+    // through public registration. Reconcile the seeded administrator so the
+    // documented admin login always lands on the operations dashboard.
+    if (
+      adminAccount.role !== UserRole.ADMIN ||
+      adminAccount.accountStatus !== AccountStatus.APPROVED
+    ) {
+      adminAccount.role = UserRole.ADMIN;
+      adminAccount.accountStatus = AccountStatus.APPROVED;
+      await adminAccount.save();
+      Logger.log(`Reconciled administrator account: ${adminEmail}`, 'Seed');
     }
 
-    // Seeded drivers represent a working platform fleet: approved, available
-    // and with a few completed deliveries so assignment fairness has data.
-    await driverModel.updateOne(
-      { userId: driver._id },
-      {
-        $set: {
-          serviceArea: 'All boroughs',
-          phone: driver.phone,
-          accountStatus: AccountStatus.APPROVED,
-          rating: 4.92,
-          completedDeliveries: 128,
-          totalEarningsCents: 96450,
-          approvedAt: new Date('2024-01-01T00:00:00.000Z'),
-        },
-      },
-    );
+    const admin = await usersService.findByEmail(adminEmail);
+
+    await ensureDriverProfile(driverModel, usersService, driver, {
+      status: AccountStatus.APPROVED,
+      availability: DriverAvailability.AVAILABLE,
+      vehicle: VehicleType.SCOOTER,
+      serviceArea: 'All boroughs',
+      rating: 4.92,
+      completedDeliveries: 128,
+      totalEarningsCents: 96450,
+    });
+
+    await ensureDriverProfile(driverModel, usersService, driverTwo, {
+      status: AccountStatus.APPROVED,
+      availability: DriverAvailability.AVAILABLE,
+      vehicle: VehicleType.BIKE,
+      serviceArea: 'Brooklyn and Lower Manhattan',
+      rating: 4.87,
+      completedDeliveries: 76,
+      totalEarningsCents: 58300,
+    });
+
+    await ensureDriverProfile(driverModel, usersService, driverThree, {
+      status: AccountStatus.PENDING_APPROVAL,
+      availability: DriverAvailability.OFFLINE,
+      vehicle: VehicleType.CAR,
+      serviceArea: 'Queens and Brooklyn',
+      rating: 5,
+      completedDeliveries: 0,
+      totalEarningsCents: 0,
+      approvedAt: new Date('2024-01-01T00:00:00.000Z'),
+    });
 
     const ownerId = owner._id.toString();
+    const ownerTwoId = ownerTwo._id.toString();
     const restaurants: RestaurantDocument[] = [];
-    for (const seed of RESTAURANTS) {
+
+    for (const [index, seed] of RESTAURANTS.entries()) {
+      // The first four kitchens belong to the original owner; the newest two
+      // belong to a second approved owner so ownership scoping has real data.
+      const restaurantOwnerId = index < 4 ? ownerId : ownerTwoId;
       restaurants.push(
-        await ensureRestaurant(restaurantsService, restaurantModel, ownerId, seed),
+        await ensureRestaurant(
+          restaurantsService,
+          restaurantModel,
+          restaurantOwnerId,
+          seed,
+        ),
       );
     }
 
@@ -875,12 +1517,15 @@ async function main(): Promise<void> {
     if (restaurants[0]) {
       await usersService.attachRestaurant(ownerId, restaurants[0]._id.toString());
     }
+    if (restaurants[4]) {
+      await usersService.attachRestaurant(ownerTwoId, restaurants[4]._id.toString());
+    }
 
     await ensurePromotions(promotionModel, admin?._id.toString());
 
     Logger.log('Seed complete.', 'Seed');
     Logger.log(
-      'Accounts: maya@example.com, owner@example.com, driver@example.com, admin@example.com',
+      'Accounts: maya/noah/ava@example.com, owner/owner2/owner3@example.com, driver/driver2/driver3@example.com, admin.',
       'Seed',
     );
     Logger.log('Passwords are the values supplied in SEED_*_PASSWORD.', 'Seed');

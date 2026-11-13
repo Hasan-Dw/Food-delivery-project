@@ -11,8 +11,9 @@ import {
   UserRole,
   VehicleType,
 } from '../common/enums/user.enum';
-import type { AddressInputDto } from './dto/address.dto';
-import type { PreferencesDto, UpdatePreferencesDto, UpdateProfileDto } from './dto/preferences.dto';
+import { UploadsService } from '../uploads/uploads.service';
+import type { UploadedImageFile } from '../uploads/image-file.util';
+import type { AddressInputDto } from './dto/address.dto';import type { PreferencesDto, UpdatePreferencesDto, UpdateProfileDto } from './dto/preferences.dto';
 import type { AddressResponse, PaymentMethodResponse, UserResponse } from './interfaces/user-response.interface';
 import { DriverProfile, type DriverProfileDocument } from './schemas/driver-profile.schema';
 import { User, type Address, type UserDocument } from './schemas/user.schema';
@@ -57,6 +58,7 @@ export class UsersService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(DriverProfile.name)
     private readonly driverModel: Model<DriverProfileDocument>,
+    private readonly uploads: UploadsService,
   ) {}
 
   async create(input: CreateUserInput): Promise<UserDocument> {
@@ -147,6 +149,46 @@ export class UsersService {
     const user = await this.getUserDocument(id);
     this.applyPreferences(user, dto);
     await user.save();
+    return toUserResponse(user);
+  }
+
+  /**
+   * Uploads or replaces the authenticated user's profile image. The previous
+   * Cloudinary asset is deleted only after the new URL is persisted.
+   */
+  async updateProfileImage(
+    id: string,
+    file: UploadedImageFile | undefined,
+  ): Promise<UserResponse> {
+    const user = await this.getUserDocument(id);
+    const stored = await this.uploads.store(file, {
+      folder: `users/user-${this.uploads.safeId(id)}`,
+      name: 'profile',
+    });
+    const previous = user.avatarPublicId;
+
+    try {
+      user.avatarKey = stored.url;
+      user.avatarPublicId = stored.publicId;
+      await user.save();
+    } catch (error) {
+      await this.uploads.discard(stored.publicId);
+      throw error;
+    }
+
+    await this.uploads.discard(previous);
+    return toUserResponse(user);
+  }
+
+  async removeProfileImage(id: string): Promise<UserResponse> {
+    const user = await this.getUserDocument(id);
+    const previous = user.avatarPublicId;
+
+    user.avatarKey = undefined;
+    user.avatarPublicId = undefined;
+    await user.save();
+
+    await this.uploads.discard(previous);
     return toUserResponse(user);
   }
 

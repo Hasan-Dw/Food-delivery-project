@@ -7,8 +7,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import { paginate, type PaginatedResult } from '../common/dto/pagination-query.dto';
-import { RestaurantStatus } from '../common/enums/user.enum';
+import { RestaurantStatus, UserRole } from '../common/enums/user.enum';
+import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { toSlug } from '../common/utils/slug.util';
+import { UploadsService } from '../uploads/uploads.service';
+import type { UploadedImageFile } from '../uploads/image-file.util';
 import type {
   MenuCategoryResponse,
   RestaurantCategoryResponse,
@@ -59,6 +62,8 @@ export interface CreateRestaurantInput {
 
 export type UpdateRestaurantInput = Partial<CreateRestaurantInput>;
 
+export type RestaurantImageKind = 'cover' | 'logo';
+
 const DEFAULT_MENU_CATEGORIES = [
   { name: 'Starters', description: 'Small plates to begin with.', sortOrder: 1 },
   { name: 'Mains', description: 'The heart of the menu.', sortOrder: 2 },
@@ -80,6 +85,7 @@ export class RestaurantsService {
     private readonly categoryModel: Model<RestaurantCategoryDocument>,
     @InjectModel(MenuCategory.name)
     private readonly menuCategoryModel: Model<MenuCategoryDocument>,
+    private readonly uploads: UploadsService,
   ) {}
 
   async list(query: RestaurantQueryDto): Promise<PaginatedResult<RestaurantResponse>> {
@@ -188,7 +194,7 @@ export class RestaurantsService {
             : undefined,
       },
       openingHours: input.openingHours ?? [],
-      description: input.description,
+      description: input.description?.trim(),
       offerLabel: input.offerLabel,
       status,
     });
@@ -197,12 +203,28 @@ export class RestaurantsService {
     return toRestaurantResponse(document);
   }
 
+  async updateForActor(
+    actor: AuthenticatedUser,
+    restaurantId: string,
+    input: UpdateRestaurantInput,
+  ): Promise<RestaurantResponse> {
+    const document = await this.findRestaurantForManagement(actor, restaurantId);
+    return this.applyUpdate(document, input);
+  }
+
   async update(
     ownerId: string,
     restaurantId: string,
     input: UpdateRestaurantInput,
   ): Promise<RestaurantResponse> {
     const document = await this.findOwnedRestaurant(ownerId, restaurantId);
+    return this.applyUpdate(document, input);
+  }
+
+  private async applyUpdate(
+    document: RestaurantDocument,
+    input: UpdateRestaurantInput,
+  ): Promise<RestaurantResponse> {
 
     if (input.categorySlugs !== undefined) {
       await this.assertCategoriesExist(input.categorySlugs);
@@ -220,7 +242,7 @@ export class RestaurantsService {
       document.estimatedDeliveryMinutes = input.estimatedDeliveryMinutes;
     }
     if (input.isOpen !== undefined) document.isOpen = input.isOpen;
-    if (input.description !== undefined) document.description = input.description;
+    if (input.description !== undefined) document.description = input.description.trim();
     if (input.offerLabel !== undefined) document.offerLabel = input.offerLabel;
 
     if (input.openingHours !== undefined) {
@@ -248,6 +270,67 @@ export class RestaurantsService {
     }
 
     await document.save();
+    return toRestaurantResponse(document);
+  }
+
+  /**
+   * Uploads a restaurant cover or logo. Owners may only touch their own
+   * restaurant; administrators may manage any restaurant. The previous asset is
+   * deleted only after MongoDB accepted the new URL and public id.
+   */
+  async updateImage(
+    actor: AuthenticatedUser,
+    restaurantId: string,
+    kind: RestaurantImageKind,
+    file: UploadedImageFile | undefined,
+  ): Promise<RestaurantResponse> {
+    const document = await this.findRestaurantForManagement(actor, restaurantId);
+    const stored = await this.uploads.store(file, {
+      folder: `restaurants/restaurant-${this.uploads.safeId(document._id.toString())}`,
+      name: kind,
+    });
+    const previous =
+      kind === 'cover' ? document.imagePublicId : document.logoPublicId;
+
+    try {
+      if (kind === 'cover') {
+        document.imageKey = stored.url;
+        document.imagePublicId = stored.publicId;
+      } else {
+        document.logoKey = stored.url;
+        document.logoPublicId = stored.publicId;
+      }
+      await document.save();
+    } catch (error) {
+      // The database still points at the old image, so remove the new orphan.
+      await this.uploads.discard(stored.publicId);
+      throw error;
+    }
+
+    await this.uploads.discard(previous);
+    return toRestaurantResponse(document);
+  }
+
+  /** Removes a cover or logo and falls back to the default artwork. */
+  async removeImage(
+    actor: AuthenticatedUser,
+    restaurantId: string,
+    kind: RestaurantImageKind,
+  ): Promise<RestaurantResponse> {
+    const document = await this.findRestaurantForManagement(actor, restaurantId);
+    const previous =
+      kind === 'cover' ? document.imagePublicId : document.logoPublicId;
+
+    if (kind === 'cover') {
+      document.imageKey = 'restaurant-default';
+      document.imagePublicId = undefined;
+    } else {
+      document.logoKey = undefined;
+      document.logoPublicId = undefined;
+    }
+    await document.save();
+
+    await this.uploads.discard(previous);
     return toRestaurantResponse(document);
   }
 
@@ -314,6 +397,28 @@ export class RestaurantsService {
     }
 
     return document;
+  }
+
+  /** Owners manage their own restaurant; administrators manage any. */
+  async findRestaurantForManagement(
+    actor: AuthenticatedUser,
+    restaurantId: string,
+  ): Promise<RestaurantDocument> {
+    if (actor.role === UserRole.ADMIN) {
+      const document = Types.ObjectId.isValid(restaurantId)
+        ? await this.restaurantModel.findById(restaurantId).exec()
+        : null;
+
+      if (!document) {
+        throw new NotFoundException({
+          code: 'restaurant_not_found',
+          message: 'That restaurant could not be found.',
+        });
+      }
+      return document;
+    }
+
+    return this.findOwnedRestaurant(actor.id, restaurantId);
   }
 
   async approvedRestaurantIds(): Promise<Types.ObjectId[]> {

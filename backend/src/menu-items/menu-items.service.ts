@@ -6,8 +6,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import { paginate, type PaginatedResult } from '../common/dto/pagination-query.dto';
+import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { MenuCategory } from '../restaurants/schemas/menu-category.schema';
 import { RestaurantsService } from '../restaurants/restaurants.service';
+import { UploadsService } from '../uploads/uploads.service';
+import type { UploadedImageFile } from '../uploads/image-file.util';
 import type { CreateMenuItemDto, MenuOptionGroupDto } from './dto/create-menu-item.dto';
 import type { MenuItemQueryDto } from './dto/menu-item-query.dto';
 import type { UpdateMenuItemDto } from './dto/update-menu-item.dto';
@@ -31,6 +34,7 @@ export class MenuItemsService {
     @InjectModel(MenuCategory.name)
     private readonly categoryModel: Model<MenuCategory>,
     private readonly restaurantsService: RestaurantsService,
+    private readonly uploads: UploadsService,
   ) {}
 
   async list(query: MenuItemQueryDto): Promise<PaginatedResult<MenuItemResponse>> {
@@ -194,7 +198,63 @@ export class MenuItemsService {
       ownerId,
       document.restaurantId.toString(),
     );
+    const publicId = document.imagePublicId;
     await document.deleteOne();
+    // Only delete the asset once the menu item record is gone.
+    await this.uploads.discard(publicId);
+  }
+
+  /**
+   * Uploads or replaces a menu item image. The previous Cloudinary asset is
+   * removed only after the database has accepted the new URL.
+   */
+  async updateImage(
+    actor: AuthenticatedUser,
+    itemId: string,
+    file: UploadedImageFile | undefined,
+  ): Promise<MenuItemResponse> {
+    const document = await this.findItem(itemId);
+    const restaurant = await this.restaurantsService.findRestaurantForManagement(
+      actor,
+      document.restaurantId.toString(),
+    );
+
+    const stored = await this.uploads.store(file, {
+      folder: `menu-items/restaurant-${this.uploads.safeId(restaurant._id.toString())}`,
+      name: `item-${this.uploads.safeId(itemId)}`,
+    });
+    const previous = document.imagePublicId;
+
+    try {
+      document.imageKey = stored.url;
+      document.imagePublicId = stored.publicId;
+      await document.save();
+    } catch (error) {
+      await this.uploads.discard(stored.publicId);
+      throw error;
+    }
+
+    await this.uploads.discard(previous);
+    return toMenuItemResponse(document);
+  }
+
+  async removeImage(
+    actor: AuthenticatedUser,
+    itemId: string,
+  ): Promise<MenuItemResponse> {
+    const document = await this.findItem(itemId);
+    await this.restaurantsService.findRestaurantForManagement(
+      actor,
+      document.restaurantId.toString(),
+    );
+
+    const previous = document.imagePublicId;
+    document.imageKey = 'product-default';
+    document.imagePublicId = undefined;
+    await document.save();
+
+    await this.uploads.discard(previous);
+    return toMenuItemResponse(document);
   }
 
   private async findItem(id: string): Promise<MenuItemDocument> {

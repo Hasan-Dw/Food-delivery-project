@@ -4,6 +4,7 @@ import { CheckoutModule } from '../checkout/checkout.module';
 import { DeliveriesModule } from '../deliveries/deliveries.module';
 import { Delivery, DeliverySchema } from '../deliveries/schemas/delivery.schema';
 import { PromotionsModule } from '../promotions/promotions.module';
+import { TrackingModule } from '../tracking/tracking.module';
 import { UsersModule } from '../users/users.module';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
@@ -18,6 +19,7 @@ import { Order, OrderSchema } from './schemas/order.schema';
     CheckoutModule,
     DeliveriesModule,
     PromotionsModule,
+    TrackingModule,
     UsersModule,
   ],
   controllers: [OrdersController],
