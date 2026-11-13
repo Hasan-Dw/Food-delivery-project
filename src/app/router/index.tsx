@@ -37,6 +37,12 @@ const RestaurantOrderDetailPage = lazy(
 const RestaurantAnalyticsPage = lazy(
   () => import('@/features/restaurant-dashboard/pages/RestaurantAnalyticsPage'),
 );
+const RestaurantMenuPage = lazy(
+  () => import('@/features/restaurant-dashboard/pages/RestaurantMenuPage'),
+);
+const RestaurantSettingsPage = lazy(
+  () => import('@/features/restaurant-dashboard/pages/RestaurantSettingsPage'),
+);
 const DriverOverviewPage = lazy(() => import('@/features/driver-dashboard/pages/DriverOverviewPage'));
 const DriverActiveDeliveryPage = lazy(
   () => import('@/features/driver-dashboard/pages/DriverActiveDeliveryPage'),
@@ -77,11 +83,14 @@ export function AppRouter() {
             <Route path={ROUTES.orderConfirmation()} element={<OrderConfirmationPage />} />
             <Route path={ROUTES.orderHistory} element={<OrderHistoryPage />} />
             <Route path={ROUTES.orderTracking()} element={<OrderTrackingPage />} />
+            {/* Guests keep their cart, are sent to sign-in, and return here. */}
+            <Route element={<ProtectedRoute roles={['CUSTOMER']} />}>
+              <Route path={ROUTES.checkout} element={<CheckoutPage />} />
+            </Route>
           </Route>
 
           <Route path={ROUTES.restaurantDetails()} element={<RestaurantPage />} />
           <Route path={ROUTES.cart} element={<CartPage />} />
-          <Route path={ROUTES.checkout} element={<CheckoutPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>
@@ -97,6 +106,8 @@ export function AppRouter() {
           <Route element={<RestaurantDashboardLayout />}>
             <Route path={ROUTES.dashboard} element={<RestaurantOverviewPage />} />
             <Route path={ROUTES.dashboardOrders} element={<RestaurantOrdersPage />} />
+            <Route path={ROUTES.dashboardMenu} element={<RestaurantMenuPage />} />
+            <Route path={ROUTES.dashboardSettings} element={<RestaurantSettingsPage />} />
             <Route path={ROUTES.dashboardAnalytics} element={<RestaurantAnalyticsPage />} />
             <Route path={ROUTES.dashboardOrder()} element={<RestaurantOrderDetailPage />} />
           </Route>
@@ -113,7 +124,8 @@ export function AppRouter() {
         </Route>
 
         {/* Platform operations — administrators only. */}
-        <Route element={<ProtectedRoute roles={['ADMIN']} requireApproval />}>
+        {/* Administrators only. Approval is not an owner/driver onboarding gate. */}
+        <Route element={<ProtectedRoute roles={['ADMIN']} />}>
           <Route element={<AdminDashboardLayout />}>
             <Route path={ROUTES.adminDashboard} element={<AdminOverviewPage />} />
             <Route path={ROUTES.adminAccounts} element={<AdminAccountsPage />} />

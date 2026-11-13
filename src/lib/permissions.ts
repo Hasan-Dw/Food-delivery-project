@@ -227,6 +227,31 @@ export function roleLandingPath(role: UserRole): string {
   }
 }
 
+const roleRoutePrefixes: Record<UserRole, readonly string[]> = {
+  CUSTOMER: ['/profile', '/checkout', '/orders', '/order-confirmation'],
+  RESTAURANT_OWNER: ['/restaurant'],
+  DRIVER: ['/driver'],
+  ADMIN: ['/admin'],
+};
+
+/**
+ * Resolve where a freshly signed-in account should land.
+ *
+ * A requested path is honoured only when it belongs to that role's workspace;
+ * otherwise the role's own entry point wins. This prevents an administrator
+ * from being left on a customer profile page by a stale `from` location state.
+ */
+export function postLoginPath(role: UserRole, requested?: string | null): string {
+  if (requested?.startsWith('/')) {
+    const allowed = roleRoutePrefixes[role];
+    if (allowed.some((prefix) => requested === prefix || requested.startsWith(`${prefix}/`))) {
+      return requested;
+    }
+  }
+
+  return roleLandingPath(role);
+}
+
 export const roleLabels: Record<UserRole, string> = {
   CUSTOMER: 'Customer',
   RESTAURANT_OWNER: 'Restaurant owner',

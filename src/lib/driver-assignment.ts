@@ -70,6 +70,8 @@ export function serviceAreasCompatible(
   const driverZone = normalizeServiceArea(driverServiceArea);
   const restaurantZone = normalizeServiceArea(restaurantServiceArea);
   if (!driverZone || !restaurantZone) return true;
+  // Mirror the API: "All boroughs" (and any area containing "all") is a wildcard.
+  if (driverZone.includes('all') || restaurantZone.includes('all')) return true;
   return driverZone === restaurantZone;
 }
 

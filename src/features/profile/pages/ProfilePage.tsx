@@ -10,11 +10,11 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Skeleton';
 import { PersonalInfoForm } from '@/features/profile/components/PersonalInfoForm';
+import { ProfileImageUploader } from '@/features/profile/components/ProfileImageUploader';
 import { AddressBook } from '@/features/profile/components/AddressBook';
 import { PreferencesPanel } from '@/features/profile/components/PreferencesPanel';
 import { PaymentMethodsPanel } from '@/features/profile/components/PaymentMethodsPanel';
@@ -114,13 +114,7 @@ export default function ProfilePage() {
 
           <div className="mt-5 flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <Avatar
-                name={person.fullName}
-                imageKey={person.avatarKey}
-                size="xl"
-                ring
-                className="ring-offset-cream"
-              />
+              <ProfileImageUploader user={person} />
               <div>
                 <h1 className="text-[clamp(2.2rem,4vw,3.2rem)] leading-[1.02]">{person.fullName}</h1>
                 <p className="mt-2 text-[0.875rem] text-olive-500">
@@ -144,12 +138,12 @@ export default function ProfilePage() {
 
             <div className="flex flex-wrap items-center gap-2.5">
               <ButtonLink
-                to={ROUTES.orderTracking('ord_10482')}
+                to={ROUTES.orderHistory}
                 variant="outline"
                 size="sm"
                 iconLeft={<MapPin aria-hidden="true" className="h-3.5 w-3.5" />}
               >
-                Open sample tracking
+                My orders
               </ButtonLink>
               <Button
                 type="button"

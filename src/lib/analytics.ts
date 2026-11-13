@@ -9,7 +9,9 @@ import type {
   Order,
   OrderStatus,
   OrderStatusSlice,
+  PopularMenuItem,
   RestaurantAnalytics,
+  WeeklySalesPoint,
 } from '@/types';
 
 /**
@@ -219,12 +221,18 @@ function summarise(orders: Order[], start: Date, end: Date): AnalyticsSummary {
   let totalOrders = 0;
   let cancelledOrders = 0;
   let rejectedOrders = 0;
+  let pendingOrders = 0;
+  let activeOrders = 0;
 
   for (const order of orders) {
     if (isWithin(order.placedAt, start, end)) {
       totalOrders += 1;
       if (order.status === 'CANCELLED') cancelledOrders += 1;
       if (order.status === 'REJECTED') rejectedOrders += 1;
+      if (order.status === 'PENDING') pendingOrders += 1;
+      if (order.status === 'ACCEPTED' || order.status === 'PREPARING' || order.status === 'READY') {
+        activeOrders += 1;
+      }
     }
 
     if (order.status !== 'COMPLETED') continue;
@@ -243,7 +251,13 @@ function summarise(orders: Order[], start: Date, end: Date): AnalyticsSummary {
     completedOrders,
     cancelledOrders,
     rejectedOrders,
+    pendingOrders,
+    activeOrders,
     averageOrderValue: completedOrders > 0 ? revenue / completedOrders : 0,
+    completionRatePercent:
+      totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 1000) / 10 : 0,
+    cancellationRatePercent:
+      totalOrders > 0 ? Math.round((cancelledOrders / totalOrders) * 1000) / 10 : 0,
     revenueGrowthPercent: 0,
     profitGrowthPercent: 0,
     previousRevenue: 0,
@@ -291,8 +305,74 @@ function buildMonthlySales(orders: Order[], now: Date): MonthlySalesPoint[] {
   return points;
 }
 
-function buildDistribution(orders: Order[], start: Date, end: Date): OrderStatusSlice[] {
-  const counts = new Map<OrderStatus, number>();
+/** Trailing eight weeks, Monday-based, for the weekly summary. */
+function startOfWeek(date: Date): Date {
+  const day = startOfDay(date);
+  const offset = (day.getDay() + 6) % 7;
+  return addDays(day, -offset);
+}
+
+function buildWeeklySales(orders: Order[], now: Date): WeeklySalesPoint[] {
+  const end = addDays(startOfWeek(now), 7);
+  const start = addDays(end, -7 * 8);
+  const points: WeeklySalesPoint[] = [];
+
+  for (let cursor = start; cursor < end; cursor = addDays(cursor, 7)) {
+    const next = addDays(cursor, 7);
+    let revenue = 0;
+    let completedOrders = 0;
+    let totalOrders = 0;
+
+    for (const order of orders) {
+      if (isWithin(order.placedAt, cursor, next)) totalOrders += 1;
+      if (order.status !== 'COMPLETED') continue;
+      if (!isWithin(revenueRecognisedAt(order), cursor, next)) continue;
+      completedOrders += 1;
+      revenue += order.totals.total;
+    }
+
+    points.push({
+      key: isoDayKey(cursor),
+      label: `Week of ${dayLabel(cursor)}`,
+      bucketStart: cursor.toISOString(),
+      bucketEnd: next.toISOString(),
+      revenue,
+      completedOrders,
+      totalOrders,
+    });
+  }
+
+  return points;
+}
+
+/** Best-selling items among completed orders in the selected window. */
+function buildPopularItems(orders: Order[], start: Date, end: Date): PopularMenuItem[] {
+  const items = new Map<string, PopularMenuItem>();
+
+  for (const order of orders) {
+    if (order.status !== 'COMPLETED') continue;
+    if (!isWithin(revenueRecognisedAt(order), start, end)) continue;
+
+    for (const item of order.items) {
+      const key = String(item.productId);
+      const current = items.get(key) ?? {
+        productId: key,
+        name: item.name,
+        quantitySold: 0,
+        revenue: 0,
+      };
+      current.quantitySold += item.quantity;
+      current.revenue += item.unitPrice * item.quantity;
+      items.set(key, current);
+    }
+  }
+
+  return [...items.values()]
+    .sort((a, b) => b.quantitySold - a.quantitySold || b.revenue - a.revenue)
+    .slice(0, 8);
+}
+
+function buildDistribution(orders: Order[], start: Date, end: Date): OrderStatusSlice[] {  const counts = new Map<OrderStatus, number>();
 
   for (const order of orders) {
     if (!isWithin(order.placedAt, start, end)) continue;
@@ -372,7 +452,9 @@ export function buildRestaurantAnalytics({
     summary,
     series,
     monthlySales: buildMonthlySales(orders, now),
+    weeklySales: buildWeeklySales(orders, now),
     orderDistribution: buildDistribution(orders, window.start, window.end),
+    popularItems: buildPopularItems(orders, window.start, window.end),
     costModel,
     generatedAt: now.toISOString(),
   };

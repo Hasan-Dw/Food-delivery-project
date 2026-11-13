@@ -14,6 +14,8 @@ import { AnalyticsDateFilter } from '../components/analytics/AnalyticsDateFilter
 import { AnalyticsOverview } from '../components/analytics/AnalyticsOverview';
 import { MonthlySalesChart } from '../components/analytics/MonthlySalesChart';
 import { OrderDistributionChart } from '../components/analytics/OrderDistributionChart';
+import { OrderHealthPanel } from '../components/analytics/OrderHealthPanel';
+import { PopularItemsPanel } from '../components/analytics/PopularItemsPanel';
 import { RevenueProfitChart } from '../components/analytics/RevenueProfitChart';
 
 function AnalyticsSkeleton() {
@@ -107,6 +109,8 @@ export default function RestaurantAnalyticsPage() {
             <>
               <AnalyticsOverview summary={data.summary} range={range} />
 
+              <OrderHealthPanel summary={data.summary} />
+
               <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,1fr)]">
                 <DashboardPanel
                   eyebrow="Trend"
@@ -125,13 +129,17 @@ export default function RestaurantAnalyticsPage() {
                 </DashboardPanel>
               </div>
 
-              <DashboardPanel
-                eyebrow="Sales"
-                title="Monthly sales"
-                description="Completed order revenue for the trailing twelve months."
-              >
-                <MonthlySalesChart points={data.monthlySales} />
-              </DashboardPanel>
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,1fr)]">
+                <DashboardPanel
+                  eyebrow="Sales"
+                  title="Monthly sales"
+                  description="Completed order revenue for the trailing twelve months."
+                >
+                  <MonthlySalesChart points={data.monthlySales} />
+                </DashboardPanel>
+
+                <PopularItemsPanel items={data.popularItems} />
+              </div>
 
               <section
                 aria-label="How these figures are calculated"

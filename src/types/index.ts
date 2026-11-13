@@ -30,6 +30,7 @@ export type {
   DriverLocation,
   DriverLocationInput,
   DriverRegistrationDetails,
+  GeoJsonLineString,
   GeoPoint,
   ID,
   ISODateString,
@@ -79,6 +80,8 @@ export type {
   MonthlySalesPoint,
   OperationalCostModel,
   OrderStatusSlice,
+  PopularMenuItem,
   RestaurantAnalytics,
   RestaurantAnalyticsQuery,
+  WeeklySalesPoint,
 } from './analytics';

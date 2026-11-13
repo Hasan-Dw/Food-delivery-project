@@ -65,12 +65,12 @@ export function HowItWorks() {
 
                   {index === 2 ? (
                     <ButtonLink
-                      to={ROUTES.orderTracking('ord_10482')}
+                      to={ROUTES.orderHistory}
                       variant="outline"
                       size="sm"
                       className="mt-6 self-start"
                     >
-                      See a delivery in progress
+                      See your orders
                     </ButtonLink>
                   ) : null}
                 </div>

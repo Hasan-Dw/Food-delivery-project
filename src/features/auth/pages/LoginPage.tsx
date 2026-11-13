@@ -11,7 +11,7 @@ import { PasswordInput } from '@/features/auth/components/PasswordInput';
 import { AuthModeNotice } from '@/features/auth/components/AuthModeNotice';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { loginSchema, type LoginValues } from '@/lib/validation';
-import { roleLandingPath } from '@/lib/permissions';
+import { postLoginPath } from '@/lib/permissions';
 import { getErrorMessage } from '@/services/api/errors';
 import { env } from '@/config/env';
 import { site } from '@/config/site';
@@ -28,7 +28,11 @@ export default function LoginPage() {
   const { signIn, isAuthenticated, user } = useAuth();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  const from = state?.from?.startsWith('/') ? state.from : user ? roleLandingPath(user.role) : ROUTES.profile;
+  const from = user
+    ? postLoginPath(user.role, state?.from)
+    : state?.from?.startsWith('/')
+      ? state.from
+      : ROUTES.profile;
   const [formError, setFormError] = useState<string | null>(null);
 
   const {

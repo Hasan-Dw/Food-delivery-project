@@ -3,7 +3,7 @@ import { restaurantCategories } from '@/mocks/data/categories';
 import { restaurants } from '@/mocks/data/restaurants';
 import { delay } from '@/mocks/utils/delay';
 import { ApiError } from '@/services/api/errors';
-import type { RestaurantService } from '@/services/restaurants/RestaurantService';
+import type { RestaurantService, RestaurantUpdateInput } from '@/services/restaurants/RestaurantService';
 
 function matchesQuery(restaurant: Restaurant, query: RestaurantQuery): boolean {
   const search = query.search?.trim().toLowerCase();
@@ -74,5 +74,57 @@ export class MockRestaurantService implements RestaurantService {
   async getFeatured(): Promise<Restaurant[]> {
     await delay(320);
     return restaurants.filter((restaurant) => restaurant.featured);
+  }
+
+  async update(restaurantId: string, input: RestaurantUpdateInput): Promise<Restaurant> {
+    await delay(320);
+    const restaurant = await this.getById(restaurantId);
+
+    if (input.name !== undefined) restaurant.name = input.name.trim();
+    if (input.tagline !== undefined) restaurant.tagline = input.tagline.trim();
+    if (input.isOpen !== undefined) restaurant.isOpen = input.isOpen;
+    if (input.deliveryFee !== undefined) restaurant.deliveryFee = input.deliveryFee;
+    if (input.minOrder !== undefined) restaurant.minOrder = input.minOrder;
+
+    if (input.address) {
+      restaurant.address = {
+        ...restaurant.address,
+        line1: input.address.line1,
+        line2: input.address.line2,
+        city: input.address.city,
+        state: input.address.state,
+        postalCode: input.address.postalCode,
+        country: input.address.country,
+        coordinates: input.address.coordinates,
+      };
+    }
+
+    return restaurant;
+  }
+
+  // The demo has no image storage. A local object URL gives the uploader a real
+  // preview without pretending the file reached a server.
+  async uploadCoverImage(restaurantId: string, file: File): Promise<Restaurant> {
+    await delay(400);
+    const restaurant = await this.getById(restaurantId);
+    return { ...restaurant, imageKey: URL.createObjectURL(file) };
+  }
+
+  async removeCoverImage(restaurantId: string): Promise<Restaurant> {
+    await delay(300);
+    const restaurant = await this.getById(restaurantId);
+    return { ...restaurant, imageKey: 'restaurant-default' };
+  }
+
+  async uploadLogo(restaurantId: string, file: File): Promise<Restaurant> {
+    await delay(400);
+    const restaurant = await this.getById(restaurantId);
+    return { ...restaurant, logoKey: URL.createObjectURL(file) };
+  }
+
+  async removeLogo(restaurantId: string): Promise<Restaurant> {
+    await delay(300);
+    const restaurant = await this.getById(restaurantId);
+    return { ...restaurant, logoKey: undefined };
   }
 }

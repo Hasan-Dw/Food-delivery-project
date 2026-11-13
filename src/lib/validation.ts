@@ -113,6 +113,12 @@ export const addressSchema = z.object({
   country: z.string().trim().min(2, 'Enter a country.'),
   instructions: z.string().trim().max(160, 'Keep instructions under 160 characters.').optional(),
   isDefault: z.boolean(),
+  coordinates: z
+    .object({
+      lat: z.number().min(-90, 'Latitude must be between -90 and 90.').max(90, 'Latitude must be between -90 and 90.'),
+      lng: z.number().min(-180, 'Longitude must be between -180 and 180.').max(180, 'Longitude must be between -180 and 180.'),
+    })
+    .optional(),
 });
 
 export const preferencesSchema = z.object({

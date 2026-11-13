@@ -2,10 +2,15 @@ import type { AuthSession, LoginCredentials, RegisterPayload } from '@/types';
 import { ApiError } from '@/services/api/errors';
 import type { ApiClient } from '@/services/api/client';
 import type { AuthService, PasswordResetResult } from './AuthService';
-import { sessionStorageBridge } from './session-storage';
+import { sessionStorageBridge, normaliseUser } from './session-storage';
 
 export interface HttpAuthServiceOptions {
   storage?: typeof sessionStorageBridge;
+}
+
+/** Normalises the role/status enums before any page or guard reads them. */
+function normaliseSession(session: AuthSession): AuthSession {
+  return { ...session, user: normaliseUser(session.user) };
 }
 
 /**
@@ -29,14 +34,16 @@ export class HttpAuthService implements AuthService {
       throw new ApiError({ code: 'invalid_session', message: 'The server returned an incomplete session.' }, 500);
     }
 
-    (this.options.storage ?? sessionStorageBridge).write(response.data, credentials.remember);
-    return response.data;
+    const session = normaliseSession(response.data);
+    (this.options.storage ?? sessionStorageBridge).write(session, credentials.remember);
+    return session;
   }
 
   async register(payload: RegisterPayload): Promise<AuthSession> {
     const response = await this.client.post<AuthSession>('/auth/register', payload, { auth: false });
-    (this.options.storage ?? sessionStorageBridge).write(response.data, true);
-    return response.data;
+    const session = normaliseSession(response.data);
+    (this.options.storage ?? sessionStorageBridge).write(session, true);
+    return session;
   }
 
   async requestPasswordReset(email: string): Promise<PasswordResetResult> {
@@ -55,7 +62,7 @@ export class HttpAuthService implements AuthService {
     if (!stored) return null;
     try {
       const response = await this.client.get<AuthSession>('/auth/session');
-      return response.data ?? stored;
+      return response.data ? normaliseSession(response.data) : stored;
     } catch {
       return null;
     }

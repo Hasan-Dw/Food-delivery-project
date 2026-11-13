@@ -1,12 +1,12 @@
-import { ArrowRight, ArrowUpRight, Check, Star } from 'lucide-react';
+import { ArrowRight, Check, Star } from 'lucide-react';
 import { Image } from '@/components/ui/Image';
 import { Avatar } from '@/components/ui/Avatar';
 import { useHeroAnimation } from '@/hooks/useHeroAnimation';
 import { useSelectedArea } from '@/stores/location-store';
 import { scrollToSection } from '@/lib/scroll';
 import { site } from '@/config/site';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '@/config/routes';
+import { useActiveOrder } from '../hooks/useActiveOrder';
+import { HeroActiveOrderCard } from './HeroActiveOrderCard';
 
 const cuisines = [
   'Sushi counters',
@@ -22,6 +22,7 @@ const cuisines = [
 export function Hero() {
   const ref = useHeroAnimation<HTMLElement>();
   const area = useSelectedArea();
+  const { order, tracking, hasActiveOrder } = useActiveOrder();
 
   return (
     <section ref={ref} id="search" className="surface-grain relative overflow-hidden bg-ivory">
@@ -144,40 +145,9 @@ export function Hero() {
             </div>
           </div>
 
-          <div
-            data-hero-chip
-            className="absolute -left-3 bottom-28 hidden w-[15.5rem] rounded-2xl bg-olive-800 p-4 text-cream shadow-lift sm:block lg:-left-8"
-            aria-hidden="true"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="relative">
-                <Avatar name="Daniel" imageKey="avatar-driver" size="sm" />
-                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-olive-800 bg-[#7FA86B]" />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-[0.75rem] font-medium">Daniel is on the way</p>
-                <p className="text-[0.625rem] text-cream/55">Kōji Sushi · 2.4 km</p>
-              </div>
-            </div>
-            <div className="mt-3.5">
-              <div className="flex items-center justify-between text-[0.625rem]">
-                <span className="text-cream/55">Arriving in</span>
-                <span className="font-semibold text-gold-200">14 min</span>
-              </div>
-              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-cream/15">
-                <div className="h-full w-[62%] rounded-full bg-gold-300" />
-              </div>
-            </div>
-          </div>
-
-          <Link
-            to={ROUTES.orderTracking('ord_10482')}
-            data-hero-chip
-            className="absolute bottom-6 right-2 hidden items-center gap-1.5 rounded-full border border-olive-900/10 bg-cream/95 px-3.5 py-2 text-[0.6875rem] font-medium text-olive-700 shadow-soft backdrop-blur transition hover:bg-cream sm:inline-flex"
-          >
-            Follow a delivery
-            <ArrowUpRight aria-hidden="true" className="h-3 w-3" />
-          </Link>
+          {hasActiveOrder && order ? (
+            <HeroActiveOrderCard order={order} tracking={tracking} />
+          ) : null}
         </div>
       </div>
 

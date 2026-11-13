@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { imageUrl } from '@/config/images';
 import { initials } from '@/lib/format';
@@ -21,6 +22,9 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, imageKey, size = 'md', className, ring = false }: AvatarProps) {
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(imageKey) && !failed;
+
   return (
     <span
       className={cn(
@@ -29,15 +33,16 @@ export function Avatar({ name, imageKey, size = 'md', className, ring = false }:
         ring && 'ring-2 ring-cream ring-offset-2 ring-offset-ivory',
         className,
       )}
-      aria-hidden={imageKey ? undefined : true}
+      aria-hidden={showImage ? undefined : true}
     >
-      {imageKey ? (
+      {showImage ? (
         <img
-          src={imageUrl(imageKey, 320)}
+          src={imageUrl(imageKey ?? '', 320)}
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"
           decoding="async"
+          onError={() => setFailed(true)}
         />
       ) : (
         initials(name)

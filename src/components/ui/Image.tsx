@@ -1,5 +1,11 @@
 import { useState, type ImgHTMLAttributes } from 'react';
-import { getImage, imageAlt, imageSrcSet, imageUrl } from '@/config/images';
+import {
+  getImage,
+  imageAlt,
+  imageSrcSet,
+  imageUrl,
+  isRemoteImage,
+} from '@/config/images';
 import { cn } from '@/lib/cn';
 
 export interface ImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet' | 'alt'> {
@@ -12,9 +18,10 @@ export interface ImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 's
 
 /**
  * Single image primitive for the whole product.
- * - Centralised asset manifest and alt text
- * - Responsive WebP `srcset`
- * - Local fallback if a file is ever missing
+ * - Centralised asset manifest and alt text for bundled art
+ * - Pass-through (with Cloudinary sizing) for uploaded images
+ * - Responsive WebP `srcset` for bundled art
+ * - Local fallback if a file is ever missing or fails to load
  * - Intrinsic dimensions prevent layout shift
  */
 export function Image({
@@ -27,9 +34,10 @@ export function Image({
   ...props
 }: ImageProps) {
   const [failed, setFailed] = useState(false);
-  const asset = getImage(imageKey);
+  const remote = isRemoteImage(imageKey);
+  const asset = remote ? undefined : getImage(imageKey);
 
-  if (!asset || failed) {
+  if ((!remote && !asset) || failed) {
     return (
       <img
         {...props}
@@ -42,15 +50,18 @@ export function Image({
     );
   }
 
+  // Uploaded images are already sized by the CDN; a manifest key is not.
+  const srcWidth = 1200;
+
   return (
     <img
       {...props}
-      src={imageUrl(imageKey)}
-      srcSet={imageSrcSet(imageKey)}
+      src={imageUrl(imageKey, remote ? srcWidth : undefined)}
+      srcSet={remote ? undefined : imageSrcSet(imageKey)}
       sizes={sizes}
-      alt={alt ?? asset.alt}
-      width={asset.masterWidth}
-      height={asset.masterHeight}
+      alt={alt ?? asset?.alt ?? 'Food from a Savora restaurant'}
+      width={asset?.masterWidth ?? 1200}
+      height={asset?.masterHeight ?? 900}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
       onError={() => setFailed(true)}
