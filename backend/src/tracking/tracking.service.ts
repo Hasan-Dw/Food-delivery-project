@@ -3,11 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { DeliveryStatus } from '../common/enums/delivery.enum';
+import { OrderStatus } from '../common/enums/order.enum';
 import { UserRole } from '../common/enums/user.enum';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
+import {
+  DEFAULT_PREP_MINUTES,
+  HANDOVER_BUFFER_MINUTES,
+  PICKUP_BUFFER_MINUTES,
+  type CoordinatesInput,
+} from '../common/utils/geo.util';
 import { Delivery, type DeliveryDocument } from '../deliveries/schemas/delivery.schema';
 import { toDriverResponse } from '../drivers/interfaces/driver-response.interface';
 import { Order, type OrderDocument } from '../orders/schemas/order.schema';
@@ -15,13 +23,13 @@ import {
   Restaurant,
   type RestaurantDocument,
 } from '../restaurants/schemas/restaurant.schema';
+import { RoutingService, type RouteGeometry, type RouteSource } from '../routing/routing.service';
 import { DriverProfile, type DriverProfileDocument } from '../users/schemas/driver-profile.schema';
 import { User, type UserDocument } from '../users/schemas/user.schema';
 
-interface Coordinates {
-  lat: number;
-  lng: number;
-}
+type Coordinates = CoordinatesInput;
+
+export type EtaSource = RouteSource | 'none';
 
 export interface TrackingSnapshotResponse {
   orderId: string;
@@ -38,7 +46,8 @@ export interface TrackingSnapshotResponse {
     speedKph?: number;
     updatedAt: string;
   } | null;
-  etaMinutes: number;
+  /** `null` when no coordinates exist to route between. */
+  etaMinutes: number | null;
   estimatedArrivalAt?: string;
   deliveredAt?: string;
   destination: {
@@ -54,10 +63,19 @@ export interface TrackingSnapshotResponse {
   route: {
     points: Coordinates[];
     distanceKm: number;
+    source: EtaSource;
+    /**
+     * GeoJSON road geometry when the routing provider was reachable. `null`
+     * means the two-point straight-line fallback, which the map labels.
+     */
+    geometry: RouteGeometry | null;
   };
+  /** Remaining road distance in kilometres (driver → next stop → door). */
+  remainingDistanceKm: number | null;
+  etaSource: EtaSource;
   progress: number;
   lastUpdated: string;
-  /** Phase 2 exposes a snapshot only; real-time GPS is Phase 3. */
+  /** True when the API publishes live updates over Socket.IO. */
   live: boolean;
 }
 
@@ -70,30 +88,43 @@ const PROGRESS_BY_STATUS: Record<DeliveryStatus, number> = {
   [DeliveryStatus.CANCELLED]: 0,
 };
 
-function roundDistance(points: Coordinates[]): number {
-  if (points.length < 2) return 0;
-  let total = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    total += haversine(points[index - 1]!, points[index]!);
-  }
-  return Math.round(total * 10) / 10;
+function roundDistance(value: number): number {
+  return Math.round(value * 10) / 10;
 }
 
-function haversine(a: Coordinates, b: Coordinates): number {
-  const radius = 6371;
-  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-  const dLat = toRadians(b.lat - a.lat);
-  const dLng = toRadians(b.lng - a.lng);
-  const lat1 = toRadians(a.lat);
-  const lat2 = toRadians(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * radius * Math.asin(Math.min(1, Math.sqrt(h)));
+function mergeSource(sources: EtaSource[]): EtaSource {
+  if (sources.every((source) => source === 'none')) return 'none';
+  return sources.includes('straight-line') ? 'straight-line' : 'osrm';
+}
+
+/**
+ * Joins consecutive road legs into one LineString. A missing geometry means at
+ * least one leg was a straight-line estimate, so the combined route must not be
+ * presented as fully road-derived.
+ */
+function mergeGeometry(legs: Array<RouteGeometry | null>): RouteGeometry | null {
+  if (legs.length === 0) return null;
+  if (legs.some((leg) => leg === null)) return null;
+
+  const coordinates: Array<[number, number]> = [];
+  for (const leg of legs as RouteGeometry[]) {
+    for (const coordinate of leg.coordinates) {
+      const previous = coordinates[coordinates.length - 1];
+      if (previous && previous[0] === coordinate[0] && previous[1] === coordinate[1]) {
+        continue;
+      }
+      coordinates.push(coordinate);
+    }
+  }
+
+  if (coordinates.length < 2) return null;
+  return { type: 'LineString', coordinates };
 }
 
 @Injectable()
 export class TrackingService {
+  private readonly liveEnabled: boolean;
+
   constructor(
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
@@ -105,12 +136,35 @@ export class TrackingService {
     private readonly userModel: Model<UserDocument>,
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
-  ) {}
+    private readonly routing: RoutingService,
+    config: ConfigService,
+  ) {
+    this.liveEnabled = config.get<boolean>('tracking.liveEnabled') ?? true;
+  }
 
   async getSnapshot(
     actor: AuthenticatedUser,
     orderId: string,
   ): Promise<TrackingSnapshotResponse> {
+    const order = await this.findOrder(orderId);
+    const delivery = await this.deliveryModel.findOne({ orderId: order._id }).exec();
+    await this.assertCanView(actor, order, delivery);
+    return this.buildSnapshot(order, delivery);
+  }
+
+  /**
+   * Internal snapshot for the live channel. Authorization happens when a socket
+   * subscribes to the order room; this method is never exposed over HTTP.
+   */
+  async buildLiveSnapshot(orderId: string): Promise<TrackingSnapshotResponse | null> {
+    if (!Types.ObjectId.isValid(orderId)) return null;
+    const order = await this.orderModel.findById(orderId).exec();
+    if (!order) return null;
+    const delivery = await this.deliveryModel.findOne({ orderId: order._id }).exec();
+    return this.buildSnapshot(order, delivery);
+  }
+
+  private async findOrder(orderId: string): Promise<OrderDocument> {
     if (!Types.ObjectId.isValid(orderId)) {
       throw new NotFoundException({
         code: 'order_not_found',
@@ -125,18 +179,18 @@ export class TrackingService {
         message: 'That order could not be found.',
       });
     }
+    return order;
+  }
 
-    const delivery = await this.deliveryModel.findOne({ orderId: order._id }).exec();
-    await this.assertCanView(actor, order, delivery);
-
-    const restaurant = await this.restaurantModel
-      .findById(order.restaurantId)
-      .exec();
+  private async buildSnapshot(
+    order: OrderDocument,
+    delivery: DeliveryDocument | null,
+  ): Promise<TrackingSnapshotResponse> {
+    const restaurant = await this.restaurantModel.findById(order.restaurantId).exec();
 
     const restaurantCoordinates =
       restaurant?.address?.coordinates ?? order.deliveryAddress.coordinates ?? null;
-    const destinationCoordinates =
-      order.deliveryAddress.coordinates ?? restaurantCoordinates ?? { lat: 0, lng: 0 };
+    const destinationCoordinates = order.deliveryAddress.coordinates ?? restaurantCoordinates;
 
     const driver = delivery?.driverId
       ? await this.driverModel.findById(delivery.driverId).exec()
@@ -149,23 +203,26 @@ export class TrackingService {
       DeliveryStatus.PENDING_ASSIGNMENT;
 
     const driverLocation = this.mapDriverLocation(delivery, driver);
-    const now = Date.now();
-    const etaMinutes = this.resolveEtaMinutes(delivery, deliveryStatus, now);
-
-    const points: Coordinates[] = [];
-    if (driverLocation) points.push({ lat: driverLocation.lat, lng: driverLocation.lng });
-    if (restaurantCoordinates) points.push(restaurantCoordinates);
-    points.push(destinationCoordinates);
+    const now = new Date();
+    const timing = await this.resolveTiming({
+      order,
+      driver,
+      driverStatus: deliveryStatus,
+      driverLocation,
+      restaurantCoordinates,
+      destinationCoordinates,
+      now,
+    });
 
     const lastUpdated =
-      delivery?.updatedAt ?? order.updatedAt ?? order.placedAt ?? new Date();
+      delivery?.updatedAt ?? order.updatedAt ?? order.placedAt ?? now;
 
     const snapshot: TrackingSnapshotResponse = {
       orderId: order._id.toString(),
       orderStatus: order.status,
       deliveryStatus,
       driverLocation,
-      etaMinutes,
+      etaMinutes: timing.etaMinutes,
       destination: {
         label: order.deliveryAddress.label,
         address: [
@@ -175,7 +232,7 @@ export class TrackingService {
         ]
           .filter(Boolean)
           .join(', '),
-        coordinates: destinationCoordinates,
+        coordinates: destinationCoordinates ?? { lat: 0, lng: 0 },
       },
       restaurant: {
         label: restaurant?.name ?? order.restaurantName,
@@ -187,12 +244,16 @@ export class TrackingService {
         coordinates: restaurantCoordinates ?? { lat: 0, lng: 0 },
       },
       route: {
-        points,
-        distanceKm: roundDistance(points),
+        points: timing.points,
+        distanceKm: timing.remainingDistanceKm ?? 0,
+        source: timing.source,
+        geometry: timing.geometry,
       },
+      remainingDistanceKm: timing.remainingDistanceKm,
+      etaSource: timing.source,
       progress: PROGRESS_BY_STATUS[deliveryStatus] ?? 0,
       lastUpdated: lastUpdated.toISOString(),
-      live: false,
+      live: this.liveEnabled,
     };
 
     if (delivery) {
@@ -210,12 +271,159 @@ export class TrackingService {
 
       // Tracking is not the delivery lifecycle; a delivered or cancelled
       // delivery should not still publish a moving driver.
-      if (deliveryStatus === DeliveryStatus.DELIVERED || deliveryStatus === DeliveryStatus.CANCELLED) {
+      if (
+        deliveryStatus === DeliveryStatus.DELIVERED ||
+        deliveryStatus === DeliveryStatus.CANCELLED
+      ) {
         snapshot.driverLocation = null;
       }
     }
 
     return snapshot;
+  }
+
+  /**
+   * Composes the ETA from real legs:
+   * - driver → restaurant (parallel with kitchen preparation, so the larger wins)
+   * - pickup handling
+   * - restaurant → customer
+   *
+   * Once the food is collected only the final leg remains. Each leg is a real
+   * road route when the routing provider is reachable, and a labelled estimate
+   * otherwise.
+   */
+  private async resolveTiming(input: {
+    order: OrderDocument;
+    driver: DriverProfileDocument | null;
+    driverStatus: DeliveryStatus;
+    driverLocation: TrackingSnapshotResponse['driverLocation'];
+    restaurantCoordinates: Coordinates | null;
+    destinationCoordinates: Coordinates | null;
+    now: Date;
+  }): Promise<{
+    etaMinutes: number | null;
+    remainingDistanceKm: number | null;
+    points: Coordinates[];
+    geometry: RouteGeometry | null;
+    source: EtaSource;
+  }> {
+    const {
+      order,
+      driver,
+      driverStatus,
+      driverLocation,
+      restaurantCoordinates,
+      destinationCoordinates,
+      now,
+    } = input;
+
+    const empty = {
+      etaMinutes: null,
+      remainingDistanceKm: null,
+      points: [] as Coordinates[],
+      geometry: null as RouteGeometry | null,
+      source: 'none' as EtaSource,
+    };
+
+    if (
+      driverStatus === DeliveryStatus.DELIVERED ||
+      driverStatus === DeliveryStatus.CANCELLED ||
+      order.status === OrderStatus.CANCELLED
+    ) {
+      return { ...empty, etaMinutes: 0, remainingDistanceKm: 0 };
+    }
+
+    const vehicle = driver?.vehicle;
+    const prepRemaining = this.remainingPrepMinutes(order, now);
+    const position: Coordinates | null = driverLocation
+      ? { lat: driverLocation.lat, lng: driverLocation.lng }
+      : null;
+    const pickedUp =
+      driverStatus === DeliveryStatus.PICKED_UP ||
+      driverStatus === DeliveryStatus.ON_THE_WAY;
+
+    // Final leg: restaurant → customer (or current position → customer).
+    if (!destinationCoordinates) return empty;
+
+    if (pickedUp) {
+      if (!position) return empty;
+      const leg = await this.routing.getRoute(position, destinationCoordinates, vehicle);
+      return {
+        etaMinutes: leg.durationMinutes + HANDOVER_BUFFER_MINUTES,
+        remainingDistanceKm: roundDistance(leg.distanceKm),
+        points: leg.points,
+        geometry: leg.geometry,
+        source: leg.source,
+      };
+    }
+
+    const toCustomer = restaurantCoordinates
+      ? await this.routing.getRoute(
+          restaurantCoordinates,
+          destinationCoordinates,
+          vehicle,
+        )
+      : null;
+
+    if (!position) {
+      // No driver yet: the kitchen is still the only active leg.
+      if (!toCustomer) return empty;
+      return {
+        etaMinutes:
+          prepRemaining + PICKUP_BUFFER_MINUTES + toCustomer.durationMinutes,
+        remainingDistanceKm: roundDistance(toCustomer.distanceKm),
+        points: toCustomer.points,
+        geometry: toCustomer.geometry,
+        source: toCustomer.source,
+      };
+    }
+
+    if (!restaurantCoordinates) {
+      const direct = await this.routing.getRoute(position, destinationCoordinates, vehicle);
+      return {
+        etaMinutes: direct.durationMinutes + HANDOVER_BUFFER_MINUTES,
+        remainingDistanceKm: roundDistance(direct.distanceKm),
+        points: direct.points,
+        geometry: direct.geometry,
+        source: direct.source,
+      };
+    }
+
+    const toRestaurant = await this.routing.getRoute(position, restaurantCoordinates, vehicle);
+    const finalLeg =
+      toCustomer ??
+      (await this.routing.getRoute(restaurantCoordinates, destinationCoordinates, vehicle));
+
+    // Preparation and driver travel happen in parallel, so the pickup is ready
+    // after the longer of the two — not after their sum.
+    const readyInMinutes =
+      Math.max(toRestaurant.durationMinutes, prepRemaining) + PICKUP_BUFFER_MINUTES;
+
+    return {
+      etaMinutes: readyInMinutes + finalLeg.durationMinutes,
+      remainingDistanceKm: roundDistance(
+        toRestaurant.distanceKm + finalLeg.distanceKm,
+      ),
+      points: [...toRestaurant.points, ...finalLeg.points],
+      geometry: mergeGeometry([toRestaurant.geometry, finalLeg.geometry]),
+      source: mergeSource([toRestaurant.source, finalLeg.source]),
+    };
+  }
+
+  /** Remaining kitchen time, measured from the last order status change. */
+  private remainingPrepMinutes(order: OrderDocument, now: Date): number {
+    if (order.status === OrderStatus.READY || order.status === OrderStatus.COMPLETED) {
+      return 0;
+    }
+
+    if (order.status === OrderStatus.PREPARING) {
+      const startedAt = (order.updatedAt ?? order.placedAt ?? now).getTime();
+      const elapsed = Math.max(0, (now.getTime() - startedAt) / 60_000);
+      return Math.max(2, Math.round(DEFAULT_PREP_MINUTES - elapsed));
+    }
+
+    if (order.status === OrderStatus.PENDING) return DEFAULT_PREP_MINUTES + 5;
+    return DEFAULT_PREP_MINUTES;
   }
 
   private mapDriverLocation(
@@ -263,22 +471,6 @@ export class TrackingService {
     }
 
     return null;
-  }
-
-  private resolveEtaMinutes(
-    delivery: DeliveryDocument | null,
-    status: DeliveryStatus,
-    now: number,
-  ): number {
-    if (status === DeliveryStatus.DELIVERED) return 0;
-    if (status === DeliveryStatus.CANCELLED) return 0;
-    if (delivery?.estimatedArrivalAt) {
-      return Math.max(
-        0,
-        Math.round((delivery.estimatedArrivalAt.getTime() - now) / 60_000),
-      );
-    }
-    return 25;
   }
 
   private async assertCanView(

@@ -70,7 +70,10 @@ export function formatMemberSince(iso: string): string {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(iso));
 }
 
-export function formatEta(minutes: number): string {
+export function formatEta(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) {
+    return 'Estimating…';
+  }
   if (minutes <= 0) return 'Arriving now';
   if (minutes < 60) return `${Math.round(minutes)} min`;
   const hours = Math.floor(minutes / 60);

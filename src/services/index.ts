@@ -13,12 +13,14 @@ import { MockRestaurantService } from '@/mocks/services/MockRestaurantService';
 import { MockTrackingService } from '@/mocks/services/MockTrackingService';
 import { MockUserService } from '@/mocks/services/MockUserService';
 import { HttpAuthService } from './auth/HttpAuthService';
+import { HttpAdminService } from './admin/HttpAdminService';
 import { HttpCheckoutService } from './checkout/HttpCheckoutService';
 import { HttpDeliveryService } from './deliveries/HttpDeliveryService';
 import { HttpDriverService } from './drivers/HttpDriverService';
 import { HttpOrderService } from './orders/HttpOrderService';
 import { HttpProductService } from './products/HttpProductService';
 import { HttpPromotionService } from './promotions/HttpPromotionService';
+import { HttpRestaurantAnalyticsService } from './analytics/HttpRestaurantAnalyticsService';
 import { HttpRestaurantService } from './restaurants/HttpRestaurantService';
 import { HttpTrackingService } from './tracking/HttpTrackingService';
 import { HttpUserService } from './users/HttpUserService';
@@ -53,10 +55,10 @@ export interface Services {
 /**
  * Single composition root for data access.
  *
- * Set `VITE_DATA_SOURCE=http` and `VITE_API_BASE_URL` to send the Phase 1 and
- * Phase 2 domains (auth, profile, restaurants, menu, orders, deliveries,
- * drivers, promotions, checkout and tracking) to the NestJS API. Only the
- * analytics and admin-dashboard read models remain local; they are Phase 3.
+ * Set `VITE_DATA_SOURCE=http` and `VITE_API_BASE_URL` to send auth, profile,
+ * restaurants, analytics, menu, orders, deliveries, drivers, promotions,
+ * checkout, tracking and image management to the NestJS API. Only the
+ * admin-dashboard read models remain local where no endpoint exists.
  */
 const useBackend = !env.useMocks;
 
@@ -73,9 +75,11 @@ export const services: Services = {
   promotions: useBackend ? new HttpPromotionService(apiClient) : new MockPromotionService(),
   checkout: useBackend ? new HttpCheckoutService(apiClient) : new MockCheckoutService(),
 
-  // Phase 3 read models. The dashboards stay on local fixtures for now.
-  analytics: new MockRestaurantAnalyticsService(),
-  admin: new MockAdminService(),
+  // The API now exposes owner-scoped analytics; keep fixtures for mock mode.
+  analytics: useBackend
+    ? new HttpRestaurantAnalyticsService(apiClient)
+    : new MockRestaurantAnalyticsService(),
+  admin: useBackend ? new HttpAdminService(apiClient) : new MockAdminService(),
 };
 
 export type {

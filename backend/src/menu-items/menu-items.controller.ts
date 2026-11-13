@@ -11,13 +11,18 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public, RequireApproved, Roles } from '../common/decorators/auth.decorators';
 import type { PaginatedResult } from '../common/dto/pagination-query.dto';
 import { UserRole } from '../common/enums/user.enum';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
+import { MAX_IMAGE_BYTES } from '../uploads/image-file.util';
+import type { UploadedImageFile } from '../uploads/image-file.util';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { MenuItemQueryDto } from './dto/menu-item-query.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
@@ -92,6 +97,30 @@ export class MenuItemsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
     await this.menuItemsService.delete(user.id, id);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @RequireApproved()
+  @Post(':id/image')
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: MAX_IMAGE_BYTES } }))
+  uploadImage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedImageFile,
+  ): Promise<MenuItemResponse> {
+    return this.menuItemsService.updateImage(user, id, file);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @RequireApproved()
+  @Delete(':id/image')
+  removeImage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<MenuItemResponse> {
+    return this.menuItemsService.removeImage(user, id);
   }
 }
 

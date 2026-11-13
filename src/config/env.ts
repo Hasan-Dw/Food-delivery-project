@@ -27,8 +27,11 @@ export const env = {
   isDev: import.meta.env.DEV,
   useMocks: dataSource === 'mock' || !rawBaseUrl,
   features: {
-    /** Set once the backend exposes SSE/WebSocket tracking. */
-    liveTracking: toBool(import.meta.env.VITE_LIVE_TRACKING, false),
+    /**
+     * Live Socket.IO tracking is on by default for HTTP deployments. Set
+     * `VITE_LIVE_TRACKING=false` to fall back to REST snapshots only.
+     */
+    liveTracking: toBool(import.meta.env.VITE_LIVE_TRACKING, dataSource === 'http'),
   },
 } as const;
 

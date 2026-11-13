@@ -82,7 +82,8 @@ export class OrderItem {
   @Prop({ required: true, trim: true, maxlength: 120 })
   name: string;
 
-  @Prop({ required: true, trim: true, maxlength: 120, default: 'product-default' })
+  // Uploaded Cloudinary URLs are longer than seeded keys, so allow URL length.
+  @Prop({ required: true, trim: true, maxlength: 500, default: 'product-default' })
   imageKey: string;
 
   @Prop({ required: true, min: 1, max: 20 })
@@ -184,7 +185,8 @@ export class Order {
   @Prop({ required: true, trim: true, maxlength: 120 })
   restaurantName: string;
 
-  @Prop({ trim: true, maxlength: 120, default: 'restaurant-default' })
+  // Uploaded Cloudinary URLs are longer than seeded keys, so allow URL length.
+  @Prop({ trim: true, maxlength: 500, default: 'restaurant-default' })
   restaurantImageKey: string;
 
   @Prop({ type: [OrderItemSchema], default: [] })
@@ -255,3 +257,6 @@ export const OrderSchema = SchemaFactory.createForClass(Order);
 OrderSchema.index({ customerId: 1, placedAt: -1 });
 OrderSchema.index({ restaurantId: 1, placedAt: -1 });
 OrderSchema.index({ restaurantId: 1, status: 1 });
+// Revenue is recognised on completedAt, so the owner analytics aggregation
+// filters restaurant + status + completion time on every request.
+OrderSchema.index({ restaurantId: 1, status: 1, completedAt: -1 });

@@ -57,4 +57,16 @@ export class HttpUserService implements UserService {
     const response = await this.client.get<PaymentMethod[]>('/me/payment-methods');
     return response.data;
   }
+
+  async uploadProfileImage(file: File): Promise<User> {
+    const form = new FormData();
+    form.append('image', file, file.name || 'image');
+    const response = await this.client.post<User>('/me/profile-image', form);
+    return response.data;
+  }
+
+  async removeProfileImage(): Promise<User> {
+    const response = await this.client.delete<User>('/me/profile-image');
+    return response.data;
+  }
 }

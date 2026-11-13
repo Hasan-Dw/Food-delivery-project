@@ -118,10 +118,10 @@ export function DeliveryExperience() {
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <ButtonLink
-              to={ROUTES.orderTracking('ord_10482')}
+              to={ROUTES.orderHistory}
               iconRight={<ArrowUpRight aria-hidden="true" className="h-4 w-4" />}
             >
-              Follow a sample delivery
+              Follow your delivery
             </ButtonLink>
             <button
               type="button"
@@ -133,8 +133,8 @@ export function DeliveryExperience() {
           </div>
 
           <p className="mt-5 text-[0.6875rem] leading-relaxed text-olive-500">
-            The order page map is a hand-drawn illustration of the final experience, clearly labelled preview mode. No
-            GPS permission is requested and no location is tracked.
+            Order pages use a real map and the assigned driver's live position while a delivery is in progress. GPS is
+            requested only from drivers during an active delivery and stops when it ends.
           </p>
         </Reveal>
       </div>

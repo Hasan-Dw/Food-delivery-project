@@ -2,7 +2,7 @@ import type { Product, ProductCategory } from '@/types';
 import { productCategories, products } from '@/mocks/data/products';
 import { delay } from '@/mocks/utils/delay';
 import { ApiError } from '@/services/api/errors';
-import type { ProductService, ProductQuery } from '@/services/products/ProductService';
+import type { ProductService, ProductQuery, ProductInput } from '@/services/products/ProductService';
 
 export class MockProductService implements ProductService {
   async listPopular(limit = 8): Promise<Product[]> {
@@ -50,5 +50,53 @@ export class MockProductService implements ProductService {
       throw new ApiError({ code: 'product_not_found', message: 'That dish is no longer available.' }, 404);
     }
     return product;
+  }
+
+  async uploadImage(productId: string, file: File): Promise<Product> {
+    await delay(400);
+    const product = await this.getById(productId);
+    return { ...product, imageKey: URL.createObjectURL(file) };
+  }
+
+  async removeImage(productId: string): Promise<Product> {
+    await delay(300);
+    const product = await this.getById(productId);
+    return { ...product, imageKey: 'dish-default' };
+  }
+
+  async create(restaurantId: string, input: ProductInput): Promise<Product> {
+    await delay(550);
+    return {
+      id: `prod_${Date.now().toString(36)}`,
+      restaurantId,
+      categoryId: input.categoryId,
+      name: input.name,
+      description: input.description,
+      price: input.price,
+      imageKey: input.imageKey ?? 'dish-default',
+      calories: input.calories,
+      isPopular: input.isPopular ?? false,
+      isVegetarian: input.isVegetarian,
+      isSpicy: input.isSpicy,
+      available: input.available ?? true,
+      optionGroups: [],
+    };
+  }
+
+  async update(productId: string, input: Partial<ProductInput>): Promise<Product> {
+    await delay(450);
+    const product = await this.getById(productId);
+    return { ...product, ...input, imageKey: input.imageKey ?? product.imageKey };
+  }
+
+  async setAvailability(productId: string, available: boolean): Promise<Product> {
+    await delay(300);
+    const product = await this.getById(productId);
+    return { ...product, available };
+  }
+
+  async remove(productId: string): Promise<void> {
+    await delay(300);
+    await this.getById(productId);
   }
 }

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, FlaskConical, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/StatePanel';
-import { DeliveryMap } from '@/features/tracking/components/DeliveryMap';
+import { TrackingMap } from '@/features/tracking/components/TrackingMap';
 import { DriverCard } from '@/features/tracking/components/DriverCard';
 import { OrderSummary } from '@/features/tracking/components/OrderSummary';
 import { TrackingTimeline } from '@/features/tracking/components/TrackingTimeline';
@@ -38,13 +38,12 @@ const headlines: Record<TrackingPhase, { lead: string; accent: string }> = {
 /**
  * Order tracking: map first, then the story and the receipt.
  *
- * The page is public so a shareable tracking link works before sign-in. All
- * data comes from the order and tracking services; the map is explicitly a
- * demo illustration and no GPS permission is requested.
+ * Only the order's customer (or the restaurant/driver/admin) may open it; the
+ * route guard and the API both enforce that. The map is a real tile map for
+ * API-backed data and a labelled illustration for the in-browser demo.
  */
 export default function OrderTrackingPage() {
   const { orderId = '' } = useParams<{ orderId: string }>();
-  const [searchParams] = useSearchParams();
   const { order, tracking, history } = useOrderTracking(orderId);
   const notify = useToast();
   const [refreshing, setRefreshing] = useState(false);
@@ -64,14 +63,14 @@ export default function OrderTrackingPage() {
       <div className="shell py-16">
         <ErrorState
           title="We could not find that delivery"
-          description={getErrorMessage(error, 'The order link may be incomplete, or this sample order does not exist.')}
+          description={getErrorMessage(error, 'The order link may be incomplete, or this order is no longer available.')}
           action={
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button variant="outline" size="sm" onClick={() => { order.refetch(); tracking.refetch(); history.refetch(); }}>
                 Try again
               </Button>
-              <ButtonLink to={ROUTES.orderTracking('ord_10482')} size="sm">
-                Open the sample order
+              <ButtonLink to={ROUTES.orderHistory} size="sm">
+                View my orders
               </ButtonLink>
             </div>
           }
@@ -111,7 +110,7 @@ export default function OrderTrackingPage() {
       notify({
         tone: 'info',
         title: 'Tracking refreshed',
-        description: 'This sample snapshot is illustrative and does not advance on its own.',
+        description: 'The latest order and driver position are now shown.',
       });
     } finally {
       setRefreshing(false);
@@ -140,8 +139,8 @@ export default function OrderTrackingPage() {
               Back to the marketplace
             </Link>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-300/50 bg-gold-50 px-3 py-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-gold-700">
-              <FlaskConical aria-hidden="true" className="h-3 w-3" />
-              Sample tracking
+              {isDemo ? <FlaskConical aria-hidden="true" className="h-3 w-3" /> : null}
+              {isDemo ? 'Snapshot tracking' : 'Live tracking'}
             </span>
           </div>
 
@@ -160,9 +159,6 @@ export default function OrderTrackingPage() {
                 <span>
                   Order {currentOrder.code} · placed {formatTime(currentOrder.placedAt)}
                 </span>
-                {searchParams.get('sample') === 'true' ? (
-                  <span className="text-[0.6875rem] text-olive-500">Opened from a sample link</span>
-                ) : null}
               </div>
             </div>
 
@@ -250,7 +246,7 @@ export default function OrderTrackingPage() {
 
       <div className="shell grid items-start gap-6 py-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(19rem,1fr)] lg:gap-7 lg:py-10">
         <div className="min-w-0 space-y-6">
-          <DeliveryMap snapshot={snapshot} />
+          <TrackingMap snapshot={snapshot} />
           <TrackingTimeline
             events={history.data}
             currentStatus={status}
@@ -266,8 +262,9 @@ export default function OrderTrackingPage() {
             <p className="flex items-start gap-2.5 text-[0.75rem] leading-relaxed text-olive-500">
               <FlaskConical aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-gold-600" />
               <span>
-                This page uses static sample tracking data. In production it subscribes to the{' '}
-                <span className="font-medium text-olive-700">TrackingService</span> channel for live driver updates.
+                {isDemo
+                  ? 'Tracking is served from a saved snapshot. Refresh to fetch the latest order state.'
+                  : 'This page receives live driver positions and status changes from the Savora tracking channel.'}
               </span>
             </p>
             <Link

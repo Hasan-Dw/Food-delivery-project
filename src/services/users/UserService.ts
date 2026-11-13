@@ -17,4 +17,7 @@ export interface UserService {
   deleteAddress(id: string): Promise<void>;
   setDefaultAddress(id: string): Promise<Address[]>;
   listPaymentMethods(): Promise<PaymentMethod[]>;
+  /** Upload/replace the signed-in user's avatar. */
+  uploadProfileImage(file: File): Promise<User>;
+  removeProfileImage(): Promise<User>;
 }

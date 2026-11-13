@@ -74,8 +74,18 @@ export class Restaurant {
   @Prop({ type: [String], default: [] })
   categorySlugs: string[];
 
-  @Prop({ trim: true, maxlength: 120, default: 'restaurant-default' })
+  @Prop({ trim: true, maxlength: 500, default: 'restaurant-default' })
   imageKey: string;
+
+  /** Cloudinary public id of the cover, used for replacement/deletion. */
+  @Prop({ trim: true, maxlength: 300 })
+  imagePublicId?: string;
+
+  @Prop({ trim: true, maxlength: 500 })
+  logoKey?: string;
+
+  @Prop({ trim: true, maxlength: 300 })
+  logoPublicId?: string;
 
   @Prop({ min: 0, max: 5, default: 0 })
   rating: number;

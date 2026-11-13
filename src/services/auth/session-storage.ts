@@ -48,7 +48,7 @@ function normaliseAccountStatus(value: unknown): AccountStatus {
     : 'APPROVED';
 }
 
-function normaliseUser(user: User): User {
+export function normaliseUser(user: User): User {
   return {
     ...user,
     role: normaliseRole(user.role),

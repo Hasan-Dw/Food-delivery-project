@@ -70,17 +70,24 @@ export class ApiClient {
 
     const token = auth ? (this.config.getAccessToken?.() ?? authToken.get()) : null;
     const url = `${this.config.baseUrl}${path}${buildQuery(query)}`;
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
     try {
       const response = await fetch(url, {
         method,
         headers: {
           Accept: 'application/json',
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          // Let the browser set the multipart boundary for FormData uploads.
+          ...(body !== undefined && !isFormData ? { 'Content-Type': 'application/json' } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...headers,
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body:
+          body === undefined
+            ? undefined
+            : isFormData
+              ? (body as FormData)
+              : JSON.stringify(body),
         signal: controller.signal,
         credentials: 'include',
       });

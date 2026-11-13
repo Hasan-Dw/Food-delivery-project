@@ -46,6 +46,23 @@ export interface MonthlySalesPoint {
   totalOrders: number;
 }
 
+export interface WeeklySalesPoint {
+  key: string;
+  label: string;
+  bucketStart: ISODateString;
+  bucketEnd: ISODateString;
+  revenue: number;
+  completedOrders: number;
+  totalOrders: number;
+}
+
+export interface PopularMenuItem {
+  productId: string;
+  name: string;
+  quantitySold: number;
+  revenue: number;
+}
+
 export interface OrderStatusSlice {
   status: OrderStatus;
   count: number;
@@ -59,7 +76,11 @@ export interface AnalyticsSummary {
   completedOrders: number;
   cancelledOrders: number;
   rejectedOrders: number;
+  pendingOrders: number;
+  activeOrders: number;
   averageOrderValue: number;
+  completionRatePercent: number;
+  cancellationRatePercent: number;
   /** `null` when the previous period had no completed revenue. */
   revenueGrowthPercent: number | null;
   /** `null` when the previous period had no estimated profit. */
@@ -93,7 +114,11 @@ export interface RestaurantAnalytics {
   series: AnalyticsSeriesPoint[];
   /** Always the trailing twelve months, independent of the selected range. */
   monthlySales: MonthlySalesPoint[];
+  /** Always the trailing eight weeks, independent of the selected range. */
+  weeklySales: WeeklySalesPoint[];
   orderDistribution: OrderStatusSlice[];
+  /** Best-selling menu items from completed orders in the selected period. */
+  popularItems: PopularMenuItem[];
   costModel: OperationalCostModel;
   generatedAt: ISODateString;
 }

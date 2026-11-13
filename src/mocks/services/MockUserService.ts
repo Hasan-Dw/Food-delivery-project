@@ -180,4 +180,22 @@ export class MockUserService implements UserService {
     await delay(220);
     return structuredClone(this.currentPaymentMethods());
   }
+
+  async uploadProfileImage(file: File): Promise<User> {
+    await delay(500);
+    const user = this.currentUser();
+    const next: User = { ...user, avatarKey: URL.createObjectURL(file) };
+    this.profiles.set(next.id, next);
+    this.persistSession(next);
+    return structuredClone(next);
+  }
+
+  async removeProfileImage(): Promise<User> {
+    await delay(350);
+    const user = this.currentUser();
+    const next: User = { ...user, avatarKey: undefined };
+    this.profiles.set(next.id, next);
+    this.persistSession(next);
+    return structuredClone(next);
+  }
 }

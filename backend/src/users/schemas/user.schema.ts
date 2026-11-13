@@ -105,8 +105,12 @@ export class User {
   @Prop({ trim: true, maxlength: 40, default: '' })
   phone: string;
 
-  @Prop({ trim: true, maxlength: 120 })
+  @Prop({ trim: true, maxlength: 500 })
   avatarKey?: string;
+
+  /** Cloudinary public id of the profile image. */
+  @Prop({ trim: true, maxlength: 300 })
+  avatarPublicId?: string;
 
   @Prop({ required: true, enum: UserRole, default: UserRole.CUSTOMER, index: true })
   role: string;

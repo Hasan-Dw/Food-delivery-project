@@ -26,7 +26,7 @@ import {
   registerSchema,
   type RegisterValues,
 } from '@/lib/validation';
-import { roleLandingPath } from '@/lib/permissions';
+import { postLoginPath } from '@/lib/permissions';
 import { getErrorMessage } from '@/services/api/errors';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -78,7 +78,11 @@ export default function RegisterPage() {
   const { signUp, isAuthenticated, user } = useAuth();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  const from = state?.from?.startsWith('/') ? state.from : user ? roleLandingPath(user.role) : ROUTES.profile;
+  const from = user
+    ? postLoginPath(user.role, state?.from)
+    : state?.from?.startsWith('/')
+      ? state.from
+      : ROUTES.profile;
   const [formError, setFormError] = useState<string | null>(null);
 
   const {

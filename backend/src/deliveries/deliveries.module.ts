@@ -10,6 +10,8 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { DeliveriesController } from './deliveries.controller';
 import { DeliveriesService } from './deliveries.service';
 import { Delivery, DeliverySchema } from './schemas/delivery.schema';
+import { RoutingModule } from '../routing/routing.module';
+import { TrackingModule } from '../tracking/tracking.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { Delivery, DeliverySchema } from './schemas/delivery.schema';
       { name: User.name, schema: UserSchema },
       { name: Restaurant.name, schema: RestaurantSchema },
     ]),
+    RoutingModule,
+    TrackingModule,
   ],
   controllers: [DeliveriesController],
   providers: [DeliveriesService],

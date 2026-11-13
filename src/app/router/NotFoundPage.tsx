@@ -28,11 +28,11 @@ export function NotFoundPage() {
           Back to the marketplace
         </ButtonLink>
         <ButtonLink
-          to={ROUTES.orderTracking('ord_10482')}
+          to={ROUTES.orderHistory}
           variant="outline"
           iconLeft={<Compass className="h-4 w-4" />}
         >
-          See a sample delivery
+          View your orders
         </ButtonLink>
       </div>
 

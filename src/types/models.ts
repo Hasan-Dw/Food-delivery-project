@@ -85,6 +85,7 @@ export interface AddressInput {
   country: string;
   instructions?: string;
   isDefault?: boolean;
+  coordinates?: Coordinates;
 }
 
 /* ── Restaurants ────────────────────────────────────────────────────────── */
@@ -121,6 +122,8 @@ export interface Restaurant {
   cuisines: string[];
   categorySlugs: string[];
   imageKey: string;
+  /** Optional logo used in compact restaurant surfaces (uploaded URL or key). */
+  logoKey?: string;
   rating: number;
   reviewCount: number;
   deliveryFee: number;
@@ -135,6 +138,8 @@ export interface Restaurant {
   featured?: boolean;
   /** Denormalised offer line, e.g. "20% off your first order". */
   offerLabel?: string;
+  /** Optional public description shown on the restaurant page. */
+  description?: string;
 }
 
 export interface RestaurantQuery {
@@ -489,11 +494,27 @@ export interface TrackingLocation {
   coordinates: Coordinates;
 }
 
+/** GeoJSON LineString in `[longitude, latitude]` order, as OSRM returns it. */
+export interface GeoJsonLineString {
+  type: 'LineString';
+  coordinates: Array<[number, number]>;
+}
+
 export interface TrackingRoute {
   /** Ordered polyline of geographic points for a real map provider. */
   points: Coordinates[];
   distanceKm: number;
+  /** Where the distance came from: real road routing or a labelled estimate. */
+  source?: 'osrm' | 'straight-line' | 'none';
+  /**
+   * Real road geometry when `source` is `osrm`. `null` means the map is drawing
+   * the two-point straight-line fallback and must label it as such.
+   */
+  geometry?: GeoJsonLineString | null;
 }
+
+/** Where an ETA or distance was derived from. */
+export type EtaSource = 'osrm' | 'straight-line' | 'none';
 
 export interface TrackingSnapshot {
   orderId: ID;
@@ -501,15 +522,19 @@ export interface TrackingSnapshot {
   orderStatus: OrderStatus;
   deliveryStatus: DeliveryStatus;
   driver?: Driver;
-  /** Latest known position, when a driver has shared one or the demo seed has one. */
+  /** Latest known position, when a driver has shared one. */
   driverLocation: DriverLocation | null;
-  etaMinutes: number;
+  /** `null` while there are no coordinates to estimate between. */
+  etaMinutes: number | null;
   estimatedArrivalAt?: ISODateString;
   deliveredAt?: ISODateString;
   destination: TrackingLocation;
   restaurant: TrackingLocation;
   route: TrackingRoute;
-  /** 0–1 along the route. Demo values are illustrative, never live GPS. */
+  /** Remaining road distance still to travel, in kilometres. */
+  remainingDistanceKm?: number | null;
+  etaSource?: EtaSource;
+  /** 0–1 along the route, derived from the delivery lifecycle. */
   progress: number;
   lastUpdated: ISODateString;
   live: boolean;

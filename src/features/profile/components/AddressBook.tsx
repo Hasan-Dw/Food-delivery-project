@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { SectionFrame } from './PersonalInfoForm';
+import { LocationPickerMap } from '@/features/location/components/LocationPickerMap';
+import type { GeocodedPlace } from '@/features/location/geocoding';
 import { useToast } from '@/stores/toast-store';
 import { services } from '@/services';
 import { queryKeys } from '@/lib/query-keys';
@@ -40,6 +42,7 @@ export function AddressBook({ addresses, isLoading, isError, onRetry }: AddressB
         ...values,
         line2: values.line2 || undefined,
         instructions: values.instructions || undefined,
+        coordinates: values.coordinates,
       };
       return id
         ? services.users.updateAddress(id, input)
@@ -106,7 +109,7 @@ export function AddressBook({ addresses, isLoading, isError, onRetry }: AddressB
                 <p className="mt-1 text-[0.8125rem] text-olive-500">
                   {env.useMocks
                     ? 'Used only for delivery in this preview. Nothing is sent to a map provider.'
-                    : 'Used to route delivery to this address once the ordering flow ships.'}
+                    : 'The pin is saved with this address and used for routing and ETA calculations.'}
                 </p>
               </div>
               <button
@@ -194,6 +197,10 @@ function AddressForm({
   const {
     register,
     handleSubmit,
+    watch,
+    getValues,
+    setValue,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
@@ -207,11 +214,42 @@ function AddressForm({
       country: initial?.country ?? 'USA',
       instructions: initial?.instructions ?? '',
       isDefault: initial?.isDefault ?? isDefaultAvailable,
+      coordinates: initial?.coordinates,
     },
   });
 
+  const coordinates = watch('coordinates');
+
+  const setCoordinates = (next: { lat: number; lng: number }) => {
+    setValue('coordinates', next, { shouldValidate: true, shouldDirty: true });
+  };
+
+  const applyGeocodedPlace = (place: GeocodedPlace | null) => {
+    if (!place?.address) return;
+    const parts = place.address;
+
+    if (parts.line1 && !getValues('line1')) setValue('line1', parts.line1, { shouldValidate: true });
+    if (parts.city && !getValues('city')) setValue('city', parts.city, { shouldValidate: true });
+    if (parts.state && !getValues('state')) setValue('state', parts.state, { shouldValidate: true });
+    if (parts.postalCode && !getValues('postalCode')) {
+      setValue('postalCode', parts.postalCode, { shouldValidate: true });
+    }
+    if (parts.country && !getValues('country')) {
+      setValue('country', parts.country, { shouldValidate: true });
+    }
+  };
+
   const submit = handleSubmit(async (values) => {
     setFormError(null);
+
+    if (!values.coordinates) {
+      setError('coordinates', {
+        type: 'manual',
+        message: 'Choose the delivery point on the map before saving.',
+      });
+      return;
+    }
+
     try {
       await onSubmit(values);
     } catch (error) {
@@ -222,6 +260,29 @@ function AddressForm({
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       <FormAlert message={formError} />
+
+      <div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[0.8125rem] font-medium text-olive-800">Delivery point</span>
+          <span className="text-[0.6875rem] text-olive-500">
+            Required — click the map or drag the pin
+          </span>
+        </div>
+        <LocationPickerMap
+          value={coordinates ?? null}
+          onChange={setCoordinates}
+          onResolveAddress={applyGeocodedPlace}
+          className={errors.coordinates ? 'border-danger/40' : undefined}
+          heightClassName="h-72"
+        />
+        {errors.coordinates?.message ? (
+          <p className="mt-2 text-[0.75rem] text-danger">{errors.coordinates.message}</p>
+        ) : (
+          <p className="mt-2 text-[0.6875rem] text-olive-500">
+            Search, tap the map or use your current location. Coordinates are saved with the address.
+          </p>
+        )}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
         <Select
@@ -297,7 +358,7 @@ function AddressForm({
         <Button type="submit" size="sm" isLoading={isSubmitting}>
           Save address
         </Button>
-        <p className="text-[0.6875rem] text-olive-500">Sample address · stored for this session only.</p>
+        <p className="text-[0.6875rem] text-olive-500">The pinned coordinates are stored with this address.</p>
       </div>
     </form>
   );
@@ -355,6 +416,15 @@ function AddressCard({
           {address.city}, {address.state} {address.postalCode}
         </span>
         <span className="block text-olive-500">{address.country}</span>
+        {address.coordinates ? (
+          <span className="mt-1.5 block text-[0.625rem] uppercase tracking-[0.08em] text-olive-400">
+            Pinned {address.coordinates.lat.toFixed(5)}, {address.coordinates.lng.toFixed(5)}
+          </span>
+        ) : (
+          <span className="mt-1.5 block text-[0.625rem] uppercase tracking-[0.08em] text-terracotta-600">
+            No map pin saved
+          </span>
+        )}
       </address>
 
       {address.instructions ? (

@@ -22,13 +22,15 @@ import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { ConfirmDialog } from '@/features/dashboard/components/ConfirmDialog';
 import { StatusBadge } from '@/features/dashboard/components/StatusBadge';
 import { formatAddress } from '@/features/dashboard/lib/dashboard-utils';
-import { DeliveryMap } from '@/features/tracking/components/DeliveryMap';
+import { TrackingMap } from '@/features/tracking/components/TrackingMap';
 import { useDriverActiveContext, useDriverDeliveryAction } from '../hooks/useDriverDashboard';
+import { useDriverLocationPublisher } from '../hooks/useDriverLocationPublisher';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/stores/toast-store';
 import { actorFromUser, canActOnDelivery } from '@/lib/permissions';
 import { getErrorMessage } from '@/services/api/errors';
 import { formatCurrency, formatEta, formatTime, pluralise } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { ROUTES } from '@/config/routes';
 import type { DeliveryAction, DeliveryStatus } from '@/types';
 
@@ -78,6 +80,14 @@ export default function DriverActiveDeliveryPage() {
   const action = useDriverDeliveryAction();
   const notify = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const activeStatus = activeDelivery.data?.status;
+  const publisher = useDriverLocationPublisher({
+    deliveryId: activeDelivery.data?.id,
+    enabled: Boolean(
+      activeStatus && ['ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'].includes(activeStatus),
+    ),
+  });
 
   if (profile.isLoading) return <PageLoader label="Opening your driver workspace…" />;
 
@@ -222,6 +232,48 @@ export default function DriverActiveDeliveryPage() {
         actions={<StatusBadge status={delivery.status} />}
       />
 
+      <div
+        role="status"
+        className={cn(
+          'flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-[0.8125rem] leading-relaxed',
+          publisher.status === 'publishing'
+            ? 'border-olive-300/50 bg-olive-50/60 text-olive-700'
+            : publisher.status === 'denied' || publisher.status === 'error' || publisher.status === 'unsupported'
+              ? 'border-danger/25 bg-danger/5 text-danger'
+              : 'border-gold-300/60 bg-gold-50/70 text-olive-700',
+        )}
+      >
+        {publisher.status === 'publishing' ? (
+          <Navigation aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-olive-700" />
+        ) : (
+          <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+        )}
+        <div>
+          <p className="font-medium">
+            {publisher.status === 'publishing'
+              ? 'Sharing your live position'
+              : publisher.status === 'requesting'
+                ? 'Waiting for location permission'
+                : publisher.status === 'denied'
+                  ? 'Location permission denied'
+                  : publisher.status === 'unsupported'
+                    ? 'Location is not supported'
+                    : publisher.status === 'closed'
+                      ? 'Location sharing stopped'
+                      : 'Location sharing needs attention'}
+          </p>
+          <p className="mt-0.5 text-[0.75rem]">
+            {publisher.message ??
+              (publisher.status === 'publishing'
+                ? `Updated ${publisher.lastSentAt ? formatTime(publisher.lastSentAt) : 'just now'}. The customer sees this position while the delivery is active.`
+                : 'Allow location access so the customer and dispatch can follow the delivery.')}
+          </p>
+          <p className="mt-1 text-[0.6875rem] opacity-75">
+            Tracking stops when this delivery ends or the tab is closed. There is no background tracking.
+          </p>
+        </div>
+      </div>
+
       {blockedByKitchen ? (
         <div
           role="status"
@@ -248,7 +300,7 @@ export default function DriverActiveDeliveryPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(19rem,1fr)]">
         <div className="space-y-6">
           {snapshot ? (
-            <DeliveryMap snapshot={snapshot} />
+            <TrackingMap snapshot={snapshot} />
           ) : tracking.isLoading ? (
             <PageLoader label="Preparing the route map…" />
           ) : (
@@ -425,7 +477,8 @@ export default function DriverActiveDeliveryPage() {
             </dl>
             <p className="mt-3 flex items-start gap-1.5 border-t border-olive-900/10 pt-3 text-[0.625rem] leading-relaxed text-olive-500">
               <Navigation aria-hidden="true" className="mt-0.5 h-3 w-3 shrink-0" />
-              GPS is not tracked in this prototype. The map is an illustrative route.
+              Your position is shared only while this delivery is active. Tracking stops when the
+              delivery ends or this tab closes.
             </p>
           </DashboardPanel>
         </div>

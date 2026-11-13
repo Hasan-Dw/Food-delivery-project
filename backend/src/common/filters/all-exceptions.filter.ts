@@ -23,9 +23,14 @@ const STATUS_CODES: Record<number, string> = {
   403: 'forbidden',
   404: 'not_found',
   409: 'conflict',
+  413: 'image_too_large',
   422: 'unprocessable_entity',
   429: 'too_many_requests',
   500: 'internal_error',
+};
+
+const STATUS_MESSAGES: Record<number, string> = {
+  413: 'Images must be 5 MB or smaller.',
 };
 
 function isDuplicateKeyError(
@@ -35,6 +40,14 @@ function isDuplicateKeyError(
     exception &&
       typeof exception === 'object' &&
       (exception as { code?: unknown }).code === 11000,
+  );
+}
+
+function isMulterError(exception: unknown): exception is { name: string; code?: string } {
+  return Boolean(
+    exception &&
+      typeof exception === 'object' &&
+      (exception as { name?: unknown }).name === 'MulterError',
   );
 }
 
@@ -85,7 +98,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             typeof body.code === 'string'
               ? body.code
               : (STATUS_CODES[status] ?? `http_${status}`),
-          message,
+          message: STATUS_MESSAGES[status] ?? message,
           requestId,
         };
 
@@ -110,6 +123,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       payload = {
         code: 'invalid_identifier',
         message: 'The provided identifier is not valid.',
+        requestId,
+      };
+    } else if (isMulterError(exception)) {
+      const tooLarge = exception.code === 'LIMIT_FILE_SIZE';
+      status = tooLarge
+        ? HttpStatus.PAYLOAD_TOO_LARGE
+        : HttpStatus.BAD_REQUEST;
+      payload = {
+        code: tooLarge ? 'image_too_large' : 'invalid_upload',
+        message: tooLarge
+          ? 'Images must be 5 MB or smaller.'
+          : 'The upload could not be processed.',
         requestId,
       };
     } else if (isDuplicateKeyError(exception)) {

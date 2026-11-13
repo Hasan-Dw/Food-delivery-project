@@ -9,10 +9,15 @@ import {
   Patch,
   Post,
   Put,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
+import { MAX_IMAGE_BYTES } from '../uploads/image-file.util';
+import type { UploadedImageFile } from '../uploads/image-file.util';
 import { AddressInputDto } from './dto/address.dto';
 import { UpdatePreferencesDto, UpdateProfileDto } from './dto/preferences.dto';
 import type {
@@ -93,5 +98,19 @@ export class UsersController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaymentMethodResponse[]> {
     return this.usersService.listPaymentMethods(user.id);
+  }
+
+  @Post('profile-image')
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: MAX_IMAGE_BYTES } }))
+  uploadProfileImage(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: UploadedImageFile,
+  ): Promise<UserResponse> {
+    return this.usersService.updateProfileImage(user.id, file);
+  }
+
+  @Delete('profile-image')
+  removeProfileImage(@CurrentUser() user: AuthenticatedUser): Promise<UserResponse> {
+    return this.usersService.removeProfileImage(user.id);
   }
 }

@@ -26,9 +26,9 @@ export const footerNav = {
   ] satisfies NavItem[],
   account: [
     { label: 'My profile', to: '/profile' },
-    { label: 'Orders', to: '/orders', soon: true },
-    { label: 'Cart', to: '/cart', soon: true },
-    { label: 'Order tracking', to: '/orders/ord_10482' },
+    { label: 'Orders', to: '/orders' },
+    { label: 'Cart', to: '/cart' },
+    { label: 'Track an order', to: '/orders' },
   ] satisfies NavItem[],
   partners: [
     { label: 'Become a partner', to: '/restaurant/dashboard', soon: true },
