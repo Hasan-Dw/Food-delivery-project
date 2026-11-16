@@ -13,6 +13,10 @@ import {
   PUBLIC_REGISTRATION_ROLES,
   UserRole,
 } from '../common/enums/user.enum';
+import {
+  SERVICE_AREA_CITY_FILTER,
+  isInsideServiceArea,
+} from '../common/constants/service-area.constant';
 import { RestaurantsService } from '../restaurants/restaurants.service';
 import { toUserResponse } from '../users/user.mapper';
 import type { UserDocument } from '../users/schemas/user.schema';
@@ -75,6 +79,23 @@ export class AuthService {
         ? AccountStatus.APPROVED
         : AccountStatus.PENDING_APPROVAL;
 
+    // Validate location payloads before any account is created so a bad pin can
+    // never leave a half-registered user behind.
+    if (role === UserRole.RESTAURANT_OWNER && dto.restaurant) {
+      this.assertServiceArea(
+        dto.restaurant.city,
+        dto.restaurant.latitude,
+        dto.restaurant.longitude,
+      );
+    }
+    if (role === UserRole.CUSTOMER && dto.defaultAddress) {
+      this.assertServiceArea(
+        dto.defaultAddress.city,
+        dto.defaultAddress.coordinates?.lat,
+        dto.defaultAddress.coordinates?.lng,
+      );
+    }
+
     const phone =
       dto.phone?.trim() ||
       dto.restaurant?.phone?.trim() ||
@@ -97,10 +118,25 @@ export class AuthService {
           name: dto.restaurant.name,
           tagline: dto.restaurant.description?.slice(0, 160),
           description: dto.restaurant.description,
-          address: { line1: dto.restaurant.address },
+          address: {
+            line1: dto.restaurant.address,
+            city: dto.restaurant.city,
+            state: dto.restaurant.state,
+            postalCode: dto.restaurant.postalCode,
+            country: dto.restaurant.country,
+            latitude: dto.restaurant.latitude,
+            longitude: dto.restaurant.longitude,
+          },
         },
       );
       await this.usersService.attachRestaurant(user._id.toString(), restaurant.id);
+    }
+
+    if (role === UserRole.CUSTOMER && dto.defaultAddress) {
+      await this.usersService.createAddress(user._id.toString(), {
+        ...dto.defaultAddress,
+        isDefault: true,
+      });
     }
 
     if (role === UserRole.DRIVER && dto.driver) {
@@ -208,6 +244,31 @@ export class AuthService {
 
   logout(): void {
     // Access tokens are stateless; the client removes its stored token.
+  }
+
+  private assertServiceArea(
+    city: string | undefined,
+    latitude: number | undefined,
+    longitude: number | undefined,
+  ): void {
+    if (city && !SERVICE_AREA_CITY_FILTER.test(city.trim())) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'Savora currently operates in Latakia only.',
+        details: { city: ['Choose Latakia.'] },
+      });
+    }
+    if (
+      latitude !== undefined &&
+      longitude !== undefined &&
+      !isInsideServiceArea({ lat: latitude, lng: longitude })
+    ) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'That map pin is outside the Latakia service area.',
+        details: { coordinates: ['Move the pin inside Latakia.'] },
+      });
+    }
   }
 
   private issueSession(user: UserDocument): AuthSessionResponse {

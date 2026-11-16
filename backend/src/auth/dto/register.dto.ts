@@ -3,17 +3,21 @@ import {
   IsEmail,
   IsEnum,
   IsIn,
+  IsNumber,
   IsOptional,
   IsString,
   Length,
   Matches,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import {
   PUBLIC_REGISTRATION_ROLES,
   VehicleType,
 } from '../../common/enums/user.enum';
+import { AddressInputDto } from '../../users/dto/address.dto';
 
 const PHONE_PATTERN = /^[+()\-\s\d]{7,40}$/;
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).+$/;
@@ -37,6 +41,40 @@ export class RestaurantRegistrationDto {
   @IsString()
   @MaxLength(320)
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  postalCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  country?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
 }
 
 export class DriverRegistrationDto {
@@ -89,4 +127,14 @@ export class RegisterDto {
   @ValidateNested()
   @Type(() => DriverRegistrationDto)
   driver?: DriverRegistrationDto;
+
+  /**
+   * Customer default delivery address captured during registration. Optional so
+   * existing clients keep working; when present it is validated for the Latakia
+   * service area and stored as the customer's default address.
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AddressInputDto)
+  defaultAddress?: AddressInputDto;
 }

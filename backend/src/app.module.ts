@@ -16,6 +16,7 @@ import { MenuItemsModule } from './menu-items/menu-items.module';
 import { OrdersModule } from './orders/orders.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { RestaurantsModule } from './restaurants/restaurants.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { UsersModule } from './users/users.module';
 
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     DriversModule,
     OrdersModule,
     TrackingModule,
+    ReviewsModule,
     AdminModule,
   ],
   providers: [

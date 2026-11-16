@@ -7,6 +7,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import { paginate, type PaginatedResult } from '../common/dto/pagination-query.dto';
+import {
+  SERVICE_AREA_CITY,
+  SERVICE_AREA_CITY_FILTER,
+  isInsideServiceArea,
+} from '../common/constants/service-area.constant';
 import { RestaurantStatus, UserRole } from '../common/enums/user.enum';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { toSlug } from '../common/utils/slug.util';
@@ -91,6 +96,7 @@ export class RestaurantsService {
   async list(query: RestaurantQueryDto): Promise<PaginatedResult<RestaurantResponse>> {
     const filter: FilterQuery<RestaurantDocument> = {
       status: RestaurantStatus.APPROVED,
+      'address.city': SERVICE_AREA_CITY_FILTER,
     };
 
     if (query.search?.trim()) {
@@ -128,6 +134,7 @@ export class RestaurantsService {
       categories.map(async (category) => {
         const itemCount = await this.restaurantModel.countDocuments({
           status: RestaurantStatus.APPROVED,
+          'address.city': SERVICE_AREA_CITY_FILTER,
           categorySlugs: category.slug,
         });
         return toRestaurantCategoryResponse(category, itemCount);
@@ -137,7 +144,11 @@ export class RestaurantsService {
 
   async getFeatured(limit = 8): Promise<RestaurantResponse[]> {
     const documents = await this.restaurantModel
-      .find({ status: RestaurantStatus.APPROVED, featured: true })
+      .find({
+        status: RestaurantStatus.APPROVED,
+        'address.city': SERVICE_AREA_CITY_FILTER,
+        featured: true,
+      })
       .sort({ rating: -1, reviewCount: -1 })
       .limit(Math.min(Math.max(limit, 1), 24))
       .exec();
@@ -165,6 +176,11 @@ export class RestaurantsService {
     status: RestaurantStatus = RestaurantStatus.PENDING_APPROVAL,
   ): Promise<RestaurantResponse> {
     await this.assertCategoriesExist(input.categorySlugs ?? []);
+    this.assertServiceArea(
+      input.address.city,
+      input.address.latitude,
+      input.address.longitude,
+    );
 
     const document = await this.restaurantModel.create({
       ownerId: new Types.ObjectId(ownerId),
@@ -182,8 +198,8 @@ export class RestaurantsService {
       address: {
         line1: input.address.line1,
         line2: input.address.line2,
-        city: input.address.city ?? '',
-        state: input.address.state ?? '',
+        city: input.address.city ?? SERVICE_AREA_CITY,
+        state: input.address.state ?? SERVICE_AREA_CITY,
         postalCode: input.address.postalCode ?? '',
         country: input.address.country ?? '',
         label: 'Other',
@@ -250,6 +266,11 @@ export class RestaurantsService {
     }
 
     if (input.address !== undefined) {
+      this.assertServiceArea(
+        input.address.city,
+        input.address.latitude,
+        input.address.longitude,
+      );
       document.address.line1 = input.address.line1;
       if (input.address.line2 !== undefined) document.address.line2 = input.address.line2;
       if (input.address.city !== undefined) document.address.city = input.address.city;
@@ -359,6 +380,7 @@ export class RestaurantsService {
   async findApprovedRestaurant(idOrSlug: string): Promise<RestaurantDocument> {
     const filter: FilterQuery<RestaurantDocument> = {
       status: RestaurantStatus.APPROVED,
+      'address.city': SERVICE_AREA_CITY_FILTER,
     };
     const document = Types.ObjectId.isValid(idOrSlug)
       ? await this.restaurantModel.findOne({ ...filter, _id: idOrSlug }).exec()
@@ -422,7 +444,10 @@ export class RestaurantsService {
   }
 
   async approvedRestaurantIds(): Promise<Types.ObjectId[]> {
-    return this.restaurantModel.distinct('_id', { status: RestaurantStatus.APPROVED });
+    return this.restaurantModel.distinct('_id', {
+      status: RestaurantStatus.APPROVED,
+      'address.city': SERVICE_AREA_CITY_FILTER,
+    });
   }
 
   async approvedRestaurantExists(restaurantId: string): Promise<boolean> {
@@ -431,8 +456,39 @@ export class RestaurantsService {
       await this.restaurantModel.exists({
         _id: restaurantId,
         status: RestaurantStatus.APPROVED,
+        'address.city': SERVICE_AREA_CITY_FILTER,
       }),
     );
+  }
+
+  /**
+   * Restaurant pins must stay inside the single supported service area.
+   * Coordinates and the city are optional for backward compatibility, but any
+   * value that is supplied has to be valid.
+   */
+  private assertServiceArea(
+    city: string | undefined,
+    latitude: number | undefined,
+    longitude: number | undefined,
+  ): void {
+    if (city && !SERVICE_AREA_CITY_FILTER.test(city.trim())) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: `Savora currently operates in ${SERVICE_AREA_CITY} only.`,
+        details: { city: [`Choose ${SERVICE_AREA_CITY}.`] },
+      });
+    }
+    if (
+      latitude !== undefined &&
+      longitude !== undefined &&
+      !isInsideServiceArea({ lat: latitude, lng: longitude })
+    ) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'That map pin is outside the Latakia service area.',
+        details: { coordinates: ['Move the pin inside Latakia.'] },
+      });
+    }
   }
 
   private async assertCategoriesExist(slugs: string[]): Promise<void> {

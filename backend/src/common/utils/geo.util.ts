@@ -46,6 +46,9 @@ export function estimateTravelMinutes(distanceKm: number, vehicle: string): numb
   return Math.max(1, Math.round((distanceKm / speed) * 60 + PICKUP_BUFFER_MINUTES));
 }
 
+/** City zones that contain every neighbourhood we seed as a driver area. */
+const LATAKIA_ZONES = new Set(['latakia']);
+
 /** Coarse zone used for the service-area compatibility check. */
 export function normalizeServiceArea(value?: string | null): string | null {
   if (!value) return null;
@@ -66,5 +69,10 @@ export function serviceAreasCompatible(
   const restaurantZone = normalizeServiceArea(restaurantArea);
   if (!driverZone || !restaurantZone) return true;
   if (driverZone.includes('all') || restaurantZone.includes('all')) return true;
+  // Restaurants store the city while drivers are grouped by Latakia
+  // neighbourhood, so a city-level match covers every neighbourhood in it.
+  if (LATAKIA_ZONES.has(driverZone) || LATAKIA_ZONES.has(restaurantZone)) {
+    return true;
+  }
   return driverZone === restaurantZone;
 }
