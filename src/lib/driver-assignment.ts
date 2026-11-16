@@ -46,9 +46,12 @@ export function estimateTravelMinutes(distanceKm: number, vehicle: VehicleType):
   return Math.max(1, Math.round((distanceKm / speed) * 60 + pickupBufferMinutes));
 }
 
+/** City zones that contain every neighbourhood we seed as a driver area. */
+const LATAKIA_ZONES = new Set(['latakia']);
+
 /**
  * Reduce a human service-area label to its coarse zone. The demo uses labels
- * such as `Brooklyn · North`; the first segment is the borough. A production
+ * such as `Latakia · Al-Ziraa`; the first segment is the zone. A production
  * system should replace this with explicit zone ids/polygons.
  */
 export function normalizeServiceArea(value?: string | null): string | null {
@@ -72,6 +75,9 @@ export function serviceAreasCompatible(
   if (!driverZone || !restaurantZone) return true;
   // Mirror the API: "All boroughs" (and any area containing "all") is a wildcard.
   if (driverZone.includes('all') || restaurantZone.includes('all')) return true;
+  // Restaurants store the city while drivers are grouped by Latakia
+  // neighbourhood, so a city-level match covers every neighbourhood in it.
+  if (LATAKIA_ZONES.has(driverZone) || LATAKIA_ZONES.has(restaurantZone)) return true;
   return driverZone === restaurantZone;
 }
 

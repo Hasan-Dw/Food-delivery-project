@@ -120,6 +120,7 @@ export class MockUserService implements UserService {
     const addresses = this.currentAddresses();
     const address: Address = {
       ...input,
+      postalCode: input.postalCode ?? '',
       id: `addr_${Date.now().toString(36)}`,
       isDefault: input.isDefault ?? addresses.length === 0,
     };
@@ -140,7 +141,12 @@ export class MockUserService implements UserService {
       throw new ApiError({ code: 'address_not_found', message: 'That address no longer exists.' }, 404);
     }
 
-    const updated: Address = { ...existing, ...input, id };
+    const updated: Address = {
+      ...existing,
+      ...input,
+      postalCode: input.postalCode ?? existing.postalCode,
+      id,
+    };
     const next = addresses.map((entry) => {
       if (entry.id === id) return updated;
       return input.isDefault ? { ...entry, isDefault: false } : entry;

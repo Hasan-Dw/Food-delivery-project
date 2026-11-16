@@ -33,7 +33,7 @@ export class OrderAddress {
   @Prop({ required: true, trim: true, maxlength: 80 })
   state: string;
 
-  @Prop({ required: true, trim: true, maxlength: 20 })
+  @Prop({ trim: true, maxlength: 20, default: '' })
   postalCode: string;
 
   @Prop({ required: true, trim: true, maxlength: 80 })

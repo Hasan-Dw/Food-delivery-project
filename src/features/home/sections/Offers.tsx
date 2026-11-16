@@ -71,7 +71,7 @@ export function Offers() {
         ) : (
           <div className="mt-9 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {promotions.data.map((promotion, index) => (
-              <Reveal key={promotion.id} delay={index * 70}>
+              <Reveal key={promotion.id} delay={index * 70} className="min-w-0">
                 <PromoCard promotion={promotion} />
               </Reveal>
             ))}

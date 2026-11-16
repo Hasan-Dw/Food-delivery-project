@@ -48,9 +48,10 @@ export class AddressInputDto {
   @Length(2, 80)
   state: string;
 
+  @IsOptional()
   @IsString()
-  @Length(4, 20)
-  postalCode: string;
+  @Length(0, 20)
+  postalCode?: string;
 
   @IsString()
   @Length(2, 80)

@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -11,6 +12,10 @@ import {
   UserRole,
   VehicleType,
 } from '../common/enums/user.enum';
+import {
+  SERVICE_AREA_CITY_FILTER,
+  isInsideServiceArea,
+} from '../common/constants/service-area.constant';
 import { UploadsService } from '../uploads/uploads.service';
 import type { UploadedImageFile } from '../uploads/image-file.util';
 import type { AddressInputDto } from './dto/address.dto';import type { PreferencesDto, UpdatePreferencesDto, UpdateProfileDto } from './dto/preferences.dto';
@@ -198,6 +203,7 @@ export class UsersService {
   }
 
   async createAddress(id: string, dto: AddressInputDto): Promise<AddressResponse> {
+    this.assertDeliveryArea(dto);
     const user = await this.getUserDocument(id);
     const address = { ...dto } as unknown as Address;
     const shouldBeDefault = dto.isDefault === true || (user.addresses ?? []).length === 0;
@@ -219,6 +225,7 @@ export class UsersService {
     addressId: string,
     dto: AddressInputDto,
   ): Promise<AddressResponse> {
+    this.assertDeliveryArea(dto);
     const user = await this.getUserDocument(id);
     const address = (user.addresses ?? []).find(
       (entry) => String((entry as unknown as { _id: Types.ObjectId })._id) === addressId,
@@ -240,7 +247,7 @@ export class UsersService {
     address.line2 = dto.line2;
     address.city = dto.city;
     address.state = dto.state;
-    address.postalCode = dto.postalCode;
+    address.postalCode = dto.postalCode ?? '';
     address.country = dto.country;
     address.instructions = dto.instructions;
     address.isDefault = dto.isDefault ?? address.isDefault;
@@ -322,10 +329,12 @@ export class UsersService {
     return driver;
   }
 
-  async attachRestaurant(userId: string, restaurantId: string): Promise<void> {
+  async attachRestaurant(userId: string, restaurantId: string, overwrite = false): Promise<void> {
     await this.userModel
       .updateOne(
-        { _id: userId, restaurantId: { $exists: false } },
+        overwrite
+          ? { _id: userId }
+          : { _id: userId, restaurantId: { $exists: false } },
         { $set: { restaurantId: new Types.ObjectId(restaurantId) } },
       )
       .exec();
@@ -376,6 +385,25 @@ export class UsersService {
       user.preferences.orderUpdates = preferences.orderUpdates;
     }
     if (preferences.marketing !== undefined) user.preferences.marketing = preferences.marketing;
+  }
+
+  /**
+   * Delivery addresses are part of the Latakia service area. Rejecting them at
+   * write time means checkout never has to discover an impossible address.
+   */
+  private assertDeliveryArea(dto: AddressInputDto): void {
+    if (dto.city && !SERVICE_AREA_CITY_FILTER.test(dto.city.trim())) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'Savora currently delivers in Latakia only.',
+      });
+    }
+    if (dto.coordinates && !isInsideServiceArea(dto.coordinates)) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'That map pin is outside the Latakia delivery area.',
+      });
+    }
   }
 
   private async getUserDocument(id: string): Promise<UserDocument> {

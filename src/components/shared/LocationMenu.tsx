@@ -39,9 +39,8 @@ export function LocationMenu({ tone = 'dark', compact = false, className }: Loca
           <span className={cn('block text-[0.625rem] uppercase tracking-[0.12em]', tone === 'light' ? 'text-cream/55' : 'text-olive-500')}>
             Delivering to
           </span>
-          <span className="block truncate text-[0.8125rem] font-medium leading-tight">
-            {area.city}, {area.region} {area.postalCode}
-          </span>
+          {/* The header shows only the city; the full address stays in the panel. */}
+          <span className="block truncate text-[0.8125rem] font-medium leading-tight">{area.city}</span>
         </span>
         <ChevronDown
           aria-hidden="true"
@@ -77,10 +76,10 @@ export function LocationMenu({ tone = 'dark', compact = false, className }: Loca
               >
                 <span>
                   <span className="block text-[0.8125rem] font-medium">
-                    {option.city}, {option.region}
+                    {option.city} · {option.region}
                   </span>
                   <span className={cn('block text-[0.6875rem]', selected ? 'text-cream/60' : 'text-olive-500')}>
-                    {option.eta} · {option.postalCode}
+                    {option.eta}
                   </span>
                 </span>
                 {selected ? <Check aria-hidden="true" className="h-4 w-4 shrink-0" /> : null}
@@ -89,7 +88,7 @@ export function LocationMenu({ tone = 'dark', compact = false, className }: Loca
           })}
           <div className="mt-2 flex items-center gap-2 border-t border-olive-900/8 px-3 pb-1 pt-3 text-[0.6875rem] text-olive-500">
             <Navigation aria-hidden="true" className="h-3.5 w-3.5 text-terracotta" />
-            Demo area selector — no location permission requested.
+            Savora currently delivers across Latakia only.
           </div>
         </div>
       ) : null}

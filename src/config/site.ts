@@ -6,9 +6,9 @@ export const site = {
   description:
     'Savora brings exceptional independent restaurants to your door. Discover local favourites, order in a few taps and follow every moment from kitchen to doorstep.',
   email: 'hello@savora.co',
-  phone: '+1 (718) 555-0142',
+  phone: '+963 944 000 142',
   supportHours: 'Every day · 8am – 11pm',
-  address: '148 Wythe Avenue, Brooklyn, NY 11249',
+  address: 'Al-Ziraa, Latakia, Syria',
   social: [
     { label: 'Instagram', href: 'https://instagram.com' },
     { label: 'TikTok', href: 'https://tiktok.com' },
@@ -16,7 +16,7 @@ export const site = {
   ],
   stats: {
     restaurants: '240+',
-    cities: '12',
+    cities: '1',
     diners: '48k',
     averageRating: '4.8',
   },

@@ -5,14 +5,24 @@ import 'leaflet/dist/leaflet.css';
 import { Crosshair, Loader2, MapPin, Search, X } from 'lucide-react';
 import type { Coordinates } from '@/types';
 import { cn } from '@/lib/cn';
+import { LATAKIA_BOUNDS, LATAKIA_CENTER } from '@/stores/location-store';
 import {
   nominatimGeocoder,
   type GeocodedPlace,
   type GeocodingProvider,
 } from '../geocoding';
 
-const DEFAULT_CENTER: Coordinates = { lat: 40.7128, lng: -74.006 };
-const DEFAULT_ZOOM = 14;
+const DEFAULT_CENTER: Coordinates = LATAKIA_CENTER;
+const DEFAULT_ZOOM = 13;
+
+/**
+ * Leaflet expects `[[south, west], [north, east]]`. Delivery addresses are
+ * constrained to Latakia so a customer cannot pin an out-of-area location.
+ */
+const MAX_BOUNDS: [[number, number], [number, number]] = [
+  [LATAKIA_BOUNDS.south, LATAKIA_BOUNDS.west],
+  [LATAKIA_BOUNDS.north, LATAKIA_BOUNDS.east],
+];
 
 const markerIcon = L.divIcon({
   className: '',
@@ -272,6 +282,10 @@ export function LocationPickerMap({
           <MapContainer
             center={[initialCenter.lat, initialCenter.lng]}
             zoom={DEFAULT_ZOOM}
+            minZoom={11}
+            maxZoom={18}
+            maxBounds={MAX_BOUNDS}
+            maxBoundsViscosity={0.85}
             scrollWheelZoom
             className="h-full w-full"
           >

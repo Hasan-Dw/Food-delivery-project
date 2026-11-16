@@ -46,6 +46,13 @@ interface NominatimPlace {
 const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org';
 const MIN_REQUEST_INTERVAL_MS = 1100;
 
+/**
+ * Savora only delivers in Latakia, so address search is biased to the city
+ * bounding box. Without this a customer in Latakia could accidentally select a
+ * same-named street in another country.
+ */
+const LATAKIA_VIEWBOX = '35.68,35.62,35.88,35.42';
+
 // Nominatim's usage policy allows at most one request per second. Requests are
 // serialised through this small client-side gate in addition to input debounce.
 let nextAllowedRequestAt = 0;
@@ -109,6 +116,9 @@ export const nominatimGeocoder: GeocodingProvider = {
       format: 'jsonv2',
       addressdetails: '1',
       limit: '5',
+      viewbox: LATAKIA_VIEWBOX,
+      bounded: '1',
+      countrycodes: 'sy',
       'accept-language': 'en',
     });
 

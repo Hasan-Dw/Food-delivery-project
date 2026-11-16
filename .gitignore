@@ -24,9 +24,16 @@ dist-ssr/
 # Test coverage
 coverage/
 
-# Documentation (root design references only)
+# Documentation
 /docs/
 
 # Operating system
 .DS_Store
 Thumbs.db
+
+# Visual Studio
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

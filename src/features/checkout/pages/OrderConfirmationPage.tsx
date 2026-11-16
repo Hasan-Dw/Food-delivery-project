@@ -5,7 +5,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Skeleton';
 import { queryKeys } from '@/lib/query-keys';
 import { services } from '@/services';
-import { formatCurrency, formatDeliveryWindow } from '@/lib/format';
+import { formatCurrency, formatDeliveryWindow, formatCityLine } from '@/lib/format';
 import { getErrorMessage } from '@/services/api/errors';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -100,8 +100,11 @@ export default function OrderConfirmationPage() {
                     {currentOrder.deliveryAddress.line1}
                     {currentOrder.deliveryAddress.line2 ? `, ${currentOrder.deliveryAddress.line2}` : ''}
                     <br />
-                    {currentOrder.deliveryAddress.city}, {currentOrder.deliveryAddress.state}{' '}
-                    {currentOrder.deliveryAddress.postalCode}
+                    {formatCityLine(
+                      currentOrder.deliveryAddress.city,
+                      currentOrder.deliveryAddress.state,
+                      currentOrder.deliveryAddress.postalCode,
+                    )}
                   </p>
                   {currentOrder.deliveryAddress.instructions ? (
                     <p className="mt-2 text-xs italic text-olive-500">{currentOrder.deliveryAddress.instructions}</p>

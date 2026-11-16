@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { AppModule } from '../app.module';
 import { setServers } from 'node:dns';
 import {
@@ -27,12 +27,19 @@ import {
 import { RestaurantsService } from '../restaurants/restaurants.service';
 import { MenuItem, type MenuItemDocument } from '../menu-items/schemas/menu-item.schema';
 import { DriverProfile, type DriverProfileDocument } from '../users/schemas/driver-profile.schema';
+import { Order, type OrderDocument } from '../orders/schemas/order.schema';
+import { Delivery, type DeliveryDocument } from '../deliveries/schemas/delivery.schema';
+import { Review, ReviewType, type ReviewDocument } from '../reviews/schemas/review.schema';
+import { OrderStatus, PaymentStatus } from '../common/enums/order.enum';
+import { DeliveryStatus } from '../common/enums/delivery.enum';
+import { SERVICE_AREA_CITY } from '../common/constants/service-area.constant';
 import {
   type Address,
   type PaymentMethod,
   type UserDocument,
 } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
+import { toSlug } from '../common/utils/slug.util';
 
 const CATEGORIES = [
   { slug: 'burgers', name: 'Burgers', imageKey: 'category-burgers', description: 'Smashed, stacked and seriously good.', sortOrder: 1 },
@@ -62,6 +69,8 @@ interface SeedAccount {
 
 interface SeedRestaurant {
   name: string;
+  /** Old display names that should be renamed in place, never duplicated. */
+  legacyNames?: string[];
   tagline: string;
   cuisines: string[];
   categorySlugs: string[];
@@ -947,6 +956,129 @@ const ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
   ],
 };
 
+/**
+ * The original preview fixtures above are retained for backwards-compatible
+ * local databases, but the development demonstration uses this explicit
+ * Latakia catalog. Image URLs can be supplied through the optional
+ * SEED_IMAGE_URL_* variables after uploading the assets to Cloudinary.
+ */
+const DEMO_RESTAURANTS: SeedRestaurant[] = [
+  {
+    name: 'Shawarmati',
+    legacyNames: ['شاورمتي'],
+    tagline: 'Syrian shawarma from the grill.',
+    cuisines: ['Syrian Shawarma', 'Grilled Chicken', 'Sandwiches', 'Fast Food'],
+    categorySlugs: ['sandwiches', 'fried-chicken'],
+    imageKey: 'dish-chicken-sandwich',
+    deliveryFee: 1.5,
+    minOrder: 5,
+    priceLevel: 2,
+    estimatedDeliveryMinutes: [20, 35],
+    isOpen: true,
+    description: 'Fresh Syrian shawarma, grilled chicken and warm sandwiches prepared to order in Latakia.',
+    address: {
+      line1: 'Approximate public map location near Sheikh Daher',
+      city: 'Latakia',
+      state: 'Latakia',
+      postalCode: '',
+      country: 'Syria',
+      latitude: 35.5236,
+      longitude: 35.7784,
+    },
+    openingHours: [{ day: 'Every day', open: '11:00', close: '23:30' }],
+    rating: 4.8,
+    reviewCount: 128,
+    distanceKm: 1.2,
+    badges: ['Latakia demo', 'Popular'],
+    featured: true,
+  },
+  {
+    name: 'Al Laffah',
+    legacyNames: ['اللفاح'],
+    tagline: 'Shawarma and Syrian sandwiches, made to order.',
+    cuisines: ['Shawarma', 'Syrian Sandwiches', 'Grilled Food', 'Fast Food'],
+    categorySlugs: ['sandwiches', 'fried-chicken'],
+    imageKey: 'feature-saffron-plate',
+    deliveryFee: 1.75,
+    minOrder: 5,
+    priceLevel: 2,
+    estimatedDeliveryMinutes: [25, 40],
+    isOpen: true,
+    description: 'A relaxed Latakia kitchen serving generous shawarma plates, grilled food and Syrian sandwiches.',
+    address: {
+      line1: 'Approximate public map location near Al-Raml Al-Janoubi',
+      city: 'Latakia',
+      state: 'Latakia',
+      postalCode: '',
+      country: 'Syria',
+      latitude: 35.5069,
+      longitude: 35.7734,
+    },
+    openingHours: [{ day: 'Every day', open: '11:00', close: '00:00' }],
+    rating: 4.7,
+    reviewCount: 96,
+    distanceKm: 2.1,
+    badges: ['Latakia demo'],
+    featured: true,
+  },
+  {
+    name: 'Sahtain',
+    legacyNames: ['صحتين'],
+    tagline: 'Syrian food made for sharing.',
+    cuisines: ['Syrian Food', 'Grills', 'Meals', 'Appetizers'],
+    categorySlugs: ['healthy', 'sandwiches'],
+    imageKey: 'dish-butter-chicken',
+    deliveryFee: 2,
+    minOrder: 7,
+    priceLevel: 3,
+    estimatedDeliveryMinutes: [30, 45],
+    isOpen: true,
+    description: 'Comforting Syrian meals, mixed grills and classic appetizers for family tables in Latakia.',
+    address: {
+      line1: 'Approximate public map location near Al-Azhari',
+      city: 'Latakia',
+      state: 'Latakia',
+      postalCode: '',
+      country: 'Syria',
+      latitude: 35.5351,
+      longitude: 35.7953,
+    },
+    openingHours: [{ day: 'Every day', open: '12:00', close: '23:00' }],
+    rating: 4.9,
+    reviewCount: 141,
+    distanceKm: 2.8,
+    badges: ['Latakia demo', 'Family meals'],
+    featured: true,
+  },
+];
+
+const DEMO_ITEMS_BY_RESTAURANT: Record<string, SeedItem[]> = {
+  Shawarmati: [
+    { category: 'Mains', name: 'شاورما دجاج / Chicken Shawarma', description: 'Tender marinated chicken shawarma with garlic sauce and pickles.', price: 4.5, imageKey: 'dish-chicken-sandwich', rating: 4.8, reviewCount: 42, isPopular: true },
+    { category: 'Mains', name: 'شاورما لحم / Meat Shawarma', description: 'Spiced beef shawarma served with tahini, parsley and pickles.', price: 5.5, imageKey: 'dish-brisket', rating: 4.7, reviewCount: 31 },
+    { category: 'Mains', name: 'شاورما عربي / Arabic Shawarma', description: 'Sliced chicken shawarma with fries, garlic sauce and flatbread.', price: 7, imageKey: 'dish-chicken-sandwich', rating: 4.9, reviewCount: 55, isPopular: true },
+    { category: 'Sides', name: 'بطاطا مقلية / French Fries', description: 'Crisp golden fries with a pinch of Syrian spices.', price: 2, imageKey: 'dish-saffron-bowl', rating: 4.5, reviewCount: 18, isVegetarian: true },
+    { category: 'Sides', name: 'ثوم / Garlic Sauce', description: 'Creamy house garlic sauce.', price: 1, imageKey: 'dish-green-goddess', rating: 4.6, reviewCount: 12, isVegetarian: true },
+    { category: 'Starters', name: 'فتوش / Fattoush', description: 'Crisp salad with toasted bread, herbs and sumac dressing.', price: 3.5, imageKey: 'dish-green-goddess', rating: 4.6, reviewCount: 20, isVegetarian: true },
+  ],
+  'Al Laffah': [
+    { category: 'Mains', name: 'ساندويش شاورما / Shawarma Sandwich', description: 'Warm saj bread filled with chicken shawarma and fresh toppings.', price: 4, imageKey: 'dish-chicken-sandwich', rating: 4.8, reviewCount: 37, isPopular: true },
+    { category: 'Mains', name: 'بروستد دجاج / Chicken Broast', description: 'Crispy seasoned chicken with fries and garlic sauce.', price: 8, imageKey: 'dish-butter-chicken', rating: 4.7, reviewCount: 29 },
+    { category: 'Mains', name: 'فروج مشوي / Grilled Chicken', description: 'Half chicken grilled with lemon, garlic and Syrian spices.', price: 9, imageKey: 'dish-butter-chicken', rating: 4.8, reviewCount: 24 },
+    { category: 'Sides', name: 'حمص / Hummus', description: 'Silky chickpea hummus with olive oil.', price: 3, imageKey: 'dish-green-goddess', rating: 4.7, reviewCount: 21, isVegetarian: true },
+    { category: 'Sides', name: 'بطاطا حرة / Spiced Potatoes', description: 'Golden potatoes tossed with coriander, garlic and chilli.', price: 3, imageKey: 'dish-saffron-bowl', rating: 4.6, reviewCount: 17, isVegetarian: true, isSpicy: true },
+    { category: 'Starters', name: 'فلافل / Falafel', description: 'Crisp chickpea falafel with tahini and herbs.', price: 3.5, imageKey: 'dish-green-goddess', rating: 4.7, reviewCount: 26, isVegetarian: true },
+  ],
+  Sahtain: [
+    { category: 'Mains', name: 'مشاوي مشكلة / Mixed Grill', description: 'A generous selection of kebab, shish tawook and grilled meat.', price: 14, imageKey: 'dish-brisket', rating: 4.9, reviewCount: 48, isPopular: true },
+    { category: 'Mains', name: 'شيش طاووق / Shish Tawook', description: 'Charcoal-grilled chicken skewers with garlic sauce.', price: 10, imageKey: 'dish-butter-chicken', rating: 4.8, reviewCount: 32 },
+    { category: 'Mains', name: 'وجبة دجاج / Chicken Meal', description: 'Grilled chicken, rice, salad and house sauce.', price: 9.5, imageKey: 'dish-butter-chicken', rating: 4.7, reviewCount: 27 },
+    { category: 'Starters', name: 'متبل / Moutabal', description: 'Smoky aubergine dip with tahini and lemon.', price: 3.5, imageKey: 'dish-green-goddess', rating: 4.7, reviewCount: 19, isVegetarian: true },
+    { category: 'Starters', name: 'تبولة / Tabbouleh', description: 'Parsley, tomato, bulgur and lemon olive-oil dressing.', price: 3.5, imageKey: 'dish-green-goddess', rating: 4.6, reviewCount: 16, isVegetarian: true },
+    { category: 'Sides', name: 'أرز بالشعيرية / Vermicelli Rice', description: 'Fluffy rice with toasted vermicelli.', price: 2.5, imageKey: 'dish-saffron-bowl', rating: 4.5, reviewCount: 14, isVegetarian: true },
+  ],
+};
+
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -1017,7 +1149,9 @@ async function ensureCustomerExtras(
       line2: extras.line2 ?? 'Apt 3B',
       city: extras.city ?? 'Brooklyn',
       state: extras.state ?? 'NY',
-      postalCode: extras.postalCode ?? '11211',
+      ...(extras.postalCode?.trim()
+  ? { postalCode: extras.postalCode.trim() }
+  : {}),
       country: extras.country ?? 'USA',
       instructions: extras.instructions ?? 'Buzzer 3B',
       isDefault: true,
@@ -1053,6 +1187,7 @@ async function ensureDriverProfile(
     completedDeliveries: number;
     totalEarningsCents: number;
     approvedAt?: Date;
+    location?: { lat: number; lng: number };
   },
 ): Promise<void> {
   let document = await driverModel.findOne({ userId: user._id }).exec();
@@ -1083,9 +1218,21 @@ async function ensureDriverProfile(
         completedDeliveries: profile.completedDeliveries,
         totalEarningsCents: profile.totalEarningsCents,
         approvedAt: profile.approvedAt ?? new Date('2024-01-01T00:00:00.000Z'),
+        ...(profile.location
+          ? {
+              lastLocation: {
+                ...profile.location,
+                updatedAt: new Date(),
+              },
+            }
+          : {}),
       },
     },
   );
+}
+
+function imageUrl(scope: string, fallback: string): string {
+  return optionalEnv(`SEED_IMAGE_URL_${scope}`, fallback);
 }
 
 async function ensureRestaurant(
@@ -1094,20 +1241,33 @@ async function ensureRestaurant(
   ownerId: string,
   seed: SeedRestaurant,
 ): Promise<RestaurantDocument> {
-  const existing = await restaurantModel.findOne({ name: seed.name });
-  if (existing) {
-    Logger.log(`Restaurant already exists: ${seed.name}`, 'Seed');
-    return existing;
-  }
+  const legacyNames = seed.legacyNames ?? [];
+  const existing =
+    (await restaurantModel.findOne({ name: seed.name })) ??
+    (legacyNames.length
+      ? await restaurantModel.findOne({ name: { $in: legacyNames } })
+      : null);
+  const seedImageKey = imageUrl(
+    seed.name === 'Shawarmati'
+      ? 'SHAWARMATI_RESTAURANT'
+      : seed.name === 'Al Laffah'
+        ? 'AL_LAFFAH_RESTAURANT'
+        : seed.name === 'Sahtain'
+          ? 'SAHTAIN_RESTAURANT'
+          : 'RESTAURANT',
+    seed.imageKey,
+  );
+  const preserveUploadedImage =
+    existing &&
+    /^https?:\/\//i.test(existing.imageKey ?? '') &&
+    seedImageKey === seed.imageKey;
 
-  const created = await restaurantsService.createForOwner(
-    ownerId,
-    {
+  const input = {
       name: seed.name,
       tagline: seed.tagline,
       cuisines: seed.cuisines,
       categorySlugs: seed.categorySlugs,
-      imageKey: seed.imageKey,
+      imageKey: preserveUploadedImage ? existing.imageKey : seedImageKey,
       deliveryFee: seed.deliveryFee,
       minOrder: seed.minOrder,
       priceLevel: seed.priceLevel,
@@ -1125,7 +1285,32 @@ async function ensureRestaurant(
         longitude: seed.address.longitude,
       },
       openingHours: seed.openingHours,
-    },
+    };
+
+  if (existing) {
+    await restaurantModel.updateOne(
+      { _id: existing._id },
+      {
+        $set: {
+          ...input,
+          slug: toSlug(seed.name),
+          ownerId: new Types.ObjectId(ownerId),
+          status: RestaurantStatus.APPROVED,
+          rating: seed.rating,
+          reviewCount: seed.reviewCount,
+          distanceKm: seed.distanceKm,
+          badges: seed.badges,
+          featured: seed.featured,
+        },
+      },
+    );
+    Logger.log(`Updated demo restaurant: ${seed.name}`, 'Seed');
+    return (await restaurantModel.findById(existing._id))!;
+  }
+
+  const created = await restaurantsService.createForOwner(
+    ownerId,
+    input,
     RestaurantStatus.APPROVED,
   );
 
@@ -1133,6 +1318,7 @@ async function ensureRestaurant(
     created.id,
     {
       $set: {
+        slug: toSlug(seed.name),
         rating: seed.rating,
         reviewCount: seed.reviewCount,
         distanceKm: seed.distanceKm,
@@ -1156,7 +1342,14 @@ async function seedMenu(
   const categories = await menuCategoryModel.find({ restaurantId: restaurant._id });
   const byName = new Map(categories.map((category) => [category.name, category._id]));
 
-  const operations = items.map((item) => {
+  const restaurantImageKey =
+    restaurant.name === 'Shawarmati'
+      ? 'SHAWARMATI'
+      : restaurant.name === 'Al Laffah'
+        ? 'AL_LAFFAH'
+        : 'SAHTAIN';
+
+  const operations = items.map((item, index) => {
     const categoryId = byName.get(item.category);
     if (!categoryId) {
       throw new Error(`Menu category "${item.category}" is missing for ${restaurant.name}.`);
@@ -1172,7 +1365,10 @@ async function seedMenu(
             name: item.name,
             description: item.description,
             priceCents: Math.round(item.price * 100),
-            imageKey: item.imageKey,
+            imageKey: imageUrl(
+              `MENU_${restaurantImageKey}_${index + 1}`,
+              item.imageKey,
+            ),
             calories: item.calories,
             rating: item.rating,
             reviewCount: item.reviewCount,
@@ -1276,6 +1472,349 @@ async function ensurePromotions(
   Logger.log(`Ensured ${SEED_PROMOTIONS.length} promotions`, 'Seed');
 }
 
+async function seedDemoActivity(params: {
+  orderModel: Model<OrderDocument>;
+  deliveryModel: Model<DeliveryDocument>;
+  reviewModel: Model<ReviewDocument>;
+  menuItemModel: Model<MenuItemDocument>;
+  driverModel: Model<DriverProfileDocument>;
+  restaurantModel: Model<RestaurantDocument>;
+  customers: UserDocument[];
+  restaurants: RestaurantDocument[];
+}): Promise<void> {
+  const {
+    orderModel,
+    deliveryModel,
+    reviewModel,
+    menuItemModel,
+    driverModel,
+    restaurantModel,
+    customers,
+    restaurants,
+  } = params;
+
+  if (customers.length < 1 || restaurants.length < 1) return;
+
+  // Remove the superseded one-review-per-order index so a single delivered
+  // order can carry restaurant, dish and delivery ratings independently.
+  await reviewModel.collection.dropIndex('orderId_1').catch(() => undefined);
+  await reviewModel.createIndexes().catch(() => undefined);
+
+  const scenarios = [
+    {
+      key: 'a',
+      customerIndex: 1,
+      daysAgo: 2,
+      rating: 5,
+      deliveryRating: 5,
+      serviceRating: 5,
+      restaurantComment: 'Fresh, hot and exactly what we ordered. The shawarma travels really well.',
+      itemComment: 'Generous filling and the garlic sauce is excellent.',
+      deliveryComment: 'Arrived warm and the driver kept us updated the whole way.',
+    },
+    {
+      key: 'b',
+      customerIndex: 0,
+      daysAgo: 9,
+      rating: 4,
+      deliveryRating: 4,
+      serviceRating: 4,
+      restaurantComment: 'Great flavour and good portions. Pickup was a little slower than expected.',
+      itemComment: 'Really tasty; I would order this again.',
+      deliveryComment: 'Friendly delivery and the order was complete.',
+    },
+    {
+      key: 'c',
+      customerIndex: 0,
+      daysAgo: 21,
+      rating: 5,
+      deliveryRating: 5,
+      serviceRating: 4,
+      restaurantComment: 'Our favourite in Latakia. Consistent quality every time.',
+      itemComment: 'Cooked perfectly and still hot on arrival.',
+      deliveryComment: 'Quick delivery; the tracking was accurate.',
+    },
+  ];
+
+  const drivers = await driverModel.find().sort({ createdAt: 1 }).limit(10);
+
+  for (const [restaurantIndex, restaurant] of restaurants.entries()) {
+    const menuItems = await menuItemModel
+      .find({ restaurantId: restaurant._id })
+      .sort({ isPopular: -1, name: 1 })
+      .limit(3);
+
+    if (menuItems.length === 0) continue;
+
+    for (const [scenarioIndex, scenario] of scenarios.entries()) {
+      const customer = customers[scenario.customerIndex % customers.length];
+      const placedAt = new Date(Date.now() - scenario.daysAgo * 24 * 60 * 60 * 1000);
+      placedAt.setHours(19, 15, 0, 0);
+      const completedAt = new Date(placedAt.getTime() + 48 * 60 * 1000);
+      const idempotencyKey = `seed-demo-order-${restaurant._id.toString()}-${scenario.key}`;
+      const lineItems = menuItems.slice(0, 2).map((item, index) => ({
+        productId: item._id,
+        name: item.name,
+        imageKey: item.imageKey,
+        quantity: index === 0 ? 2 : 1,
+        unitPriceCents: item.priceCents,
+        selectedOptions: [],
+      }));
+      const subtotalCents = lineItems.reduce(
+        (sum, item) => sum + item.unitPriceCents * item.quantity,
+        0,
+      );
+      const deliveryFeeCents = Math.round(restaurant.deliveryFee * 100);
+      const address = customer.addresses?.[0];
+      const orderCode = `SV-DEMO${restaurantIndex + 1}${scenarioIndex + 1}`;
+
+      const order = await orderModel.findOneAndUpdate(
+        { idempotencyKey },
+        {
+          $setOnInsert: {
+            idempotencyKey,
+            code: orderCode,
+            customerId: customer._id,
+            customerName: customer.fullName,
+            customerPhone: customer.phone ?? '',
+            restaurantId: restaurant._id,
+            restaurantName: restaurant.name,
+            restaurantImageKey: restaurant.imageKey,
+            items: lineItems,
+            status: OrderStatus.COMPLETED,
+            deliveryAddress: {
+              label: AddressLabel.HOME,
+              line1: address?.line1 ?? 'Approximate home location near Sheikh Daher',
+              city: SERVICE_AREA_CITY,
+              state: SERVICE_AREA_CITY,
+              postalCode: '',
+              country: 'Syria',
+              instructions: address?.instructions ?? '',
+              isDefault: true,
+              coordinates: address?.coordinates ?? { lat: 35.523, lng: 35.779 },
+            },
+            totals: {
+              subtotalCents,
+              deliveryFeeCents,
+              serviceFeeCents: 0,
+              discountCents: 0,
+              taxCents: 0,
+              totalCents: subtotalCents + deliveryFeeCents,
+            },
+            paymentMethod: {
+              type: PaymentType.CASH,
+              label: 'Cash on delivery',
+              isDefault: true,
+            },
+            paymentStatus: PaymentStatus.PAID,
+            placedAt,
+            acceptedAt: new Date(placedAt.getTime() + 3 * 60 * 1000),
+            preparingAt: new Date(placedAt.getTime() + 8 * 60 * 1000),
+            readyAt: new Date(placedAt.getTime() + 22 * 60 * 1000),
+            completedAt,
+            statusHistory: [
+              { status: OrderStatus.PENDING, at: placedAt },
+              { status: OrderStatus.ACCEPTED, at: new Date(placedAt.getTime() + 3 * 60 * 1000) },
+              { status: OrderStatus.PREPARING, at: new Date(placedAt.getTime() + 8 * 60 * 1000) },
+              { status: OrderStatus.READY, at: new Date(placedAt.getTime() + 22 * 60 * 1000) },
+              { status: OrderStatus.COMPLETED, at: completedAt },
+            ],
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
+      if (!order) continue;
+
+      const driver = drivers[(restaurantIndex + scenarioIndex) % Math.max(drivers.length, 1)];
+      const delivery = await deliveryModel.findOneAndUpdate(
+        { orderId: order._id },
+        {
+          $setOnInsert: {
+            orderId: order._id,
+            driverId: driver?._id ?? null,
+            restaurantId: restaurant._id,
+            customerId: customer._id,
+            status: DeliveryStatus.DELIVERED,
+            assignedAt: new Date(placedAt.getTime() + 22 * 60 * 1000),
+            pickedUpAt: new Date(placedAt.getTime() + 28 * 60 * 1000),
+            deliveredAt: completedAt,
+            estimatedArrivalAt: completedAt,
+            driverLocation: {
+              lat: 35.523,
+              lng: 35.779,
+              updatedAt: completedAt,
+            },
+            assignmentHistory: driver
+              ? [
+                  {
+                    action: 'ASSIGNED',
+                    source: 'AUTOMATIC',
+                    previousDriverId: null,
+                    newDriverId: driver._id,
+                    driverId: driver._id,
+                    driverName: driver.phone || 'Savora driver',
+                    at: new Date(placedAt.getTime() + 22 * 60 * 1000),
+                  },
+                ]
+              : [],
+            autoAssignment: {
+              attempts: 1,
+              lastAttemptAt: new Date(placedAt.getTime() + 22 * 60 * 1000),
+              lastTrigger: 'ORDER_READY',
+              status: driver ? 'ASSIGNED' : 'NO_ELIGIBLE_DRIVER',
+            },
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
+      if (delivery && !order.deliveryId) {
+        await orderModel.updateOne({ _id: order._id }, { $set: { deliveryId: delivery._id } });
+      }
+
+      const reviewTargets = [
+        {
+          type: ReviewType.RESTAURANT,
+          menuItemId: null,
+          rating: scenario.rating,
+          deliveryRating: null,
+          serviceRating: null,
+          comment: scenario.restaurantComment,
+        },
+        ...lineItems.map((item) => ({
+          type: ReviewType.MENU_ITEM,
+          menuItemId: item.productId,
+          rating: scenario.rating,
+          deliveryRating: null,
+          serviceRating: null,
+          comment: scenario.itemComment,
+        })),
+        {
+          type: ReviewType.DELIVERY,
+          menuItemId: null,
+          rating: Math.round(((scenario.deliveryRating + scenario.serviceRating) / 2) * 100) / 100,
+          deliveryRating: scenario.deliveryRating,
+          serviceRating: scenario.serviceRating,
+          comment: scenario.deliveryComment,
+        },
+      ];
+
+      for (const target of reviewTargets) {
+        await reviewModel.findOneAndUpdate(
+          {
+            orderId: order._id,
+            type: target.type,
+            menuItemId: target.menuItemId,
+          },
+          {
+            $setOnInsert: {
+              customerId: customer._id,
+              restaurantId: restaurant._id,
+              orderId: order._id,
+              type: target.type,
+              menuItemId: target.menuItemId,
+              driverId: target.type === ReviewType.DELIVERY ? driver?._id ?? null : null,
+              rating: target.rating,
+              deliveryRating: target.deliveryRating,
+              serviceRating: target.serviceRating,
+              comment: target.comment,
+            },
+          },
+          { upsert: true, setDefaultsOnInsert: true },
+        );
+      }
+    }
+  }
+
+  // Rebuild every aggregate from the review rows so displayed ratings always
+  // match the records a customer can read.
+  for (const restaurant of restaurants) {
+    const [summary] = await reviewModel.aggregate<{ average: number; total: number }>([
+      {
+        $match: {
+          restaurantId: restaurant._id,
+          type: ReviewType.RESTAURANT,
+          status: 'visible',
+        },
+      },
+      { $group: { _id: null, average: { $avg: '$rating' }, total: { $sum: 1 } } },
+    ]);
+
+    await restaurantModel.updateOne(
+      { _id: restaurant._id },
+      {
+        $set: {
+          rating: summary ? Math.round(summary.average * 100) / 100 : 0,
+          reviewCount: summary?.total ?? 0,
+        },
+      },
+    );
+  }
+
+  const restaurantIds = restaurants.map((restaurant) => restaurant._id);
+  const reviewedItemIds = await reviewModel.distinct('menuItemId', {
+    restaurantId: { $in: restaurantIds },
+    type: ReviewType.MENU_ITEM,
+    status: 'visible',
+    menuItemId: { $ne: null },
+  });
+
+  await menuItemModel.updateMany(
+    { restaurantId: { $in: restaurantIds }, _id: { $nin: reviewedItemIds } },
+    { $set: { rating: 0, reviewCount: 0 } },
+  );
+
+  for (const menuItemId of reviewedItemIds) {
+    const [summary] = await reviewModel.aggregate<{ average: number; total: number }>([
+      { $match: { menuItemId, type: ReviewType.MENU_ITEM, status: 'visible' } },
+      { $group: { _id: null, average: { $avg: '$rating' }, total: { $sum: 1 } } },
+    ]);
+
+    await menuItemModel.updateOne(
+      { _id: menuItemId },
+      {
+        $set: {
+          rating: summary ? Math.round(summary.average * 100) / 100 : 0,
+          reviewCount: summary?.total ?? 0,
+        },
+      },
+    );
+  }
+
+  for (const driver of drivers) {
+    const [summary] = await reviewModel.aggregate<{ average: number }>([
+      {
+        $match: {
+          driverId: driver._id,
+          type: ReviewType.DELIVERY,
+          status: 'visible',
+          deliveryRating: { $ne: null },
+        },
+      },
+      { $group: { _id: null, average: { $avg: '$deliveryRating' } } },
+    ]);
+
+    await driverModel.updateOne(
+      { _id: driver._id },
+      {
+        $set: {
+          rating: summary ? Math.round(summary.average * 100) / 100 : 5,
+          completedDeliveries: await deliveryModel.countDocuments({
+            driverId: driver._id,
+            status: DeliveryStatus.DELIVERED,
+          }),
+        },
+      },
+    );
+  }
+
+  Logger.log(
+    `Ensured demo order history and reviews for ${restaurants.length} restaurants.`,
+    'Seed',
+  );
+}
+
 async function main(): Promise<void> {
   setServers(['1.1.1.1', '8.8.8.8']);
   const customerPassword = requiredEnv('SEED_CUSTOMER_PASSWORD');
@@ -1309,73 +1848,44 @@ async function main(): Promise<void> {
     );
     const menuItemModel = app.get<Model<MenuItemDocument>>(getModelToken(MenuItem.name));
     const promotionModel = app.get<Model<PromotionDocument>>(getModelToken(Promotion.name));
+    const orderModel = app.get<Model<OrderDocument>>(getModelToken(Order.name));
+    const deliveryModel = app.get<Model<DeliveryDocument>>(getModelToken(Delivery.name));
+    const reviewModel = app.get<Model<ReviewDocument>>(getModelToken(Review.name));
 
     await ensureCategories(categoryModel);
 
     const customer = await ensureAccount(usersService, {
-      email: 'maya@example.com',
+      email: 'hasan@example.com',
       password: customerPassword,
-      fullName: 'Maya Chen',
+      fullName: 'Hasan',
       role: UserRole.CUSTOMER,
       status: AccountStatus.APPROVED,
-      phone: '+1 (718) 555-0142',
-      preferences: {
-        dietary: ['vegetarian'],
-        emailReceipts: true,
-        orderUpdates: true,
-        marketing: true,
-      },
+      phone: '+963 944 000 001',
     });
-    await ensureCustomerExtras(customer);
+    await ensureCustomerExtras(customer, {
+      line1: 'Approximate home location near Sheikh Daher',
+      city: 'Latakia',
+      state: 'Latakia',
+      postalCode: '',
+      country: 'Syria',
+      coordinates: { lat: 35.523, lng: 35.779 },
+    });
 
     const noah = await ensureAccount(usersService, {
-      email: 'noah@example.com',
+      email: 'lama@example.com',
       password: customerPassword,
-      fullName: 'Noah Kim',
+      fullName: 'Lama',
       role: UserRole.CUSTOMER,
       status: AccountStatus.APPROVED,
-      phone: '+1 (917) 555-0172',
-      preferences: {
-        dietary: [],
-        emailReceipts: true,
-        orderUpdates: true,
-        marketing: false,
-      },
+      phone: '+963 944 000 002',
     });
     await ensureCustomerExtras(noah, {
-      line1: '76 Grand Street',
-      line2: 'Floor 2',
-      city: 'New York',
-      state: 'NY',
-      postalCode: '10013',
-      instructions: 'Leave with the front desk.',
-      coordinates: { lat: 40.7189, lng: -74.0021 },
-      cardLast4: '1881',
-    });
-
-    const ava = await ensureAccount(usersService, {
-      email: 'ava@example.com',
-      password: customerPassword,
-      fullName: 'Ava Patel',
-      role: UserRole.CUSTOMER,
-      status: AccountStatus.APPROVED,
-      phone: '+1 (646) 555-0129',
-      preferences: {
-        dietary: ['vegan'],
-        emailReceipts: true,
-        orderUpdates: true,
-        marketing: true,
-      },
-    });
-    await ensureCustomerExtras(ava, {
-      line1: '320 Atlantic Avenue',
-      line2: 'Apt 5C',
-      city: 'Brooklyn',
-      state: 'NY',
-      postalCode: '11201',
-      instructions: 'Call on arrival. No contact delivery preferred.',
-      coordinates: { lat: 40.6912, lng: -73.9865 },
-      cardLast4: '3320',
+      line1: 'Approximate home location near Al-Raml Al-Janoubi',
+      city: 'Latakia',
+      state: 'Latakia',
+      postalCode: '',
+      country: 'Syria',
+      coordinates: { lat: 35.507, lng: 35.774 },
     });
 
     const owner = await ensureAccount(usersService, {
@@ -1405,32 +1915,24 @@ async function main(): Promise<void> {
       phone: '+1 (917) 555-0110',
     });
 
-    const driver = await ensureAccount(usersService, {
-      email: 'driver@example.com',
-      password: driverPassword,
-      fullName: 'Sam Rivera',
-      role: UserRole.DRIVER,
-      status: AccountStatus.APPROVED,
-      phone: '+1 (917) 555-0119',
-    });
-
-    const driverTwo = await ensureAccount(usersService, {
-      email: 'driver2@example.com',
-      password: driverPassword,
-      fullName: 'Aisha Bell',
-      role: UserRole.DRIVER,
-      status: AccountStatus.APPROVED,
-      phone: '+1 (347) 555-0183',
-    });
-
-    const driverThree = await ensureAccount(usersService, {
-      email: 'driver3@example.com',
-      password: driverPassword,
-      fullName: 'Marco Silva',
-      role: UserRole.DRIVER,
-      status: AccountStatus.PENDING_APPROVAL,
-      phone: '+1 (929) 555-0148',
-    });
+    const demoDrivers = await Promise.all(
+      [
+        ['driver.hasan@example.com', 'Hasan Driver', '+963 944 000 101'],
+        ['driver.lama@example.com', 'Lama Driver', '+963 944 000 102'],
+        ['driver.latakia3@example.com', 'Latakia Driver 3', '+963 944 000 103'],
+        ['driver.latakia4@example.com', 'Latakia Driver 4', '+963 944 000 104'],
+        ['driver.latakia5@example.com', 'Latakia Driver 5', '+963 944 000 105'],
+      ].map(([email, fullName, phone]) =>
+        ensureAccount(usersService, {
+          email,
+          password: driverPassword,
+          fullName,
+          role: UserRole.DRIVER,
+          status: AccountStatus.APPROVED,
+          phone,
+        }),
+      ),
+    );
 
     const adminAccount = await ensureAccount(usersService, {
       email: adminEmail,
@@ -1456,45 +1958,37 @@ async function main(): Promise<void> {
 
     const admin = await usersService.findByEmail(adminEmail);
 
-    await ensureDriverProfile(driverModel, usersService, driver, {
+    const driverProfiles = [
+      { serviceArea: 'Al-Ziraa', location: { lat: 35.515, lng: 35.790 } },
+      { serviceArea: 'Sheikh Daher', location: { lat: 35.524, lng: 35.779 } },
+      { serviceArea: 'Al-Azhari', location: { lat: 35.535, lng: 35.795 } },
+      { serviceArea: 'Al-Raml Al-Janoubi', location: { lat: 35.507, lng: 35.774 } },
+      { serviceArea: 'Daatour', location: { lat: 35.548, lng: 35.785 } },
+    ];
+    for (const [index, driver] of demoDrivers.entries()) {
+      await ensureDriverProfile(driverModel, usersService, driver, {
       status: AccountStatus.APPROVED,
       availability: DriverAvailability.AVAILABLE,
-      vehicle: VehicleType.SCOOTER,
-      serviceArea: 'All boroughs',
-      rating: 4.92,
-      completedDeliveries: 128,
-      totalEarningsCents: 96450,
-    });
-
-    await ensureDriverProfile(driverModel, usersService, driverTwo, {
-      status: AccountStatus.APPROVED,
-      availability: DriverAvailability.AVAILABLE,
-      vehicle: VehicleType.BIKE,
-      serviceArea: 'Brooklyn and Lower Manhattan',
-      rating: 4.87,
-      completedDeliveries: 76,
-      totalEarningsCents: 58300,
-    });
-
-    await ensureDriverProfile(driverModel, usersService, driverThree, {
-      status: AccountStatus.PENDING_APPROVAL,
-      availability: DriverAvailability.OFFLINE,
-      vehicle: VehicleType.CAR,
-      serviceArea: 'Queens and Brooklyn',
-      rating: 5,
+      vehicle: index % 2 === 0 ? VehicleType.SCOOTER : VehicleType.BIKE,
+      serviceArea: driverProfiles[index]?.serviceArea ?? 'Latakia',
+      rating: 4.8,
       completedDeliveries: 0,
       totalEarningsCents: 0,
-      approvedAt: new Date('2024-01-01T00:00:00.000Z'),
-    });
+      location: driverProfiles[index]?.location,
+      });
+    }
 
     const ownerId = owner._id.toString();
     const ownerTwoId = ownerTwo._id.toString();
     const restaurants: RestaurantDocument[] = [];
 
-    for (const [index, seed] of RESTAURANTS.entries()) {
-      // The first four kitchens belong to the original owner; the newest two
-      // belong to a second approved owner so ownership scoping has real data.
-      const restaurantOwnerId = index < 4 ? ownerId : ownerTwoId;
+    await restaurantModel.updateMany(
+      { name: { $nin: DEMO_RESTAURANTS.map(({ name }) => name) }, status: RestaurantStatus.APPROVED },
+      { $set: { status: RestaurantStatus.SUSPENDED, featured: false } },
+    );
+
+    for (const [index, seed] of DEMO_RESTAURANTS.entries()) {
+      const restaurantOwnerId = index === 0 ? ownerId : ownerTwoId;
       restaurants.push(
         await ensureRestaurant(
           restaurantsService,
@@ -1510,18 +2004,29 @@ async function main(): Promise<void> {
         menuItemModel,
         menuCategoryModel,
         restaurant,
-        ITEMS_BY_RESTAURANT[restaurant.name] ?? [],
+        DEMO_ITEMS_BY_RESTAURANT[restaurant.name] ?? [],
       );
     }
 
     if (restaurants[0]) {
-      await usersService.attachRestaurant(ownerId, restaurants[0]._id.toString());
+      await usersService.attachRestaurant(ownerId, restaurants[0]._id.toString(), true);
     }
-    if (restaurants[4]) {
-      await usersService.attachRestaurant(ownerTwoId, restaurants[4]._id.toString());
+    if (restaurants[1]) {
+      await usersService.attachRestaurant(ownerTwoId, restaurants[1]._id.toString(), true);
     }
 
     await ensurePromotions(promotionModel, admin?._id.toString());
+
+    await seedDemoActivity({
+      orderModel,
+      deliveryModel,
+      reviewModel,
+      menuItemModel,
+      driverModel,
+      restaurantModel,
+      customers: [customer, noah],
+      restaurants,
+    });
 
     Logger.log('Seed complete.', 'Seed');
     Logger.log(

@@ -10,6 +10,7 @@ import { MockProductService } from '@/mocks/services/MockProductService';
 import { MockPromotionService } from '@/mocks/services/MockPromotionService';
 import { MockRestaurantAnalyticsService } from '@/mocks/services/MockRestaurantAnalyticsService';
 import { MockRestaurantService } from '@/mocks/services/MockRestaurantService';
+import { MockReviewService } from '@/mocks/services/MockReviewService';
 import { MockTrackingService } from '@/mocks/services/MockTrackingService';
 import { MockUserService } from '@/mocks/services/MockUserService';
 import { HttpAuthService } from './auth/HttpAuthService';
@@ -22,6 +23,7 @@ import { HttpProductService } from './products/HttpProductService';
 import { HttpPromotionService } from './promotions/HttpPromotionService';
 import { HttpRestaurantAnalyticsService } from './analytics/HttpRestaurantAnalyticsService';
 import { HttpRestaurantService } from './restaurants/HttpRestaurantService';
+import { HttpReviewService } from './reviews/HttpReviewService';
 import { HttpTrackingService } from './tracking/HttpTrackingService';
 import { HttpUserService } from './users/HttpUserService';
 import type { AdminService } from './admin/AdminService';
@@ -34,12 +36,14 @@ import type { ProductService } from './products/ProductService';
 import type { PromotionService } from './promotions/PromotionService';
 import type { RestaurantAnalyticsService } from './analytics/RestaurantAnalyticsService';
 import type { RestaurantService } from './restaurants/RestaurantService';
+import type { ReviewService } from './reviews/ReviewService';
 import type { TrackingService } from './tracking/TrackingService';
 import type { UserService } from './users/UserService';
 
 export interface Services {
   auth: AuthService;
   restaurants: RestaurantService;
+  reviews: ReviewService;
   analytics: RestaurantAnalyticsService;
   products: ProductService;
   orders: OrderService;
@@ -66,6 +70,7 @@ export const services: Services = {
   auth: useBackend ? new HttpAuthService(apiClient) : new MockAuthService(),
   users: useBackend ? new HttpUserService(apiClient) : new MockUserService(),
   restaurants: useBackend ? new HttpRestaurantService(apiClient) : new MockRestaurantService(),
+  reviews: useBackend ? new HttpReviewService(apiClient) : new MockReviewService(),
   products: useBackend ? new HttpProductService(apiClient) : new MockProductService(),
 
   orders: useBackend ? new HttpOrderService(apiClient) : new MockOrderService(),
@@ -93,6 +98,7 @@ export type {
   PromotionService,
   RestaurantAnalyticsService,
   RestaurantService,
+  ReviewService,
   TrackingService,
   UserService,
 };

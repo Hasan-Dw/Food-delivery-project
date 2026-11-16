@@ -78,7 +78,7 @@ export function FeaturedRestaurants() {
               </div>
 
               <div className="absolute -bottom-5 -right-3 hidden rounded-2xl border border-cream/15 bg-olive-900/90 px-5 py-4 shadow-lift backdrop-blur sm:block">
-                <p className="font-display text-[1.8rem] leading-none text-gold-200">240+</p>
+                <p className="font-display text-[1.8rem] leading-none text-gold-200">3</p>
                 <p className="mt-1 text-[0.625rem] uppercase tracking-[0.13em] text-cream/50">
                   independent kitchens
                 </p>
@@ -121,7 +121,7 @@ export function FeaturedRestaurants() {
               <ol className="divide-y divide-cream/10">
                 {(featured.data ?? []).map((restaurant, index) => (
                   <li key={restaurant.id}>
-                    <Reveal delay={index * 80}>
+                    <Reveal delay={index * 80} className="min-w-0">
                       <FeaturedRow restaurant={restaurant} index={index} />
                     </Reveal>
                   </li>

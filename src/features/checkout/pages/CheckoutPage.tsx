@@ -10,6 +10,7 @@ import { useCartStore } from '@/stores/cart-store';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { services } from '@/services';
 import { getErrorMessage } from '@/services/api/errors';
+import { cn } from '@/lib/cn';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { Address, AddressLabel } from '@/types';
 import { DeliveryAddressForm } from '../components/DeliveryAddressForm';
@@ -32,10 +33,10 @@ function createAddress(userId: string): Address {
     id: `checkout-${userId}`,
     label: 'Other' satisfies AddressLabel,
     line1: '',
-    city: '',
-    state: '',
+    city: 'Latakia',
+    state: 'Latakia',
     postalCode: '',
-    country: 'USA',
+    country: 'Syria',
     isDefault: false,
   };
 }
@@ -52,6 +53,7 @@ export default function CheckoutPage() {
   const { mutation, partialOrder } = useCheckout();
   const [address, setAddress] = useState<Address>(() => createAddress(user?.id ?? 'guest'));
   const [addressEdited, setAddressEdited] = useState(false);
+  const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState(user?.fullName ?? '');
   const [customerPhone, setCustomerPhone] = useState(user?.phone ?? '');
   const [paymentMethodId, setPaymentMethodId] = useState('');
@@ -158,6 +160,7 @@ export default function CheckoutPage() {
     if (!addressEdited && addresses.data?.length) {
       const selected = addresses.data.find((entry) => entry.isDefault) ?? addresses.data[0];
       setAddress({ ...selected });
+      setSelectedSavedId(selected.id);
     }
   }, [addressEdited, addresses.data]);
 
@@ -210,7 +213,7 @@ export default function CheckoutPage() {
       nextErrors.customerPhone = 'Enter a valid phone number.';
     }
     const addressErrors: NonNullable<CheckoutErrors['address']> = {};
-    for (const field of ['line1', 'city', 'state', 'postalCode', 'country'] as const) {
+    for (const field of ['line1', 'city', 'state', 'country'] as const) {
       if (!address[field].trim()) addressErrors[field] = 'This field is required.';
     }
     if (Object.keys(addressErrors).length) nextErrors.address = addressErrors;
@@ -353,6 +356,78 @@ export default function CheckoutPage() {
                 </label>
               </div>
             </section>
+
+            {addresses.data?.length ? (
+              <section className="rounded-2xl border border-olive-900/10 bg-white/70 p-5 shadow-soft sm:p-7">
+                <div className="mb-4">
+                  <p className="eyebrow text-terracotta-700">Saved addresses</p>
+                  <h2 className="mt-2 font-display text-[1.65rem] text-olive-900">Where should we deliver?</h2>
+                  <p className="mt-1 text-[0.75rem] text-olive-500">
+                    Your default address is selected automatically. Choose another saved address or edit the
+                    details below.
+                  </p>
+                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {addresses.data.map((saved) => {
+                    const selected = selectedSavedId === saved.id;
+                    return (
+                      <button
+                        key={saved.id}
+                        type="button"
+                        disabled={lockedAfterOrder}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          setSelectedSavedId(saved.id);
+                          setAddressEdited(true);
+                          setAddress({ ...saved });
+                        }}
+                        className={cn(
+                          'rounded-xl border p-3.5 text-left transition disabled:opacity-60',
+                          selected
+                            ? 'border-olive-700 bg-olive-700 text-cream'
+                            : 'border-olive-900/12 bg-cream/60 text-olive-800 hover:border-olive-900/25',
+                        )}
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-[0.75rem] font-semibold uppercase tracking-[0.08em]">
+                            {saved.label}
+                          </span>
+                          {saved.isDefault ? (
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.08em]',
+                                selected ? 'bg-cream/15 text-cream' : 'bg-olive-900/8 text-olive-600',
+                              )}
+                            >
+                              Default
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className={cn('mt-1.5 block text-[0.8125rem]', selected ? 'text-cream' : 'text-olive-700')}>
+                          {saved.line1}
+                        </span>
+                        <span className={cn('block text-[0.6875rem]', selected ? 'text-cream/65' : 'text-olive-500')}>
+                          {saved.line2 ? `${saved.line2} · ` : ''}
+                          {saved.city}
+                          {saved.state ? ` · ${saved.state}` : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  disabled={lockedAfterOrder}
+                  onClick={() => {
+                    setSelectedSavedId(null);
+                    setAddressEdited(true);
+                  }}
+                  className="mt-3 text-[0.75rem] font-medium text-terracotta-600 underline-offset-4 hover:underline disabled:opacity-60"
+                >
+                  Use a different address
+                </button>
+              </section>
+            ) : null}
 
             <DeliveryAddressForm
               address={address}

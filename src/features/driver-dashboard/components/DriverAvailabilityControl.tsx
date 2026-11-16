@@ -63,8 +63,8 @@ export function DriverAvailabilityControl({
           {isOnDelivery
             ? 'Availability is locked while you are on a delivery. Finish the drop-off first, then choose online or offline.'
             : goingOnline
-              ? 'Go online when you are ready to accept a platform-assigned delivery.'
-              : 'You are offline. No delivery will be assigned until you are back online.'}
+              ? 'You are offline. No delivery will be assigned until you go back online.'
+              : 'You are online and ready to receive a platform-assigned delivery.'}
         </p>
       ) : null}
 

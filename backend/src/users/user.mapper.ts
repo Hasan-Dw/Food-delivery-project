@@ -18,7 +18,7 @@ export function toAddressResponse(address: Address): AddressResponse {
     line1: address.line1,
     city: address.city,
     state: address.state,
-    postalCode: address.postalCode,
+    postalCode: address.postalCode ?? '',
     country: address.country,
     isDefault: Boolean(address.isDefault),
   };

@@ -9,14 +9,32 @@ function toBool(value: string | undefined, fallback = false): boolean {
 }
 
 const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '');
-
+const isProduction = import.meta.env.PROD;
 const requestedDataSource = import.meta.env.VITE_DATA_SOURCE;
-const dataSource: 'mock' | 'http' =
-  requestedDataSource === 'http' || requestedDataSource === 'mock'
+
+/**
+ * Production builds never fall back to in-browser demo data. A missing API URL
+ * is a deployment error that must surface loudly instead of silently serving
+ * fake accounts and orders to real customers.
+ */
+const dataSource: 'mock' | 'http' = isProduction
+  ? 'http'
+  : requestedDataSource === 'http' || requestedDataSource === 'mock'
     ? requestedDataSource
     : rawBaseUrl
       ? 'http'
       : 'mock';
+
+/** Human-readable deployment problem, empty when configuration is valid. */
+const configError =
+  dataSource === 'http' && !rawBaseUrl
+    ? 'VITE_API_BASE_URL is not set. The production build cannot reach the Savora API.'
+    : '';
+
+if (isProduction && !rawBaseUrl) {
+  // Fails visibly in the browser console and in any monitoring that captures it.
+  console.error(`[Savora] ${configError}`);
+}
 
 export const env = {
   apiBaseUrl: rawBaseUrl,
@@ -25,6 +43,8 @@ export const env = {
   mapProvider: import.meta.env.VITE_MAP_PROVIDER ?? 'preview',
   mapToken: import.meta.env.VITE_MAP_TOKEN ?? '',
   isDev: import.meta.env.DEV,
+  isProduction,
+  configError,
   useMocks: dataSource === 'mock' || !rawBaseUrl,
   features: {
     /**

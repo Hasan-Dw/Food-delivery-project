@@ -31,6 +31,16 @@ export function formatRating(rating: number): string {
   return rating.toFixed(1);
 }
 
+/**
+ * Syrian addresses usually have no postal code, so the trailing segment is
+ * omitted instead of leaving a dangling space or "undefined" on receipts.
+ */
+export function formatCityLine(city: string, state?: string, postalCode?: string): string {
+  const region = state && state !== city ? `, ${state}` : '';
+  const postal = postalCode?.trim() ? ` ${postalCode.trim()}` : '';
+  return `${city}${region}${postal}`;
+}
+
 export function formatCount(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(value % 1000 >= 100 ? 1 : 0)}k`;
   return String(value);

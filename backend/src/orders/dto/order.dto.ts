@@ -40,9 +40,10 @@ export class OrderAddressDto {
   @Length(1, 80)
   state: string;
 
+  @IsOptional()
   @IsString()
-  @Length(1, 20)
-  postalCode: string;
+  @MaxLength(20)
+  postalCode?: string;
 
   @IsString()
   @Length(1, 80)

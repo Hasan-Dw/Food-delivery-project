@@ -21,6 +21,9 @@ import { Textarea } from '@/components/ui/Textarea';
 import { PasswordInput } from '@/features/auth/components/PasswordInput';
 import { AuthModeNotice } from '@/features/auth/components/AuthModeNotice';
 import { FormAlert } from '@/components/ui/FormAlert';
+import { LocationPickerMap } from '@/features/location/components/LocationPickerMap';
+import type { GeocodedPlace } from '@/features/location/geocoding';
+import { serviceAreas } from '@/stores/location-store';
 import {
   getPasswordStrength,
   registerSchema,
@@ -73,6 +76,15 @@ const vehicleOptions = [
   { value: 'car', label: 'Car' },
 ];
 
+const neighbourhoodOptions = serviceAreas.map((area) => ({
+  value: area.region,
+  label: `${area.city} · ${area.region}`,
+}));
+
+function streetLine(place: GeocodedPlace | null): string {
+  return place?.address?.line1?.trim() || '';
+}
+
 export default function RegisterPage() {
   useDocumentTitle('Create an account');
   const { signUp, isAuthenticated, user } = useAuth();
@@ -107,6 +119,11 @@ export default function RegisterPage() {
       driverPhone: '',
       driverServiceArea: '',
       driverVehicle: 'bike',
+      restaurantCity: 'Latakia',
+      restaurantState: serviceAreas[0].region,
+      addressLine1: '',
+      addressCity: 'Latakia',
+      addressState: serviceAreas[0].region,
     },
   });
 
@@ -115,6 +132,39 @@ export default function RegisterPage() {
   const strength = getPasswordStrength(password);
   const isOwner = role === 'RESTAURANT_OWNER';
   const isDriver = role === 'DRIVER';
+  const isCustomer = role === 'CUSTOMER';
+  const restaurantLatitude = watch('restaurantLatitude');
+  const restaurantLongitude = watch('restaurantLongitude');
+  const addressLatitude = watch('addressLatitude');
+  const addressLongitude = watch('addressLongitude');
+  const restaurantPin =
+    restaurantLatitude !== undefined && restaurantLongitude !== undefined
+      ? { lat: restaurantLatitude, lng: restaurantLongitude }
+      : null;
+  const deliveryPin =
+    addressLatitude !== undefined && addressLongitude !== undefined
+      ? { lat: addressLatitude, lng: addressLongitude }
+      : null;
+
+  const setRestaurantPin = (coordinates: { lat: number; lng: number }) => {
+    setValue('restaurantLatitude', coordinates.lat, { shouldValidate: true });
+    setValue('restaurantLongitude', coordinates.lng, { shouldValidate: true });
+  };
+
+  const setDeliveryPin = (coordinates: { lat: number; lng: number }) => {
+    setValue('addressLatitude', coordinates.lat, { shouldValidate: true });
+    setValue('addressLongitude', coordinates.lng, { shouldValidate: true });
+  };
+
+  const resolveRestaurantAddress = (place: GeocodedPlace | null) => {
+    const line = streetLine(place);
+    if (line) setValue('restaurantAddress', line, { shouldValidate: true });
+  };
+
+  const resolveDeliveryAddress = (place: GeocodedPlace | null) => {
+    const line = place?.address?.line1?.trim();
+    if (line) setValue('addressLine1', line, { shouldValidate: true });
+  };
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />;
@@ -122,7 +172,20 @@ export default function RegisterPage() {
 
   const selectRole = (nextRole: RegistrationRole) => {
     setValue('role', nextRole, { shouldValidate: false });
-    clearErrors(['restaurantName', 'restaurantAddress', 'restaurantPhone', 'driverPhone', 'driverServiceArea', 'driverVehicle']);
+    clearErrors([
+      'restaurantName',
+      'restaurantAddress',
+      'restaurantPhone',
+      'restaurantState',
+      'restaurantLatitude',
+      'restaurantLongitude',
+      'driverPhone',
+      'driverServiceArea',
+      'driverVehicle',
+      'addressLine1',
+      'addressLatitude',
+      'addressLongitude',
+    ]);
   };
 
   const onSubmit = handleSubmit(async (values) => {
@@ -141,8 +204,30 @@ export default function RegisterPage() {
           address: values.restaurantAddress ?? '',
           phone: values.restaurantPhone ?? '',
           description: values.restaurantDescription,
+          city: values.restaurantCity || 'Latakia',
+          state: values.restaurantState,
+          postalCode: '',
+          country: 'Syria',
+          latitude: values.restaurantLatitude,
+          longitude: values.restaurantLongitude,
         };
         payload.phone = values.restaurantPhone;
+      }
+
+      if (values.role === 'CUSTOMER') {
+        payload.defaultAddress = {
+          label: 'Home',
+          line1: values.addressLine1 ?? '',
+          city: values.addressCity || 'Latakia',
+          state: values.addressState || serviceAreas[0].region,
+          postalCode: '',
+          country: 'Syria',
+          isDefault: true,
+          coordinates:
+            values.addressLatitude !== undefined && values.addressLongitude !== undefined
+              ? { lat: values.addressLatitude, lng: values.addressLongitude }
+              : undefined,
+        };
       }
 
       if (values.role === 'DRIVER') {
@@ -233,7 +318,7 @@ export default function RegisterPage() {
         <Input
           label="Full name"
           autoComplete="name"
-          placeholder="Maya Bennett"
+          placeholder="Hasan Al-Ali"
           leading={<User aria-hidden="true" className="h-4 w-4" />}
           error={errors.fullName?.message}
           {...register('fullName')}
@@ -249,6 +334,59 @@ export default function RegisterPage() {
           {...register('email')}
         />
 
+        {isCustomer ? (
+          <div className="space-y-5 rounded-2xl border border-olive-900/10 bg-cream/70 p-4 sm:p-5">
+            <div>
+              <p className="text-[0.8125rem] font-semibold text-olive-800">Default delivery address</p>
+              <p className="mt-1 text-[0.6875rem] leading-relaxed text-olive-500">
+                We save this for checkout. You can edit it or add more addresses later in your profile.
+              </p>
+            </div>
+
+            <Input
+              label="Street and building"
+              autoComplete="address-line1"
+              placeholder="Al-Ziraa, 8th Street, building 12"
+              leading={<MapPin aria-hidden="true" className="h-4 w-4" />}
+              error={errors.addressLine1?.message}
+              {...register('addressLine1')}
+            />
+
+            <Select
+              label="Neighbourhood"
+              options={neighbourhoodOptions}
+              error={errors.addressState?.message}
+              {...register('addressState')}
+            />
+
+            <div>
+              <p className="text-[0.8125rem] font-medium text-olive-800">Pin your door</p>
+              <p className="mt-1 text-[0.6875rem] leading-relaxed text-olive-500">
+                Search or tap the map. We only deliver inside Latakia.
+              </p>
+              <LocationPickerMap
+                value={deliveryPin}
+                onChange={setDeliveryPin}
+                onResolveAddress={resolveDeliveryAddress}
+                heightClassName="mt-3 h-64 sm:h-72"
+              />
+              {errors.addressLatitude?.message || errors.addressLongitude?.message ? (
+                <p className="mt-2 text-[0.75rem] text-danger" role="alert">
+                  {errors.addressLatitude?.message || errors.addressLongitude?.message}
+                </p>
+              ) : deliveryPin ? (
+                <p className="mt-2 text-[0.6875rem] text-olive-500">
+                  Pin saved at {deliveryPin.lat.toFixed(4)}, {deliveryPin.lng.toFixed(4)}.
+                </p>
+              ) : (
+                <p className="mt-2 text-[0.6875rem] text-olive-500">
+                  Latakia, Syria · no pin selected yet.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         {isOwner ? (
           <div className="space-y-5 rounded-2xl border border-olive-900/10 bg-cream/70 p-4 sm:p-5">
             <div>
@@ -260,7 +398,7 @@ export default function RegisterPage() {
 
             <Input
               label="Restaurant name"
-              placeholder="Kōji Sushi"
+              placeholder="Shawarmati"
               leading={<Store aria-hidden="true" className="h-4 w-4" />}
               error={errors.restaurantName?.message}
               {...register('restaurantName')}
@@ -268,17 +406,50 @@ export default function RegisterPage() {
 
             <Input
               label="Restaurant address"
-              placeholder="31 Grand Street, Brooklyn, NY"
+              placeholder="Al-Ziraa, Latakia"
               leading={<MapPin aria-hidden="true" className="h-4 w-4" />}
               error={errors.restaurantAddress?.message}
               {...register('restaurantAddress')}
             />
 
+            <Select
+              label="Neighbourhood"
+              options={neighbourhoodOptions}
+              error={errors.restaurantState?.message}
+              {...register('restaurantState')}
+            />
+
+            <div>
+              <p className="text-[0.8125rem] font-medium text-olive-800">Pin the kitchen</p>
+              <p className="mt-1 text-[0.6875rem] leading-relaxed text-olive-500">
+                Search or tap the map. Savora only accepts restaurants inside Latakia.
+              </p>
+              <LocationPickerMap
+                value={restaurantPin}
+                onChange={setRestaurantPin}
+                onResolveAddress={resolveRestaurantAddress}
+                heightClassName="mt-3 h-64 sm:h-72"
+              />
+              {errors.restaurantLatitude?.message ? (
+                <p className="mt-2 text-[0.75rem] text-danger" role="alert">
+                  {errors.restaurantLatitude.message}
+                </p>
+              ) : restaurantPin ? (
+                <p className="mt-2 text-[0.6875rem] text-olive-500">
+                  Pin saved at {restaurantPin.lat.toFixed(4)}, {restaurantPin.lng.toFixed(4)}.
+                </p>
+              ) : (
+                <p className="mt-2 text-[0.6875rem] text-olive-500">
+                  Latakia only · no pin selected yet.
+                </p>
+              )}
+            </div>
+
             <Input
               label="Contact number"
               type="tel"
               autoComplete="tel"
-              placeholder="+1 (718) 555-0100"
+              placeholder="+963 944 000 100"
               leading={<Phone aria-hidden="true" className="h-4 w-4" />}
               error={errors.restaurantPhone?.message}
               {...register('restaurantPhone')}
@@ -307,7 +478,7 @@ export default function RegisterPage() {
               label="Phone number"
               type="tel"
               autoComplete="tel"
-              placeholder="+1 (917) 555-0164"
+              placeholder="+963 944 000 164"
               leading={<Phone aria-hidden="true" className="h-4 w-4" />}
               error={errors.driverPhone?.message}
               {...register('driverPhone')}
@@ -315,7 +486,7 @@ export default function RegisterPage() {
 
             <Input
               label="Service area"
-              placeholder="Brooklyn · North"
+              placeholder="Latakia · Sheikh Daher"
               leading={<MapPin aria-hidden="true" className="h-4 w-4" />}
               error={errors.driverServiceArea?.message}
               {...register('driverServiceArea')}

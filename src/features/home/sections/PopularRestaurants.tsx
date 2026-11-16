@@ -62,7 +62,7 @@ export function PopularRestaurants() {
                 The kitchens your neighbours <em className="italic text-terracotta">keep returning to.</em>
               </>
             }
-            description={`Independent places delivering to ${area.city} ${area.postalCode} right now. Search or pick a cuisine to narrow the list.`}
+            description={`Independent places delivering to ${area.region}, ${area.city} right now. Search or pick a cuisine to narrow the list.`}
             action={
               filtered.length > 6 ? (
                 <button
@@ -147,7 +147,7 @@ export function PopularRestaurants() {
           <>
             <div className="mt-9 grid gap-x-6 gap-y-11 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((restaurant, index) => (
-                <Reveal key={restaurant.id} delay={Math.min(index * 55, 275)}>
+                <Reveal key={restaurant.id} delay={Math.min(index * 55, 275)} className="min-w-0">
                   <RestaurantCard restaurant={restaurant} priority={index < 3} />
                 </Reveal>
               ))}

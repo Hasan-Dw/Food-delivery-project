@@ -7,6 +7,12 @@ import {
   Restaurant,
   RestaurantSchema,
 } from '../restaurants/schemas/restaurant.schema';
+import { MenuItem, MenuItemSchema } from '../menu-items/schemas/menu-item.schema';
+import { Delivery, DeliverySchema } from '../deliveries/schemas/delivery.schema';
+import {
+  DriverProfile,
+  DriverProfileSchema,
+} from '../users/schemas/driver-profile.schema';
 
 import { ReviewsService } from './reviews.service';
 import { ReviewsController } from './reviews.controller';
@@ -17,6 +23,9 @@ import { ReviewsController } from './reviews.controller';
       { name: Review.name, schema: ReviewSchema },
       { name: Order.name, schema: OrderSchema },
       { name: Restaurant.name, schema: RestaurantSchema },
+      { name: MenuItem.name, schema: MenuItemSchema },
+      { name: Delivery.name, schema: DeliverySchema },
+      { name: DriverProfile.name, schema: DriverProfileSchema },
     ]),
   ],
   controllers: [ReviewsController],

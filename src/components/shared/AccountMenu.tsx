@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, LogOut, ShoppingBag, UserRound } from 'lucide-react';
+import { ChevronDown, LayoutDashboard, LogOut, ShoppingBag, UserRound } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useDismissible } from '@/hooks/useDismissible';
 import { ROUTES } from '@/config/routes';
+import { roleLabels, roleLandingPath } from '@/lib/permissions';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/cn';
 
@@ -13,6 +14,7 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useDismissible(open, () => setOpen(false), ref);
+  const isStaff = user ? user.role !== 'CUSTOMER' : false;
 
   if (status === 'loading') {
     return <span className="h-9 w-24 animate-pulse rounded-full bg-olive-900/5" aria-hidden="true" />;
@@ -65,6 +67,17 @@ export function AccountMenu() {
             <UserRound aria-hidden="true" className="h-4 w-4 text-olive-500" />
             Your profile
           </Link>
+          {isStaff ? (
+            <Link
+              to={roleLandingPath(user.role)}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-xl bg-olive-900/5 px-3 py-2.5 text-[0.8125rem] font-medium text-olive-800 transition hover:bg-olive-900/10"
+            >
+              <LayoutDashboard aria-hidden="true" className="h-4 w-4 text-terracotta-600" />
+              {roleLabels[user.role]} dashboard
+            </Link>
+          ) : null}
           <Link
             to={ROUTES.orderHistory}
             role="menuitem"

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, ChevronLeft, ChevronRight, Clock3, PackageCheck, ReceiptText } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Clock3, PackageCheck, ReceiptText, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { ButtonLink } from '@/components/ui/Button';
 import { Image } from '@/components/ui/Image';
 import { PageLoader } from '@/components/ui/Skeleton';
+import { OrderReviewDialog } from '@/features/reviews/components/OrderReviewDialog';
 import { ROUTES } from '@/config/routes';
 import { queryKeys } from '@/lib/query-keys';
 import { formatCurrency, formatDay } from '@/lib/format';
@@ -49,7 +50,7 @@ function matchesFilter(order: Order, filter: OrderFilter): boolean {
   return true;
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onRate }: { order: Order; onRate: (order: Order) => void }) {
   const cancelled = isCancelled(order);
   const delivered = isDelivered(order);
 
@@ -86,13 +87,25 @@ function OrderCard({ order }: { order: Order }) {
         <span className="text-sm font-semibold tabular-nums text-olive-900">
           {formatCurrency(order.totals.total)}
         </span>
-        <Link
-          to={ROUTES.orderTracking(order.id)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-olive-900/15 px-3 py-2 text-xs font-medium text-olive-700 transition hover:border-olive-900/30 hover:bg-olive-900/[0.04]"
-        >
-          {delivered || cancelled ? <ReceiptText aria-hidden="true" className="h-3.5 w-3.5" /> : <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />}
-          {delivered || cancelled ? 'Receipt' : 'Track order'}
-        </Link>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {delivered ? (
+            <button
+              type="button"
+              onClick={() => onRate(order)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-terracotta-600 px-3 py-2 text-xs font-medium text-cream transition hover:bg-terracotta-700"
+            >
+              <Star aria-hidden="true" className="h-3.5 w-3.5" />
+              Rate order
+            </button>
+          ) : null}
+          <Link
+            to={ROUTES.orderTracking(order.id)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-olive-900/15 px-3 py-2 text-xs font-medium text-olive-700 transition hover:border-olive-900/30 hover:bg-olive-900/[0.04]"
+          >
+            {delivered || cancelled ? <ReceiptText aria-hidden="true" className="h-3.5 w-3.5" /> : <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />}
+            {delivered || cancelled ? 'Receipt' : 'Track order'}
+          </Link>
+        </div>
       </div>
     </article>
   );
@@ -102,6 +115,7 @@ export default function OrderHistoryPage() {
   const { user, isAuthenticated } = useAuth();
   const [filter, setFilter] = useState<OrderFilter>('all');
   const [page, setPage] = useState(1);
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
 
   const orders = useQuery({
     queryKey: queryKeys.orderList({ customerId: user?.id }),
@@ -267,7 +281,7 @@ export default function OrderHistoryPage() {
 
             {visibleOrders.length ? (
               <div className="mt-4 space-y-3">
-                {visibleOrders.map((order) => <OrderCard key={order.id} order={order} />)}
+                {visibleOrders.map((order) => <OrderCard key={order.id} order={order} onRate={setReviewOrder} />)}
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-olive-900/15 bg-white/50 px-6 py-10 text-center">
@@ -308,6 +322,10 @@ export default function OrderHistoryPage() {
           </section>
         </>
       )}
+
+      {reviewOrder ? (
+        <OrderReviewDialog order={reviewOrder} open onClose={() => setReviewOrder(null)} />
+      ) : null}
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Flame, Leaf, Plus, Star } from 'lucide-react';
-import type { Product, Restaurant, SelectedOption } from '@/types';
+import type { Product, Restaurant } from '@/types';
 import { Image } from '@/components/ui/Image';
+import { DishDetailDialog } from '@/features/menu/components/DishDetailDialog';
 import { ROUTES } from '@/config/routes';
+import { defaultSelectedOptions } from '@/lib/product-options';
 import { useCartStore } from '@/stores/cart-store';
 import { useToast } from '@/stores/toast-store';
 import { formatCurrency } from '@/lib/format';
@@ -16,26 +18,11 @@ interface DishCardProps {
   className?: string;
 }
 
-function defaultOptions(product: Product): SelectedOption[] {
-  return product.optionGroups.flatMap((group) => {
-    const option = group.options.find((candidate) => candidate.isDefault) ?? (group.required ? group.options[0] : undefined);
-    if (!option) return [];
-    return [
-      {
-        groupId: group.id,
-        groupName: group.name,
-        optionId: option.id,
-        optionName: option.name,
-        priceDelta: option.priceDelta,
-      },
-    ];
-  });
-}
-
 export function DishCard({ product, restaurant, priority = false, className }: DishCardProps) {
   const addProduct = useCartStore((state) => state.addProduct);
   const notify = useToast();
   const [added, setAdded] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const resetTimer = useRef<number | null>(null);
 
   const price = product.price;
@@ -46,7 +33,7 @@ export function DishCard({ product, restaurant, priority = false, className }: D
       product,
       restaurantName: restaurant.name,
       deliveryFee: restaurant.deliveryFee,
-      selectedOptions: defaultOptions(product),
+      selectedOptions: defaultSelectedOptions(product),
     });
 
     notify({
@@ -62,6 +49,10 @@ export function DishCard({ product, restaurant, priority = false, className }: D
     resetTimer.current = window.setTimeout(() => setAdded(false), 1600);
   };
 
+  const openDetails = () => {
+    if (restaurant) setDetailsOpen(true);
+  };
+
   return (
     <article
       className={cn(
@@ -69,11 +60,12 @@ export function DishCard({ product, restaurant, priority = false, className }: D
         className,
       )}
     >
-      <Link
-        to={restaurant ? ROUTES.restaurantDetails(restaurant.slug) : ROUTES.home}
-        className="relative block aspect-[4/3] overflow-hidden rounded-[0.75rem] bg-ivory-200"
-        tabIndex={-1}
-        aria-hidden="true"
+      <button
+        type="button"
+        onClick={openDetails}
+        className="relative block aspect-[4/3] w-full overflow-hidden rounded-[0.75rem] bg-ivory-200 text-left focus-visible:outline-offset-4"
+        aria-label={`View details for ${product.name}${restaurant ? ` from ${restaurant.name}` : ''}`}
+        disabled={!restaurant}
       >
         <Image
           imageKey={product.imageKey}
@@ -100,22 +92,27 @@ export function DishCard({ product, restaurant, priority = false, className }: D
           <Star aria-hidden="true" className="h-3 w-3 fill-gold-300 text-gold-500" />
           {product.rating?.toFixed(1) ?? restaurant?.rating.toFixed(1) ?? '4.8'}
         </span>
-      </Link>
+      </button>
 
       <div className="flex flex-1 flex-col px-1 pb-1 pt-3.5">
         {restaurant ? (
-          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-olive-500">
+          <Link
+            to={ROUTES.restaurantDetails(restaurant.slug)}
+            className="w-fit text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-olive-500 transition-colors hover:text-terracotta-600"
+          >
             {restaurant.name}
-          </p>
+          </Link>
         ) : null}
 
         <h3 className="mt-1.5 font-display text-[1.15rem] leading-snug text-olive-900">
-          <Link
-            to={restaurant ? ROUTES.restaurantDetails(restaurant.slug) : ROUTES.home}
-            className="transition-colors hover:text-terracotta-600 focus-visible:outline-offset-4"
+          <button
+            type="button"
+            onClick={openDetails}
+            disabled={!restaurant}
+            className="text-left transition-colors hover:text-terracotta-600 focus-visible:outline-offset-4 disabled:cursor-default"
           >
             {product.name}
-          </Link>
+          </button>
         </h3>
 
         <p className="mt-1.5 line-clamp-2 text-[0.75rem] leading-relaxed text-olive-500">
@@ -123,7 +120,15 @@ export function DishCard({ product, restaurant, priority = false, className }: D
         </p>
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-4">
-          <p className="text-[0.9375rem] font-semibold text-olive-900">{formatCurrency(price)}</p>
+          <button
+            type="button"
+            onClick={openDetails}
+            disabled={!restaurant}
+            className="text-left text-[0.9375rem] font-semibold text-olive-900 transition-colors hover:text-terracotta-600 disabled:cursor-default"
+            aria-label={`Open ${product.name} details and quantity`}
+          >
+            {formatCurrency(price)}
+          </button>
           <button
             type="button"
             onClick={handleAdd}
@@ -149,6 +154,14 @@ export function DishCard({ product, restaurant, priority = false, className }: D
           </button>
         </div>
       </div>
+
+      {detailsOpen && restaurant ? (
+        <DishDetailDialog
+          product={product}
+          restaurant={restaurant}
+          onClose={() => setDetailsOpen(false)}
+        />
+      ) : null}
     </article>
   );
 }

@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -10,7 +10,6 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  WsException,
 } from '@nestjs/websockets';
 import type { Namespace, Server, Socket } from 'socket.io';
 import { JwtStrategy } from '../auth/jwt.strategy';
@@ -96,6 +95,31 @@ export class TrackingGateway
     return error;
   }
 
+  /** Normalise HTTP/WS errors into the client's `tracking:error` payload. */
+  private trackingErrorPayload(error: unknown): { code: string; message: string } {
+    if (error instanceof HttpException) {
+      const response = error.getResponse();
+      if (typeof response === 'string') {
+        return { code: 'tracking_error', message: response };
+      }
+      const record = response as { code?: unknown; message?: unknown };
+      const raw = record.message;
+      const message = Array.isArray(raw)
+        ? raw.join(', ')
+        : typeof raw === 'string'
+          ? raw
+          : 'The live tracking channel rejected this request.';
+      return {
+        code: typeof record.code === 'string' ? record.code : 'tracking_error',
+        message,
+      };
+    }
+    return {
+      code: 'tracking_error',
+      message: error instanceof Error ? error.message : 'The live tracking channel rejected this request.',
+    };
+  }
+
   handleConnection(client: TrackingSocket): void {
     // Middleware has already rejected unauthenticated sockets; this is a
     // defensive guard for unusual adapters that skip middleware.
@@ -116,17 +140,38 @@ export class TrackingGateway
     @MessageBody() body: { orderId?: unknown },
   ): Promise<{ subscribed: boolean }> {
     const user = client.data.user;
-    if (!user) throw new WsException('unauthorized');
+    if (!user) {
+      client.emit('tracking:error', {
+        code: 'unauthorized',
+        message: 'Sign in again to follow this delivery live.',
+      });
+      return { subscribed: false };
+    }
 
     const orderId = typeof body?.orderId === 'string' ? body.orderId : '';
-    if (!orderId) throw new WsException('invalid_order');
+    if (!orderId) {
+      client.emit('tracking:error', {
+        code: 'invalid_order',
+        message: 'The tracking request did not include an order.',
+      });
+      return { subscribed: false };
+    }
 
     // Throws when the customer, restaurant, driver or admin may not see this
     // order. Only authorized sockets ever join the room.
-    const snapshot = await this.tracking.getSnapshot(user, orderId);
-    await client.join(trackingRoom(orderId));
-    client.emit('tracking:snapshot', snapshot);
-    return { subscribed: true };
+    try {
+      const snapshot = await this.tracking.getSnapshot(user, orderId);
+      await client.join(trackingRoom(orderId));
+      client.emit('tracking:snapshot', snapshot);
+      return { subscribed: true };
+    } catch (error) {
+      // A thrown WsException only reaches the generic `exception` event. Emit
+      // an explicit typed error so clients can show the real reason and stop
+      // retrying when the order is not theirs.
+      const payload = this.trackingErrorPayload(error);
+      client.emit('tracking:error', payload);
+      return { subscribed: false };
+    }
   }
 
   @SubscribeMessage('tracking:unsubscribe')

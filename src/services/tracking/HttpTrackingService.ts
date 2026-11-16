@@ -58,9 +58,24 @@ function openSocketStream(
     onError?.(new Error(payload?.message ?? 'The live tracking channel reported an error.'));
   };
 
+  // Nest's default WS exception channel. The gateway emits a typed
+  // `tracking:error` too, but this keeps older deployments understandable.
+  const handleException = (payload: unknown) => {
+    if (typeof payload === 'string') {
+      handleError({ message: payload });
+      return;
+    }
+    const record = (payload ?? {}) as { code?: string; message?: unknown };
+    handleError({
+      code: record.code,
+      message: typeof record.message === 'string' ? record.message : undefined,
+    });
+  };
+
   socket.on('connect', subscribe);
   socket.on('tracking:snapshot', emitSnapshot);
   socket.on('tracking:error', handleError);
+  socket.on('exception', handleException);
   socket.on('connect_error', (error: Error & { data?: { code?: string } }) => {
     if (error?.data?.code === 'unauthorized' || error?.data?.code === 'forbidden_origin') {
       // Retrying cannot fix a rejected identity; stop the reconnection loop.
@@ -80,6 +95,7 @@ function openSocketStream(
       socket.off('connect', subscribe);
       socket.off('tracking:snapshot', emitSnapshot);
       socket.off('tracking:error', handleError);
+      socket.off('exception', handleException);
       socket.disconnect();
     },
     live: true,

@@ -107,6 +107,21 @@ export function useDriverAvailability() {
   });
 }
 
+export function useDriverDeliveryRelease() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ deliveryId, reason }: { deliveryId: string; reason: string }) =>
+      services.deliveries.release(deliveryId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+      queryClient.invalidateQueries({ queryKey: queryKeys.drivers });
+      queryClient.invalidateQueries({ queryKey: queryKeys.allTracking });
+    },
+  });
+}
+
 export function useDriverDeliveryAction() {
   const queryClient = useQueryClient();
 

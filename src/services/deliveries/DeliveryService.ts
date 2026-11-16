@@ -67,6 +67,11 @@ export interface DeliveryService {
     reason: string,
     options?: DeliveryAssignmentOptions,
   ): Promise<Delivery>;
+  /**
+   * Driver-facing failure release. Returns the delivery to the assignable pool
+   * without cancelling the customer's order. Valid before handover only.
+   */
+  release(deliveryId: string, reason: string): Promise<Delivery>;
   transition(deliveryId: string, action: DeliveryAction): Promise<Delivery>;
   updateLocation(deliveryId: string, input: DriverLocationInput): Promise<Delivery>;
 }

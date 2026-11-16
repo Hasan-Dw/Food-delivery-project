@@ -10,6 +10,7 @@ import { FormAlert } from '@/components/ui/FormAlert';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { formatCityLine } from '@/lib/format';
 import { SectionFrame } from './PersonalInfoForm';
 import { LocationPickerMap } from '@/features/location/components/LocationPickerMap';
 import type { GeocodedPlace } from '@/features/location/geocoding';
@@ -208,10 +209,10 @@ function AddressForm({
       label: initial?.label ?? 'Home',
       line1: initial?.line1 ?? '',
       line2: initial?.line2 ?? '',
-      city: initial?.city ?? 'Brooklyn',
-      state: initial?.state ?? 'NY',
+      city: initial?.city ?? 'Latakia',
+      state: initial?.state ?? 'Latakia',
       postalCode: initial?.postalCode ?? '',
-      country: initial?.country ?? 'USA',
+      country: initial?.country ?? 'Syria',
       instructions: initial?.instructions ?? '',
       isDefault: initial?.isDefault ?? isDefaultAvailable,
       coordinates: initial?.coordinates,
@@ -298,7 +299,7 @@ function AddressForm({
         <Input
           label="Street address"
           autoComplete="address-line1"
-          placeholder="34 South Portland Avenue"
+          placeholder="Al-Ziraa, 8th Street"
           error={errors.line1?.message}
           {...register('line1')}
         />
@@ -320,13 +321,13 @@ function AddressForm({
           {...register('city')}
         />
         <Input
-          label="State"
+          label="State / governorate"
           autoComplete="address-level1"
           error={errors.state?.message}
           {...register('state')}
         />
         <Input
-          label="Postal code"
+          label="Postal code (optional)"
           autoComplete="postal-code"
           error={errors.postalCode?.message}
           {...register('postalCode')}
@@ -413,7 +414,7 @@ function AddressCard({
         <span className="block font-medium text-olive-800">{address.line1}</span>
         {address.line2 ? <span className="block">{address.line2}</span> : null}
         <span className="block">
-          {address.city}, {address.state} {address.postalCode}
+          {formatCityLine(address.city, address.state, address.postalCode)}
         </span>
         <span className="block text-olive-500">{address.country}</span>
         {address.coordinates ? (

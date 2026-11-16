@@ -141,7 +141,7 @@ export function Hero() {
             </span>
             <div className="pr-1">
               <p className="text-[0.75rem] font-semibold leading-tight text-olive-900">4.9 average</p>
-              <p className="text-[0.625rem] text-olive-500">across 240+ kitchens</p>
+              <p className="text-[0.625rem] text-olive-500">across Latakia</p>
             </div>
           </div>
 

@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import { HydratedDocument, Types } from "mongoose"
 import {
   AccountStatus,
   AddressLabel,
@@ -7,113 +7,125 @@ import {
   PaymentBrand,
   PaymentType,
   UserRole,
-} from '../../common/enums/user.enum';
+} from "../../common/enums/user.enum"
 
 @Schema({ _id: false })
 export class Coordinates {
   @Prop({ required: true, min: -90, max: 90 })
-  lat: number;
+  lat: number
 
   @Prop({ required: true, min: -180, max: 180 })
-  lng: number;
+  lng: number
 }
-export const CoordinatesSchema = SchemaFactory.createForClass(Coordinates);
+export const CoordinatesSchema = SchemaFactory.createForClass(Coordinates)
 
 @Schema({ _id: true })
 export class Address {
   @Prop({ required: true, enum: AddressLabel, default: AddressLabel.HOME })
-  label: string;
+  label: string
 
   @Prop({ required: true, trim: true, maxlength: 160 })
-  line1: string;
+  line1: string
 
   @Prop({ trim: true, maxlength: 160 })
-  line2?: string;
+  line2?: string
 
   @Prop({ required: true, trim: true, maxlength: 80 })
-  city: string;
+  city: string
 
   @Prop({ required: true, trim: true, maxlength: 80 })
-  state: string;
+  state: string
 
-  @Prop({ required: true, trim: true, maxlength: 20 })
-  postalCode: string;
+  @Prop({ required: false, trim: true, maxlength: 20 })
+  postalCode?: string
 
   @Prop({ required: true, trim: true, maxlength: 80 })
-  country: string;
+  country: string
 
   @Prop({ trim: true, maxlength: 240 })
-  instructions?: string;
+  instructions?: string
 
   @Prop({ default: false })
-  isDefault: boolean;
+  isDefault: boolean
 
   @Prop({ type: CoordinatesSchema })
-  coordinates?: Coordinates;
+  coordinates?: Coordinates
 }
-export const AddressSchema = SchemaFactory.createForClass(Address);
+export const AddressSchema = SchemaFactory.createForClass(Address)
 
 @Schema({ _id: false })
 export class UserPreferences {
   @Prop({ type: [String], enum: Object.values(DietaryPreference), default: [] })
-  dietary: string[];
+  dietary: string[]
 
   @Prop({ default: true })
-  emailReceipts: boolean;
+  emailReceipts: boolean
 
   @Prop({ default: true })
-  orderUpdates: boolean;
+  orderUpdates: boolean
 
   @Prop({ default: false })
-  marketing: boolean;
+  marketing: boolean
 }
-export const UserPreferencesSchema = SchemaFactory.createForClass(UserPreferences);
+export const UserPreferencesSchema =
+  SchemaFactory.createForClass(UserPreferences)
 
 @Schema({ _id: true })
 export class PaymentMethod {
   @Prop({ required: true, enum: PaymentType })
-  type: string;
+  type: string
 
   @Prop({ required: true, trim: true, maxlength: 80 })
-  label: string;
+  label: string
 
   @Prop({ enum: PaymentBrand })
-  brand?: string;
+  brand?: string
 
   @Prop({ trim: true, maxlength: 4 })
-  last4?: string;
+  last4?: string
 
   @Prop({ trim: true, maxlength: 7 })
-  expiry?: string;
+  expiry?: string
 
   @Prop({ default: false })
-  isDefault: boolean;
+  isDefault: boolean
 }
-export const PaymentMethodSchema = SchemaFactory.createForClass(PaymentMethod);
+export const PaymentMethodSchema = SchemaFactory.createForClass(PaymentMethod)
 
-@Schema({ timestamps: true, collection: 'users' })
+@Schema({ timestamps: true, collection: "users" })
 export class User {
-  @Prop({ required: true, unique: true, lowercase: true, trim: true, index: true })
-  email: string;
+  @Prop({
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    index: true,
+  })
+  email: string
 
   @Prop({ required: true, select: false })
-  passwordHash: string;
+  passwordHash: string
 
   @Prop({ required: true, trim: true, maxlength: 120 })
-  fullName: string;
+  fullName: string
 
-  @Prop({ trim: true, maxlength: 40, default: '' })
-  phone: string;
+  @Prop({ trim: true, maxlength: 40, default: "" })
+  phone: string
 
   @Prop({ trim: true, maxlength: 500 })
-  avatarKey?: string;
+  avatarKey?: string
 
   /** Cloudinary public id of the profile image. */
   @Prop({ trim: true, maxlength: 300 })
-  avatarPublicId?: string;
+  avatarPublicId?: string
 
-  @Prop({ required: true, enum: UserRole, default: UserRole.CUSTOMER, index: true })
-  role: string;
+  @Prop({
+    required: true,
+    enum: UserRole,
+    default: UserRole.CUSTOMER,
+    index: true,
+  })
+  role: string
 
   @Prop({
     required: true,
@@ -121,34 +133,34 @@ export class User {
     default: AccountStatus.APPROVED,
     index: true,
   })
-  accountStatus: string;
+  accountStatus: string
 
-  @Prop({ type: Types.ObjectId, ref: 'Restaurant' })
-  restaurantId?: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: "Restaurant" })
+  restaurantId?: Types.ObjectId
 
-  @Prop({ type: Types.ObjectId, ref: 'DriverProfile' })
-  driverId?: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: "DriverProfile" })
+  driverId?: Types.ObjectId
 
   @Prop({ type: UserPreferencesSchema, default: () => ({}) })
-  preferences: UserPreferences;
+  preferences: UserPreferences
 
   @Prop({ type: [AddressSchema], default: [] })
-  addresses: Address[];
+  addresses: Address[]
 
   @Prop({ type: [PaymentMethodSchema], default: [] })
-  paymentMethods: PaymentMethod[];
+  paymentMethods: PaymentMethod[]
 
   @Prop({ select: false })
-  passwordResetTokenHash?: string;
+  passwordResetTokenHash?: string
 
   @Prop({ type: Date, select: false })
-  passwordResetExpiresAt?: Date;
+  passwordResetExpiresAt?: Date
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date
+  updatedAt: Date
 }
 
-export type UserDocument = HydratedDocument<User>;
-export const UserSchema = SchemaFactory.createForClass(User);
+export type UserDocument = HydratedDocument<User>
+export const UserSchema = SchemaFactory.createForClass(User)
 
-UserSchema.index({ role: 1, accountStatus: 1 });
+UserSchema.index({ role: 1, accountStatus: 1 })

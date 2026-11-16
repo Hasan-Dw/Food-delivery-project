@@ -3,6 +3,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { services } from '@/services';
 import type {
   AccountStatus,
+  AdminReviewQuery,
   Delivery,
   Driver,
   Order,
@@ -66,6 +67,31 @@ export function useAdminOrders() {
   });
 
   return { orders, deliveries };
+}
+
+export function useAdminReviews(query: AdminReviewQuery) {
+  return useQuery({
+    queryKey: queryKeys.adminReviews({
+      status: query.status,
+      type: query.type,
+      restaurantId: query.restaurantId,
+      page: String(query.page ?? 1),
+    }),
+    queryFn: () => services.reviews.listForAdmin(query),
+  });
+}
+
+export function useModerateReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ reviewId, action }: { reviewId: string; action: 'hide' | 'restore' }) =>
+      action === 'hide' ? services.reviews.hide(reviewId) : services.reviews.restore(reviewId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+    },
+  });
 }
 
 function useAdminInvalidation() {
