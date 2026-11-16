@@ -1,17 +1,30 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, ChevronLeft, ChevronRight, Clock3, PackageCheck, ReceiptText, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  PackageCheck,
+  ReceiptText,
+  RotateCcw,
+  Star,
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { ButtonLink } from '@/components/ui/Button';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { Image } from '@/components/ui/Image';
 import { PageLoader } from '@/components/ui/Skeleton';
+import { OrderDetailsPanel } from '@/features/checkout/components/OrderDetailsPanel';
 import { OrderReviewDialog } from '@/features/reviews/components/OrderReviewDialog';
 import { ROUTES } from '@/config/routes';
 import { queryKeys } from '@/lib/query-keys';
 import { formatCurrency, formatDay } from '@/lib/format';
 import { getErrorMessage } from '@/services/api/errors';
 import { services } from '@/services';
+import { useCartStore } from '@/stores/cart-store';
+import { useToast } from '@/stores/toast-store';
 import type { Order, OrderStatus } from '@/types';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
@@ -50,63 +63,155 @@ function matchesFilter(order: Order, filter: OrderFilter): boolean {
   return true;
 }
 
-function OrderCard({ order, onRate }: { order: Order; onRate: (order: Order) => void }) {
+function OrderCard({
+  order,
+  expanded,
+  onToggleDetails,
+  onRate,
+}: {
+  order: Order;
+  expanded: boolean;
+  onToggleDetails: () => void;
+  onRate: (order: Order) => void;
+}) {
   const cancelled = isCancelled(order);
   const delivered = isDelivered(order);
+  const navigate = useNavigate();
+  const notify = useToast();
+
+  const reorder = useMutation({
+    mutationFn: async (target: Order) => {
+      const [menu, restaurant] = await Promise.all([
+        services.products.listByRestaurant(target.restaurantId),
+        services.restaurants.getById(target.restaurantId).catch(() => null),
+      ]);
+      const productsById = new Map(menu.map((product) => [product.id, product]));
+      const addProduct = useCartStore.getState().addProduct;
+      let added = 0;
+      let skipped = 0;
+
+      for (const item of target.items) {
+        const product = productsById.get(item.productId);
+        if (!product || !product.available) {
+          skipped += 1;
+          continue;
+        }
+        addProduct({
+          product,
+          restaurantName: target.restaurantName,
+          deliveryFee: restaurant?.deliveryFee ?? 0,
+          quantity: item.quantity,
+          selectedOptions: item.selectedOptions ?? [],
+        });
+        added += 1;
+      }
+
+      return { added, skipped };
+    },
+    onSuccess: ({ added, skipped }) => {
+      if (added === 0) {
+        notify({
+          tone: 'info',
+          title: 'Nothing to reorder',
+          description: 'These items are no longer available on the menu.',
+        });
+        return;
+      }
+      notify({
+        tone: 'success',
+        title: `${added} item${added === 1 ? '' : 's'} added to your cart`,
+        description: skipped
+          ? `${skipped} unavailable item${skipped === 1 ? '' : 's'} skipped.`
+          : order.restaurantName,
+      });
+      navigate(ROUTES.cart);
+    },
+    onError: (error) =>
+      notify({
+        tone: 'error',
+        title: 'Could not reorder',
+        description: getErrorMessage(error, 'Please try again in a moment.'),
+      }),
+  });
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-olive-900/10 bg-white/75 p-4 shadow-soft transition hover:border-olive-900/20 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
-      <Image
-        imageKey={order.restaurantImageKey}
-        alt={order.restaurantName}
-        className="h-20 w-full shrink-0 rounded-xl object-cover sm:h-[4.5rem] sm:w-[4.5rem]"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-display text-[1.25rem] text-olive-900">{order.restaurantName}</h3>
-          <span
-            className={`rounded-full px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-wide ${
-              delivered
-                ? 'bg-olive-900/[0.07] text-olive-700'
-                : cancelled
-                  ? 'bg-danger/10 text-danger'
-                  : 'bg-gold-100 text-olive-700'
-            }`}
-          >
-            {statusLabels[order.status]}
-          </span>
+    <article className="flex flex-col gap-4 rounded-2xl border border-olive-900/10 bg-white/75 p-4 shadow-soft transition hover:border-olive-900/20 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+        <Image
+          imageKey={order.restaurantImageKey}
+          alt={order.restaurantName}
+          className="h-20 w-full shrink-0 rounded-xl object-cover sm:h-[4.5rem] sm:w-[4.5rem]"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-display text-[1.25rem] text-olive-900">{order.restaurantName}</h3>
+            <span
+              className={`rounded-full px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-wide ${
+                delivered
+                  ? 'bg-olive-900/[0.07] text-olive-700'
+                  : cancelled
+                    ? 'bg-danger/10 text-danger'
+                    : 'bg-gold-100 text-olive-700'
+              }`}
+            >
+              {statusLabels[order.status]}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-olive-600">
+            {order.items.map((item) => item.name).join(' · ')}
+          </p>
+          <p className="mt-2 text-[0.6875rem] text-olive-400">
+            {formatDay(order.placedAt)} <span aria-hidden="true">·</span> Order {order.code}
+          </p>
         </div>
-        <p className="mt-1 text-xs text-olive-600">
-          {order.items.map((item) => item.name).join(' · ')}
-        </p>
-        <p className="mt-2 text-[0.6875rem] text-olive-400">
-          {formatDay(order.placedAt)} <span aria-hidden="true">·</span> Order {order.code}
-        </p>
-      </div>
-      <div className="flex items-center justify-between gap-3 border-t border-olive-900/10 pt-3 sm:flex-col sm:items-end sm:border-0 sm:pt-0">
-        <span className="text-sm font-semibold tabular-nums text-olive-900">
-          {formatCurrency(order.totals.total)}
-        </span>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {delivered ? (
+        <div className="flex items-center justify-between gap-3 border-t border-olive-900/10 pt-3 sm:flex-col sm:items-end sm:border-0 sm:pt-0">
+          <span className="text-sm font-semibold tabular-nums text-olive-900">
+            {formatCurrency(order.totals.total)}
+          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {delivered ? (
+              <button
+                type="button"
+                onClick={() => onRate(order)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-terracotta-600 px-3 py-2 text-xs font-medium text-cream transition hover:bg-terracotta-700"
+              >
+                <Star aria-hidden="true" className="h-3.5 w-3.5" />
+                Rate order
+              </button>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => reorder.mutate(order)}
+              isLoading={reorder.isPending}
+              iconLeft={<RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />}
+            >
+              Reorder
+            </Button>
+            <Link
+              to={ROUTES.orderTracking(order.id)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-olive-900/15 px-3 py-2 text-xs font-medium text-olive-700 transition hover:border-olive-900/30 hover:bg-olive-900/[0.04]"
+            >
+              {delivered || cancelled ? <ReceiptText aria-hidden="true" className="h-3.5 w-3.5" /> : <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />}
+              {delivered || cancelled ? 'Receipt' : 'Track order'}
+            </Link>
             <button
               type="button"
-              onClick={() => onRate(order)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-terracotta-600 px-3 py-2 text-xs font-medium text-cream transition hover:bg-terracotta-700"
+              onClick={onToggleDetails}
+              aria-expanded={expanded}
+              className="inline-flex items-center gap-1.5 rounded-full border border-olive-900/15 px-3 py-2 text-xs font-medium text-olive-700 transition hover:border-olive-900/30 hover:bg-olive-900/[0.04]"
             >
-              <Star aria-hidden="true" className="h-3.5 w-3.5" />
-              Rate order
+              Details
+              <ChevronDown
+                aria-hidden="true"
+                className={`h-3.5 w-3.5 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+              />
             </button>
-          ) : null}
-          <Link
-            to={ROUTES.orderTracking(order.id)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-olive-900/15 px-3 py-2 text-xs font-medium text-olive-700 transition hover:border-olive-900/30 hover:bg-olive-900/[0.04]"
-          >
-            {delivered || cancelled ? <ReceiptText aria-hidden="true" className="h-3.5 w-3.5" /> : <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />}
-            {delivered || cancelled ? 'Receipt' : 'Track order'}
-          </Link>
+          </div>
         </div>
       </div>
+
+      {expanded ? <OrderDetailsPanel order={order} /> : null}
     </article>
   );
 }
@@ -115,6 +220,7 @@ export default function OrderHistoryPage() {
   const { user, isAuthenticated } = useAuth();
   const [filter, setFilter] = useState<OrderFilter>('all');
   const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
 
   const orders = useQuery({
@@ -144,6 +250,7 @@ export default function OrderHistoryPage() {
   const changeFilter = (nextFilter: OrderFilter) => {
     setFilter(nextFilter);
     setPage(1);
+    setExpandedId(null);
   };
 
   if (!isAuthenticated || !user) return <PageLoader label="Loading your orders…" />;
@@ -281,7 +388,15 @@ export default function OrderHistoryPage() {
 
             {visibleOrders.length ? (
               <div className="mt-4 space-y-3">
-                {visibleOrders.map((order) => <OrderCard key={order.id} order={order} onRate={setReviewOrder} />)}
+                {visibleOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    expanded={expandedId === order.id}
+                    onToggleDetails={() => setExpandedId((current) => (current === order.id ? null : order.id))}
+                    onRate={setReviewOrder}
+                  />
+                ))}
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-olive-900/15 bg-white/50 px-6 py-10 text-center">
