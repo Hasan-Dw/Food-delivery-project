@@ -136,8 +136,8 @@ function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
     if (form.description.length > 1000) {
       return setFormError('Keep the description to 1,000 characters or fewer.');
     }
-    if (!form.city.trim() || !form.state.trim() || !form.postalCode.trim()) {
-      return setFormError('Enter the city, state and postal code.');
+    if (!form.city.trim() || !form.state.trim()) {
+      return setFormError('Enter the city and state.');
     }
     if (!coordinates) {
       return setFormError('Drop a pin on the map so deliveries can be routed to your kitchen.');
@@ -168,7 +168,7 @@ function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
             line2: form.line2.trim() || undefined,
             city: form.city.trim(),
             state: form.state.trim(),
-            postalCode: form.postalCode.trim(),
+            ...(form.postalCode.trim() ? { postalCode: form.postalCode.trim() } : {}),
             country: form.country.trim(),
             coordinates,
           },
@@ -278,7 +278,7 @@ function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
                 autoComplete="address-level1"
               />
               <Input
-                label="Postal code"
+                label="Postal code (optional)"
                 value={form.postalCode}
                 onChange={(event) => update('postalCode', event.target.value)}
                 maxLength={20}

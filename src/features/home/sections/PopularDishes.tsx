@@ -78,7 +78,7 @@ export function PopularDishes() {
         ) : (
           <div className="mt-9 grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
             {popularDishes.data.map((product, index) => (
-              <Reveal key={product.id} delay={Math.min(index * 45, 315)}>
+              <Reveal key={product.id} delay={Math.min(index * 45, 315)} className="min-w-0">
                 <DishCard product={product} restaurant={restaurantById.get(product.restaurantId)} />
               </Reveal>
             ))}

@@ -106,6 +106,14 @@ export class HttpDeliveryService implements DeliveryService {
     return response.data;
   }
 
+  async release(deliveryId: string, reason: string): Promise<Delivery> {
+    const response = await this.client.post<Delivery>(
+      `/deliveries/${encodeURIComponent(deliveryId)}/release`,
+      { reason },
+    );
+    return response.data;
+  }
+
   async transition(deliveryId: string, action: DeliveryAction): Promise<Delivery> {
     const response = await this.client.post<Delivery>(
       `/deliveries/${encodeURIComponent(deliveryId)}/transition`,

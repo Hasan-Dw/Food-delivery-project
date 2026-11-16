@@ -50,6 +50,9 @@ import {
   type DriverProfileDocument,
 } from '../src/users/schemas/driver-profile.schema';
 import { UsersService } from '../src/users/users.service';
+import { DeliveriesService } from '../src/deliveries/deliveries.service';
+import { AdminModule } from '../src/admin/admin.module';
+import { ReviewsModule } from '../src/reviews/reviews.module';
 import { findMongodBinary } from './mongo-binary';
 
 interface RegisteredSession {
@@ -86,6 +89,7 @@ describe('Savora API (e2e)', () => {
   let promotionModel: Model<PromotionDocument>;
   let redemptionModel: Model<PromotionRedemptionDocument>;
   let usersService: UsersService;
+  let deliveriesService: DeliveriesService;
 
   beforeAll(async () => {
     // A locally installed mongod avoids downloading a binary from
@@ -126,6 +130,8 @@ describe('Savora API (e2e)', () => {
         DriversModule,
         OrdersModule,
         TrackingModule,
+        AdminModule,
+        ReviewsModule,
       ],
       providers: [
         { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -156,6 +162,7 @@ describe('Savora API (e2e)', () => {
       getModelToken(PromotionRedemption.name),
     );
     usersService = app.get(UsersService);
+    deliveriesService = app.get(DeliveriesService);
   }, 180000);
 
   afterAll(async () => {
@@ -260,6 +267,148 @@ describe('Savora API (e2e)', () => {
     const stored = await userModel.findOne({ email }).select('+passwordHash').lean();
     expect(stored?.passwordHash).toBeTruthy();
     expect(stored?.passwordHash).not.toBe(PASSWORD);
+  });
+
+  it('persists the default delivery address supplied during customer registration', async () => {
+    const email = uniqueEmail('located-customer');
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        fullName: 'Located Customer',
+        email,
+        password: PASSWORD,
+        role: 'CUSTOMER',
+        defaultAddress: {
+          label: 'Home',
+          line1: 'Al-Ziraa, 8th Street, building 12',
+          city: 'Latakia',
+          state: 'Al-Ziraa',
+          postalCode: '',
+          country: 'Syria',
+          isDefault: true,
+          coordinates: { lat: 35.5196, lng: 35.7915 },
+        },
+      })
+      .expect(201);
+
+    const addresses = await request(app.getHttpServer())
+      .get('/api/v1/me/addresses')
+      .set(bearer(response.body.data.accessToken))
+      .expect(200);
+
+    expect(addresses.body.data).toHaveLength(1);
+    expect(addresses.body.data[0]).toMatchObject({
+      label: 'Home',
+      city: 'Latakia',
+      state: 'Al-Ziraa',
+      isDefault: true,
+      coordinates: { lat: 35.5196, lng: 35.7915 },
+    });
+  });
+
+  it('rejects a registration location outside the Latakia service area', async () => {
+    const before = await userModel.countDocuments();
+
+    const outside = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        fullName: 'Distant Customer',
+        email: uniqueEmail('outside'),
+        password: PASSWORD,
+        role: 'CUSTOMER',
+        defaultAddress: {
+          label: 'Home',
+          line1: '214 Bedford Avenue',
+          city: 'Brooklyn',
+          state: 'NY',
+          postalCode: '11211',
+          country: 'USA',
+          coordinates: { lat: 40.7192, lng: -73.9561 },
+        },
+      })
+      .expect(400);
+
+    expect(outside.body.code).toBe('out_of_service_area');
+
+    const badPin = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        fullName: 'Misplaced Customer',
+        email: uniqueEmail('bad-pin'),
+        password: PASSWORD,
+        role: 'CUSTOMER',
+        defaultAddress: {
+          label: 'Home',
+          line1: 'Al-Ziraa, 8th Street',
+          city: 'Latakia',
+          state: 'Al-Ziraa',
+          postalCode: '',
+          country: 'Syria',
+          coordinates: { lat: 40.7192, lng: -73.9561 },
+        },
+      })
+      .expect(400);
+
+    expect(badPin.body.code).toBe('out_of_service_area');
+    expect(await userModel.countDocuments()).toBe(before);
+  });
+
+  it('stores a restaurant owner’s Latakia pin and neighbourhood at registration', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        fullName: 'Located Owner',
+        email: uniqueEmail('located-owner'),
+        password: PASSWORD,
+        role: 'RESTAURANT_OWNER',
+        restaurant: {
+          name: 'Located Kitchen',
+          address: 'Al-Ziraa, 8th Street',
+          phone: '+963 944 000 200',
+          city: 'Latakia',
+          state: 'Al-Ziraa',
+          postalCode: '',
+          country: 'Syria',
+          latitude: 35.5196,
+          longitude: 35.7915,
+        },
+      })
+      .expect(201);
+
+    const mine = await request(app.getHttpServer())
+      .get('/api/v1/restaurants/mine')
+      .set(bearer(response.body.data.accessToken))
+      .expect(200);
+
+    expect(mine.body.data).toHaveLength(1);
+    expect(mine.body.data[0].address).toMatchObject({
+      line1: 'Al-Ziraa, 8th Street',
+      city: 'Latakia',
+      state: 'Al-Ziraa',
+      coordinates: { lat: 35.5196, lng: 35.7915 },
+    });
+  });
+
+  it('rejects a restaurant registration pin outside Latakia', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        fullName: 'Distant Owner',
+        email: uniqueEmail('distant-owner'),
+        password: PASSWORD,
+        role: 'RESTAURANT_OWNER',
+        restaurant: {
+          name: 'Distant Kitchen',
+          address: '214 Bedford Avenue',
+          phone: '+963 944 000 201',
+          city: 'Latakia',
+          latitude: 40.7192,
+          longitude: -73.9561,
+        },
+      })
+      .expect(400);
+
+    expect(response.body.code).toBe('out_of_service_area');
   });
 
   it('rejects duplicate registration emails with a conflict', async () => {
@@ -368,7 +517,7 @@ describe('Savora API (e2e)', () => {
         role: 'DRIVER',
         driver: {
           phone: '+1 917 555 0119',
-          serviceArea: 'Brooklyn',
+          serviceArea: 'Latakia',
           vehicle: 'bike',
         },
       })
@@ -530,7 +679,7 @@ describe('Savora API (e2e)', () => {
           minOrder: 0,
           deliveryFee: 3,
           estimatedDeliveryMinutes: [20, 30],
-          'address.coordinates': { lat: 40.7178, lng: -73.9573 },
+          'address.coordinates': { lat: 35.5196, lng: 35.7915 },
         },
       },
     );
@@ -557,7 +706,7 @@ describe('Savora API (e2e)', () => {
   }
 
   async function registerDriverSession(
-    serviceArea = 'All boroughs',
+    serviceArea = 'Latakia',
   ): Promise<RegisteredSession & { driverId: string }> {
     const email = uniqueEmail('p2-driver');
     const response = await request(app.getHttpServer())
@@ -587,10 +736,10 @@ describe('Savora API (e2e)', () => {
         $set: {
           accountStatus: AccountStatus.APPROVED,
           availability: 'AVAILABLE',
-          serviceArea: 'All boroughs',
+          serviceArea: 'Latakia',
           lastLocation: {
-            lat: 40.719 + Math.random() * 0.004,
-            lng: -73.956 + Math.random() * 0.004,
+            lat: 35.5196 + Math.random() * 0.004,
+            lng: 35.7915 + Math.random() * 0.004,
             updatedAt: new Date(),
           },
         },
@@ -630,13 +779,13 @@ describe('Savora API (e2e)', () => {
       items: [{ productId: itemId, quantity: 2, selectedOptions: [] }],
       deliveryAddress: {
         label: 'Home',
-        line1: '214 Bedford Avenue',
-        city: 'Brooklyn',
-        state: 'NY',
-        postalCode: '11211',
-        country: 'USA',
-        lat: 40.7178,
-        lng: -73.9573,
+        line1: 'Al-Ziraa, 8th Street',
+        city: 'Latakia',
+        state: 'Latakia',
+        postalCode: '',
+        country: 'Syria',
+        lat: 35.5196,
+        lng: 35.7915,
       },
       paymentMethodId: 'cash-on-delivery',
       customerName: 'Maya Chen',
@@ -654,8 +803,11 @@ describe('Savora API (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/orders')
       .set(bearer(token))
-      .send(orderPayload(restaurantId, itemId, `p2-${Date.now()}-${Math.random()}`, extra))
-      .expect(201);
+      .send(orderPayload(restaurantId, itemId, `p2-${Date.now()}-${Math.random()}`, extra));
+    if (response.status !== 201) {
+      // Surface the API error instead of only the status in lifecycle failures.
+      throw new Error(`Order creation failed (${response.status}): ${JSON.stringify(response.body)}`);
+    }
     return response.body.data as {
       id: string;
       status: string;
@@ -735,8 +887,10 @@ describe('Savora API (e2e)', () => {
     const first = await request(app.getHttpServer())
       .post('/api/v1/orders')
       .set(bearer(customer.accessToken))
-      .send(payload)
-      .expect(201);
+      .send(payload);
+    if (first.status !== 201) {
+      throw new Error(`Order creation failed (${first.status}): ${JSON.stringify(first.body)}`);
+    }
 
     const second = await request(app.getHttpServer())
       .post('/api/v1/orders')
@@ -823,6 +977,263 @@ describe('Savora API (e2e)', () => {
       .expect(403);
   });
 
+  it('scopes public restaurant discovery to Latakia', async () => {
+    const owner = await registerOwner(uniqueEmail('latakia-owner'), 'Latakia Kitchen');
+    const restaurantId = owner.user.restaurantId as string;
+    await restaurantModel.updateOne(
+      { _id: restaurantId },
+      { $set: { status: RestaurantStatus.APPROVED } },
+    );
+
+    const local = await request(app.getHttpServer())
+      .get('/api/v1/restaurants')
+      .expect(200);
+    expect(local.body.data.total).toBe(1);
+    expect(local.body.data.items[0].address.city).toBe('Latakia');
+
+    // An approved restaurant outside the city must never leak into discovery.
+    await restaurantModel.updateOne(
+      { _id: restaurantId },
+      { $set: { 'address.city': 'Brooklyn' } },
+    );
+
+    const hidden = await request(app.getHttpServer())
+      .get('/api/v1/restaurants')
+      .expect(200);
+    expect(hidden.body.data.total).toBe(0);
+
+    const featured = await request(app.getHttpServer())
+      .get('/api/v1/restaurants/featured')
+      .expect(200);
+    expect(featured.body.data).toHaveLength(0);
+  });
+
+  it('rejects delivery addresses outside the Latakia service area', async () => {
+    const { restaurantId, itemId } = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/orders')
+      .set(bearer(customer.accessToken))
+      .send({
+        ...orderPayload(restaurantId, itemId, `latakia-${Date.now()}`),
+        deliveryAddress: {
+          label: 'Home',
+          line1: '214 Bedford Avenue',
+          city: 'Brooklyn',
+          state: 'NY',
+          postalCode: '11211',
+          country: 'USA',
+        },
+      })
+      .expect(400);
+
+    expect(response.body.code).toBe('out_of_service_area');
+    expect(await orderModel.countDocuments()).toBe(0);
+  });
+
+  it('supports separate restaurant, dish and delivery reviews after delivery', async () => {
+    const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const otherCustomer = await registerCustomer();
+    const driver = await registerDriverSession();
+    const admin = await loginAsAdmin();
+
+    const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+    await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+
+    const assigned = await request(app.getHttpServer())
+      .get(`/api/v1/deliveries/by-order/${order.id}`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+    const deliveryId = assigned.body.data.id as string;
+
+    for (const action of ['PICK_UP', 'START_TRANSIT', 'DELIVER']) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${deliveryId}/transition`)
+        .set(bearer(driver.accessToken))
+        .send({ action })
+        .expect(201);
+    }
+
+    const summaryBefore = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/restaurant/${restaurantId}/summary`)
+      .expect(200);
+    expect(summaryBefore.body.data).toEqual({
+      average: 0,
+      total: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    });
+
+    const restaurantReview = await request(app.getHttpServer())
+      .post('/api/v1/reviews')
+      .set(bearer(customer.accessToken))
+      .send({ orderId: order.id, type: 'restaurant', rating: 5, comment: 'Excellent shawarma.' })
+      .expect(201);
+    expect(restaurantReview.body.data).toMatchObject({
+      type: 'restaurant',
+      rating: 5,
+      orderId: order.id,
+      restaurantId,
+    });
+
+    const duplicate = await request(app.getHttpServer())
+      .post('/api/v1/reviews')
+      .set(bearer(customer.accessToken))
+      .send({ orderId: order.id, type: 'restaurant', rating: 4 })
+      .expect(409);
+    expect(duplicate.body.code).toBe('review_exists');
+
+    const dishReview = await request(app.getHttpServer())
+      .post('/api/v1/reviews')
+      .set(bearer(customer.accessToken))
+      .send({ orderId: order.id, type: 'menu_item', menuItemId: itemId, rating: 5 })
+      .expect(201);
+    expect(dishReview.body.data.menuItemId).toBe(itemId);
+
+    const notPurchased = await request(app.getHttpServer())
+      .post('/api/v1/reviews')
+      .set(bearer(customer.accessToken))
+      .send({
+        orderId: order.id,
+        type: 'menu_item',
+        menuItemId: new Types.ObjectId().toString(),
+        rating: 5,
+      })
+      .expect(400);
+    expect(notPurchased.body.message).toContain('purchased');
+
+    const deliveryReview = await request(app.getHttpServer())
+      .post('/api/v1/reviews')
+      .set(bearer(customer.accessToken))
+      .send({
+        orderId: order.id,
+        type: 'delivery',
+        deliveryRating: 4,
+        serviceRating: 5,
+        comment: 'Fast hand-off.',
+      })
+      .expect(201);
+    expect(deliveryReview.body.data).toMatchObject({
+      type: 'delivery',
+      deliveryRating: 4,
+      serviceRating: 5,
+      rating: 4.5,
+    });
+
+    const restaurantSummary = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/restaurant/${restaurantId}/summary`)
+      .expect(200);
+    expect(restaurantSummary.body.data).toMatchObject({ average: 5, total: 1 });
+
+    const menuSummary = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/menu-item/${itemId}/summary`)
+      .expect(200);
+    expect(menuSummary.body.data).toMatchObject({ average: 5, total: 1 });
+
+    const driverSummary = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/driver/${driver.driverId}/summary`)
+      .expect(200);
+    expect(driverSummary.body.data).toMatchObject({
+      total: 1,
+      deliveryAverage: 4,
+      serviceAverage: 5,
+    });
+
+    const myReviews = await request(app.getHttpServer())
+      .get('/api/v1/reviews/my-reviews?perPage=50')
+      .set(bearer(customer.accessToken))
+      .expect(200);
+    expect(myReviews.body.data.total).toBe(3);
+
+    // Editing is restricted to the author (existence is not disclosed).
+    await request(app.getHttpServer())
+      .patch(`/api/v1/reviews/${restaurantReview.body.data.id}`)
+      .set(bearer(otherCustomer.accessToken))
+      .send({ rating: 3 })
+      .expect(404);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/api/v1/reviews/${restaurantReview.body.data.id}`)
+      .set(bearer(customer.accessToken))
+      .send({ rating: 4, comment: 'Updated after a second visit.' })
+      .expect(200);
+    expect(updated.body.data).toMatchObject({ rating: 4, comment: 'Updated after a second visit.' });
+
+    const updatedSummary = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/restaurant/${restaurantId}/summary`)
+      .expect(200);
+    expect(updatedSummary.body.data).toMatchObject({ average: 4, total: 1 });
+
+    // Delivery review lookup is order-owner only.
+    const ownDelivery = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/order/${order.id}/delivery`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+    expect(ownDelivery.body.data.id).toBe(deliveryReview.body.data.id);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/reviews/order/${order.id}/delivery`)
+      .set(bearer(otherCustomer.accessToken))
+      .expect(403);
+
+    // Admin moderation removes a review from public aggregates and can undo it.
+    const hidden = await request(app.getHttpServer())
+      .patch(`/api/v1/reviews/admin/${restaurantReview.body.data.id}/hide`)
+      .set(bearer(admin.accessToken))
+      .send({})
+      .expect(200);
+    expect(hidden.body.data.review.status).toBe('hidden');
+
+    const hiddenSummary = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/restaurant/${restaurantId}/summary`)
+      .expect(200);
+    expect(hiddenSummary.body.data.total).toBe(0);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/reviews/admin/${restaurantReview.body.data.id}/restore`)
+      .set(bearer(admin.accessToken))
+      .send({})
+      .expect(200);
+
+    const restoredSummary = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/restaurant/${restaurantId}/summary`)
+      .expect(200);
+    expect(restoredSummary.body.data).toMatchObject({ average: 4, total: 1 });
+
+    const adminQueue = await request(app.getHttpServer())
+      .get(
+        `/api/v1/reviews/admin?status=visible&restaurantId=${restaurantId}&perPage=50`,
+      )
+      .set(bearer(admin.accessToken))
+      .expect(200);
+    expect(adminQueue.body.data.total).toBeGreaterThanOrEqual(3);
+    expect(
+      adminQueue.body.data.items.every(
+        (entry: { status: string; restaurantId: string }) =>
+          entry.status === 'visible' && entry.restaurantId === restaurantId,
+      ),
+    ).toBe(true);
+
+    // Reviews stay tied to delivered orders: a pending order cannot be rated.
+    const pendingOrder = await placeOrder(customer.accessToken, restaurantId, itemId);
+    await request(app.getHttpServer())
+      .post('/api/v1/reviews')
+      .set(bearer(customer.accessToken))
+      .send({ orderId: pendingOrder.id, type: 'restaurant', rating: 5 })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/reviews/${restaurantReview.body.data.id}`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+
+    const afterDelete = await request(app.getHttpServer())
+      .get(`/api/v1/reviews/restaurant/${restaurantId}/summary`)
+      .expect(200);
+    expect(afterDelete.body.data.total).toBe(0);
+  });
+
   it('prevents double assignment and supports unassign then reassign', async () => {
     const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
     const customer = await registerCustomer();
@@ -898,6 +1309,173 @@ describe('Savora API (e2e)', () => {
       source: 'MANUAL',
     });
   });
+
+    it('keeps order cancellation and delivery cancellation consistent', async () => {
+      const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+      const customer = await registerCustomer();
+      const driver = await registerDriverSession();
+      const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+
+      await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+      const delivery = await request(app.getHttpServer())
+        .get(`/api/v1/deliveries/by-order/${order.id}`)
+        .set(bearer(customer.accessToken))
+        .expect(200);
+
+      const cancellations = await Promise.all([
+        request(app.getHttpServer())
+          .post(`/api/v1/orders/${order.id}/transition`)
+          .set(bearer(customer.accessToken))
+          .send({ action: 'CANCEL' }),
+        request(app.getHttpServer())
+          .post(`/api/v1/orders/${order.id}/transition`)
+          .set(bearer(customer.accessToken))
+          .send({ action: 'CANCEL' }),
+      ]);
+      expect(cancellations.map((response) => response.status).sort()).toEqual([201, 409]);
+
+      const cancelledDelivery = await request(app.getHttpServer())
+        .get(`/api/v1/deliveries/${delivery.body.data.id}`)
+        .set(bearer(customer.accessToken))
+        .expect(200);
+      expect(cancelledDelivery.body.data.status).toBe('CANCELLED');
+
+      const cancelledOrder = await request(app.getHttpServer())
+        .get(`/api/v1/orders/${order.id}`)
+        .set(bearer(customer.accessToken))
+        .expect(200);
+      expect(cancelledOrder.body.data.status).toBe('CANCELLED');
+      expect((await driverModel.findById(driver.driverId).lean())?.activeDeliveryId).toBeNull();
+    });
+
+    it('releases driver-failed deliveries without cancelling the order', async () => {
+      const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+      const customer = await registerCustomer();
+      const driver = await registerDriverSession();
+      const replacement = await registerDriverSession();
+      const outsider = await registerDriverSession();
+      const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+
+      await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+      const assigned = await request(app.getHttpServer())
+        .get(`/api/v1/deliveries/by-order/${order.id}`)
+        .set(bearer(customer.accessToken))
+        .expect(200);
+      const driverSessions = [driver, replacement, outsider];
+      const assignedDriver = driverSessions.find(
+        (session) => session.driverId === assigned.body.data.driverId,
+      );
+      expect(assignedDriver).toBeTruthy();
+      const unauthorizedDriver = driverSessions.find(
+        (session) => session.driverId !== assigned.body.data.driverId,
+      );
+      expect(unauthorizedDriver).toBeTruthy();
+
+      const unauthorized = await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${assigned.body.data.id}/release`)
+        .set(bearer(unauthorizedDriver!.accessToken))
+        .send({ reason: 'Not my delivery.' });
+      expect(unauthorized.status).toBe(403);
+
+      const released = await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${assigned.body.data.id}/release`)
+        .set(bearer(assignedDriver!.accessToken))
+        .send({ reason: 'Vehicle breakdown.' })
+        .expect(201);
+      expect(released.body.data.driverId).not.toBe(assignedDriver!.driverId);
+      expect([driver.driverId, replacement.driverId, outsider.driverId]).toContain(
+        released.body.data.driverId,
+      );
+      expect(released.body.data.status).toBe('ASSIGNED');
+
+      const stillActive = await request(app.getHttpServer())
+        .get(`/api/v1/orders/${order.id}`)
+        .set(bearer(customer.accessToken))
+        .expect(200);
+      expect(stillActive.body.data.status).toBe('READY');
+      expect(
+        (await driverModel.findById(assignedDriver!.driverId).lean())?.activeDeliveryId,
+      ).toBeNull();
+    });
+
+    it('does not release delivered deliveries and fails suspension before finalizing it', async () => {
+      const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+      const customer = await registerCustomer();
+      const driver = await registerDriverSession();
+      const admin = await loginAsAdmin();
+      const driverUser = await userModel.findOne({ email: driver.user.email }).lean();
+      expect(driverUser).toBeTruthy();
+      const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+
+      await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+      const assigned = await request(app.getHttpServer())
+        .get(`/api/v1/deliveries/by-order/${order.id}`)
+        .set(bearer(customer.accessToken))
+        .expect(200);
+      const deliveryId = assigned.body.data.id as string;
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${deliveryId}/transition`)
+        .set(bearer(driver.accessToken))
+        .send({ action: 'PICK_UP' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${deliveryId}/transition`)
+        .set(bearer(driver.accessToken))
+        .send({ action: 'START_TRANSIT' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${deliveryId}/transition`)
+        .set(bearer(driver.accessToken))
+        .send({ action: 'DELIVER' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${deliveryId}/release`)
+        .set(bearer(admin.accessToken))
+        .send({ reason: 'Late release attempt.' })
+        .expect(409);
+
+      const suspensionResponse = await request(app.getHttpServer())
+        .patch(`/api/v1/admin/accounts/${driverUser?._id.toString()}/status`)
+        .set(bearer(admin.accessToken))
+        .send({ status: AccountStatus.SUSPENDED, reason: 'Policy violation.' });
+      expect(suspensionResponse.status).toBe(200);
+      const suspension = suspensionResponse;
+      expect(suspension.body.data.accountStatus).toBe(AccountStatus.SUSPENDED);
+
+      const repeated = await request(app.getHttpServer())
+        .patch(`/api/v1/admin/accounts/${driverUser?._id.toString()}/status`)
+        .set(bearer(admin.accessToken))
+        .send({ status: AccountStatus.SUSPENDED })
+        .expect(200);
+      expect(repeated.body.data.accountStatus).toBe(AccountStatus.SUSPENDED);
+    });
+
+    it('does not finalize suspension when active delivery release fails', async () => {
+      const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+      const customer = await registerCustomer();
+      const driver = await registerDriverSession();
+      const admin = await loginAsAdmin();
+      const driverUser = await userModel.findOne({ email: driver.user.email }).lean();
+      expect(driverUser).toBeTruthy();
+      const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+      await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+
+      const failure = jest
+        .spyOn(deliveriesService, 'releaseAssignmentForAccountStatus')
+        .mockRejectedValueOnce(new Error('release unavailable'));
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/admin/accounts/${driverUser?._id.toString()}/status`)
+        .set(bearer(admin.accessToken))
+        .send({ status: AccountStatus.SUSPENDED })
+        .expect(500);
+      expect(response.body.code).toBe('internal_error');
+      expect((await userModel.findById(driverUser?._id).lean())?.accountStatus).toBe(
+        AccountStatus.APPROVED,
+      );
+      failure.mockRestore();
+    });
 
   it('enforces driver availability rules and assignment permissions', async () => {
     const driver = await registerDriverSession();

@@ -2,7 +2,7 @@ import { CreditCard, MapPin, ReceiptText } from 'lucide-react';
 import type { Order } from '@/types';
 import { Image } from '@/components/ui/Image';
 import { Badge } from '@/components/ui/Badge';
-import { formatCurrency, formatTime } from '@/lib/format';
+import { formatCurrency, formatTime, formatCityLine } from '@/lib/format';
 
 /** Read-only order receipt, sized for the tracking sidebar. */
 export function OrderSummary({ order }: { order: Order }) {
@@ -84,7 +84,11 @@ export function OrderSummary({ order }: { order: Order }) {
             <span className="font-medium text-olive-800">{order.deliveryAddress.line1}</span>
             {order.deliveryAddress.line2 ? `, ${order.deliveryAddress.line2}` : ''}
             <span className="block">
-              {order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.postalCode}
+              {formatCityLine(
+                order.deliveryAddress.city,
+                order.deliveryAddress.state,
+                order.deliveryAddress.postalCode,
+              )}
             </span>
           </address>
         </div>

@@ -93,7 +93,7 @@ export class MockRestaurantService implements RestaurantService {
         line2: input.address.line2,
         city: input.address.city,
         state: input.address.state,
-        postalCode: input.address.postalCode,
+        postalCode: input.address.postalCode ?? restaurant.address.postalCode,
         country: input.address.country,
         coordinates: input.address.coordinates,
       };

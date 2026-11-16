@@ -17,8 +17,8 @@ export function DeliveryAddressForm({
   const fields: Array<{ key: AddressField; label: string; autoComplete: string }> = [
     { key: 'line1', label: 'Street address', autoComplete: 'address-line1' },
     { key: 'city', label: 'City', autoComplete: 'address-level2' },
-    { key: 'state', label: 'State', autoComplete: 'address-level1' },
-    { key: 'postalCode', label: 'ZIP code', autoComplete: 'postal-code' },
+    { key: 'state', label: 'State / governorate', autoComplete: 'address-level1' },
+    { key: 'postalCode', label: 'Postal code (optional)', autoComplete: 'postal-code' },
     { key: 'country', label: 'Country', autoComplete: 'country-name' },
   ];
 

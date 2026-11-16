@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ui/StatePanel';
 import { TrackingMap } from '@/features/tracking/components/TrackingMap';
 import { DriverCard } from '@/features/tracking/components/DriverCard';
 import { OrderSummary } from '@/features/tracking/components/OrderSummary';
+import { DeliveryReviewPrompt } from '@/features/reviews/components/DeliveryReviewPrompt';
 import { TrackingTimeline } from '@/features/tracking/components/TrackingTimeline';
 import { useOrderTracking } from '@/features/tracking/hooks/useOrderTracking';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -257,6 +258,7 @@ export default function OrderTrackingPage() {
         <aside className="min-w-0 space-y-6">
           <DriverCard snapshot={snapshot} />
           <OrderSummary order={currentOrder} />
+          <DeliveryReviewPrompt order={currentOrder} />
 
           <div className="rounded-2xl border border-olive-900/10 bg-cream px-5 py-4">
             <p className="flex items-start gap-2.5 text-[0.75rem] leading-relaxed text-olive-500">

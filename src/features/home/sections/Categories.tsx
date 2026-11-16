@@ -56,7 +56,7 @@ export function Categories() {
               ) : (
                 <p className="inline-flex items-center gap-2 text-[0.75rem] text-olive-500">
                   <span className="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden="true" />
-                  Curated for Brooklyn, NY
+                  Curated for Latakia, Syria
                 </p>
               )
             }
@@ -89,7 +89,7 @@ export function Categories() {
         ) : (
           <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-4 sm:gap-x-6 lg:grid-cols-8 lg:gap-x-4">
             {categories.data.map((category, index) => (
-              <Reveal key={category.id} delay={Math.min(index * 45, 315)}>
+              <Reveal key={category.id} delay={Math.min(index * 45, 315)} className="min-w-0">
                 <CategoryCard
                   category={category}
                   active={category.slug === activeSlug}

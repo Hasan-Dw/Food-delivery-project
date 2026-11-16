@@ -1,9 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, LogOut, Search, X } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, LogOut, Search, X } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { primaryNav } from '@/config/navigation';
 import { ROUTES } from '@/config/routes';
+import { roleLabels, roleLandingPath } from '@/lib/permissions';
 import { site } from '@/config/site';
 import { useLocationStore, serviceAreas } from '@/stores/location-store';
 import { useSearchDialogStore } from '@/stores/search-dialog-store';
@@ -84,7 +85,8 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             </kbd>
           </button>
 
-          <p className="eyebrow mb-3 text-terracotta-600">Deliver to</p>
+          <p className="eyebrow mb-1.5 text-terracotta-600">Deliver to</p>
+          <p className="mb-3 text-[0.6875rem] text-olive-500">Savora currently delivers across Latakia only.</p>
           <div className="grid grid-cols-2 gap-2">
             {serviceAreas.map((area) => (
               <button
@@ -98,9 +100,9 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                     : 'border-olive-900/12 bg-cream/70 text-olive-700',
                 )}
               >
-                <span className="block text-[0.8125rem] font-medium">{area.city}</span>
+                <span className="block text-[0.8125rem] font-medium">{area.region}</span>
                 <span className={cn('block text-[0.6875rem]', area.id === areaId ? 'text-cream/60' : 'text-olive-500')}>
-                  {area.eta}
+                  {area.city} · {area.eta}
                 </span>
               </button>
             ))}
@@ -126,6 +128,16 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           <div className="mt-7 space-y-2.5">
             {user ? (
               <>
+                {user.role !== 'CUSTOMER' ? (
+                  <ButtonLinkBlock
+                    to={roleLandingPath(user.role)}
+                    onNavigate={onClose}
+                    variant="primary"
+                  >
+                    <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
+                    {roleLabels[user.role]} dashboard
+                  </ButtonLinkBlock>
+                ) : null}
                 <ButtonLinkBlock to={ROUTES.profile} onNavigate={onClose}>
                   Your profile
                 </ButtonLinkBlock>

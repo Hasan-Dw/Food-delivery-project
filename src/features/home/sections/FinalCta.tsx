@@ -63,17 +63,16 @@ export function FinalCta() {
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-[0.75rem] text-cream/55">
               <span className="inline-flex items-center gap-2">
                 <MapPin aria-hidden="true" className="h-3.5 w-3.5 text-gold-300" />
-                Delivering to {area.city}, {area.region} {area.postalCode}
+                Delivering to {area.region}, {area.city}
               </span>
               <span className="inline-flex items-center gap-2">
                 <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-gold-300" />
-                240+ independent kitchens
+                3 partner kitchens
               </span>
             </div>
 
             <p className="mt-8 border-t border-cream/12 pt-5 text-[0.6875rem] leading-relaxed text-cream/35">
-              Savora is a frontend prototype. Orders, payments and live delivery data are simulated, and no real
-              transaction is ever created.
+              Savora delivers across Latakia with cash on delivery. Ratings come from real delivered orders.
             </p>
           </Reveal>
         </div>

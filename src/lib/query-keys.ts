@@ -7,6 +7,18 @@ export const queryKeys = {
   popularProducts: ['products', 'popular'] as const,
   restaurantProducts: (restaurantId: string) => ['products', 'restaurant', restaurantId] as const,
   productCategories: (restaurantId: string) => ['product-categories', restaurantId] as const,
+  restaurantReviews: (restaurantId: string, page = 1) =>
+    ['reviews', 'restaurant', restaurantId, page] as const,
+  restaurantReviewSummary: (restaurantId: string) =>
+    ['reviews', 'restaurant', restaurantId, 'summary'] as const,
+  menuItemReviews: (menuItemId: string, page = 1) => ['reviews', 'menu-item', menuItemId, page] as const,
+  menuItemReviewSummary: (menuItemId: string) =>
+    ['reviews', 'menu-item', menuItemId, 'summary'] as const,
+  driverReviewSummary: (driverId: string) => ['reviews', 'driver', driverId, 'summary'] as const,
+  myReviews: (query: Record<string, string | undefined> = {}) => ['reviews', 'mine', query] as const,
+  deliveryReview: (orderId: string) => ['reviews', 'delivery', orderId] as const,
+  adminReviews: (query: Record<string, string | undefined> = {}) =>
+    ['admin', 'reviews', query] as const,
   promotions: ['promotions'] as const,
   checkoutQuote: (restaurantId: string, signature: string, couponCode: string) =>
     ['checkout', 'quote', restaurantId, signature, couponCode] as const,

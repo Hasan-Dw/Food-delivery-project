@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -13,23 +13,23 @@ import {
 	ShoppingBag,
 	Sparkles,
 	Users,
-	X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Image } from '@/components/ui/Image';
 import { Rating } from '@/components/ui/Rating';
 import { Reveal } from '@/components/ui/Reveal';
-import { SectionHeading } from '@/components/ui/SectionHeading';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/StatePanel';
+import { DishDetailDialog } from '@/features/menu/components/DishDetailDialog';
+import { RestaurantReviews } from '@/features/reviews/components/RestaurantReviews';
 import { ROUTES } from '@/config/routes';
 import { queryKeys } from '@/lib/query-keys';
 import { getErrorMessage } from '@/services/api';
 import { services } from '@/services';
 import { useCartStore } from '@/stores/cart-store';
 import { cn } from '@/lib/cn';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatCityLine } from '@/lib/format';
 import type { Product } from '@/types';
 
 const sectionLinks = [
@@ -39,9 +39,6 @@ const sectionLinks = [
 	{ id: 'details', label: 'Hours & location' },
 ];
 
-const focusableSelector =
-	'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 function RestaurantSkeleton() {
 	return (
 		<div className="pb-20" aria-busy="true" aria-label="Loading restaurant">
@@ -49,100 +46,6 @@ function RestaurantSkeleton() {
 			<section className="shell grid gap-8 pb-10 pt-8 lg:grid-cols-[1fr_1.08fr] lg:items-center lg:gap-16 lg:pb-16 lg:pt-12"><div><Skeleton className="h-6 w-40" /><Skeleton className="mt-5 h-12 w-3/4" /><Skeleton className="mt-4 h-4 w-full max-w-lg" /><Skeleton className="mt-2 h-4 w-2/3 max-w-lg" /><div className="mt-7 flex gap-3"><Skeleton className="h-11 w-36 rounded-full" /><Skeleton className="h-11 w-24 rounded-full" /></div></div><Skeleton className="aspect-[4/3] w-full rounded-[999px_999px_1.25rem_1.25rem]" /></section>
 			<div className="border-y border-olive-900/10"><div className="shell flex gap-7 py-4"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /></div></div>
 			<main className="shell grid gap-10 pt-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-14"><div><Skeleton className="h-9 w-48" />{Array.from({ length: 3 }).map((_, index) => <div key={index} className="flex gap-4 border-b border-olive-900/10 py-5"><Skeleton className="h-24 w-24 shrink-0 rounded-xl" /><div className="flex-1"><Skeleton className="h-4 w-1/2" /><Skeleton className="mt-3 h-3 w-full" /><Skeleton className="mt-2 h-3 w-2/3" /><Skeleton className="mt-4 h-8 w-16 rounded-full" /></div></div>)}</div><div className="space-y-5"><Skeleton className="h-48 w-full rounded-panel" /><Skeleton className="h-56 w-full rounded-panel" /></div></main>
-		</div>
-	);
-}
-
-interface DishDialogProps {
-	product: Product;
-	restaurantName: string;
-	deliveryFee: number;
-	onClose: () => void;
-}
-
-function DishDialog({ product, restaurantName, deliveryFee, onClose }: DishDialogProps) {
-	const panelRef = useRef<HTMLDivElement>(null);
-	const closeButtonRef = useRef<HTMLButtonElement>(null);
-	const closeTimerRef = useRef<number | null>(null);
-	const isClosingRef = useRef(false);
-	const onCloseRef = useRef(onClose);
-	const titleId = useId();
-	const [isClosing, setIsClosing] = useState(false);
-	const addProduct = useCartStore((state) => state.addProduct);
-	onCloseRef.current = onClose;
-
-	const requestClose = useCallback(() => {
-		if (isClosingRef.current) return;
-		isClosingRef.current = true;
-		setIsClosing(true);
-		closeTimerRef.current = window.setTimeout(() => onCloseRef.current(), 300);
-	}, []);
-
-	useEffect(() => {
-		const body = document.body;
-		const previousOverflow = body.style.overflow;
-		const previousPaddingRight = body.style.paddingRight;
-		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-		const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-		const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 30);
-
-		body.style.overflow = 'hidden';
-		if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				event.preventDefault();
-				requestClose();
-				return;
-			}
-
-			if (event.key !== 'Tab' || !panelRef.current) return;
-			const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(focusableSelector)).filter(
-				(element) => element.offsetParent !== null,
-			);
-			if (!focusable.length) return;
-
-			const first = focusable[0];
-			const last = focusable[focusable.length - 1];
-			if (event.shiftKey && document.activeElement === first) {
-				event.preventDefault();
-				last.focus();
-			} else if (!event.shiftKey && document.activeElement === last) {
-				event.preventDefault();
-				first.focus();
-			}
-		};
-
-		document.addEventListener('keydown', handleKeyDown);
-		return () => {
-			window.clearTimeout(focusTimer);
-			document.removeEventListener('keydown', handleKeyDown);
-			body.style.overflow = previousOverflow;
-			body.style.paddingRight = previousPaddingRight;
-			if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
-			if (previouslyFocused?.isConnected) previouslyFocused.focus();
-		};
-	}, [requestClose]);
-
-	const handleOrder = () => {
-		const selectedOptions = product.optionGroups.flatMap((group) => {
-			const option = group.options.find((item) => item.isDefault) ?? group.options[0];
-			return option
-				? [{ groupId: group.id, groupName: group.name, optionId: option.id, optionName: option.name, priceDelta: option.priceDelta }]
-				: [];
-		});
-
-		addProduct({ product, restaurantName, deliveryFee, selectedOptions });
-		requestClose();
-	};
-
-	return (
-		<div className="fixed inset-0 z-[80] overflow-y-auto p-3 sm:p-6">
-			<div aria-hidden="true" className={`fixed inset-0 bg-ink/60 backdrop-blur-[10px] ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`} onClick={requestClose} />
-			<div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className={`relative mx-auto mt-3 grid max-w-2xl overflow-hidden rounded-panel border border-olive-900/10 bg-ivory shadow-lift sm:mt-[7vh] sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] ${isClosing ? 'animate-dialog-out' : 'animate-chip-in'}`}>
-				<div className="relative h-52 bg-ivory-200 sm:h-auto sm:min-h-[32rem]"><Image imageKey={product.imageKey} alt={product.name} priority sizes="(min-width: 640px) 22rem, 100vw" /><div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink/45 to-transparent sm:inset-y-0 sm:right-0 sm:left-auto sm:h-auto sm:w-24 sm:bg-gradient-to-l" /><button ref={closeButtonRef} type="button" onClick={requestClose} aria-label="Close dish details" className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-cream/60 bg-ink/35 text-cream backdrop-blur-md transition hover:bg-ink/55"><X aria-hidden="true" className="h-5 w-5" /></button></div>
-				<div className="p-5 sm:p-7"><div className="flex items-start justify-between gap-5"><div><p className="eyebrow text-terracotta-700">From the kitchen</p><h2 id={titleId} className="mt-3 text-display-sm">{product.name}</h2></div><span className="shrink-0 text-lg font-semibold tabular-nums text-olive-900">{formatCurrency(product.price)}</span></div><p className="mt-4 text-sm leading-7 text-olive-600">{product.description}</p><div className="mt-5 flex flex-wrap gap-2">{product.isVegetarian ? <Badge tone="success">Vegetarian</Badge> : null}{product.isSpicy ? <Badge tone="terracotta">Spicy</Badge> : null}{product.isPopular ? <Badge tone="gold">Popular</Badge> : null}{product.calories ? <Badge tone="outline">{product.calories} calories</Badge> : null}</div>{product.optionGroups.length ? <div className="mt-6 border-t border-olive-900/10 pt-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Included choices</p><div className="mt-3 grid gap-3 sm:grid-cols-2">{product.optionGroups.map((group) => <div key={group.id} className="rounded-xl bg-cream p-3"><p className="text-xs font-semibold text-olive-900">{group.name}</p><p className="mt-1 text-xs leading-5 text-olive-500">{group.options.find((option) => option.isDefault)?.name ?? group.options[0]?.name ?? 'Chef selected'}</p></div>)}</div></div> : null}<div className="mt-7 flex flex-col-reverse gap-3 border-t border-olive-900/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-olive-500">Ready in {product.available ? 'the current menu' : 'the next menu update'}.</p><Button onClick={handleOrder} iconLeft={<ShoppingBag className="h-4 w-4" />}>Add to order</Button></div></div>
-			</div>
 		</div>
 	);
 }
@@ -332,13 +235,15 @@ export default function RestaurantPage() {
 				</div>
 				<aside className="lg:sticky lg:top-[8.5rem] lg:self-start">
 					<section id="about" className="mt-5 rounded-panel border border-olive-900/10 bg-cream p-5"><h3 className="text-xl">About this kitchen</h3><p className="mt-2 text-xs leading-6 text-olive-500">{restaurant.name} is a neighbourhood kitchen built around seasonal produce, good company and food that travels well.</p><div className="mt-4 space-y-2 border-t border-olive-900/10 pt-4 text-xs"><div className="flex justify-between"><span className="text-olive-500">Price range</span><span>{'$'.repeat(restaurant.priceLevel)} · Moderate</span></div><div className="flex justify-between"><span className="text-olive-500">Dietary</span><span>Vegetarian options</span></div><div className="flex gap-2 pt-2 text-olive-500"><ShieldCheck className="h-4 w-4 shrink-0 text-success" /> Contactless delivery available</div></div></section>
-					<section id="details" className="mt-5 rounded-panel border border-olive-900/10 bg-cream p-5"><div className="flex items-start justify-between gap-4"><div><p className="eyebrow text-terracotta-700">Visit the kitchen</p><h3 className="mt-3 text-xl">Hours & location</h3></div><MapPin aria-hidden="true" className="h-5 w-5 shrink-0 text-terracotta-600" /></div><div className="mt-5 grid gap-5 border-t border-olive-900/10 pt-5 sm:grid-cols-2 lg:grid-cols-1"><div><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Opening hours</p><dl className="mt-3 space-y-2 text-xs">{restaurant.openingHours.map((hours) => <div key={hours.day} className="flex justify-between gap-4"><dt className="text-olive-500">{hours.day}</dt><dd className="font-medium text-olive-800">{hours.open === 'Closed' ? 'Closed' : `${hours.open} – ${hours.close}`}</dd></div>)}</dl></div><div><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Delivery address</p><address className="mt-3 not-italic text-xs leading-6 text-olive-600">{restaurant.address.line1}<br />{restaurant.address.city}, {restaurant.address.state} {restaurant.address.postalCode}</address><p className="mt-3 text-xs text-success">{restaurant.isOpen ? 'Open now for delivery' : 'Currently closed'}</p></div></div></section>
+					<section id="details" className="mt-5 rounded-panel border border-olive-900/10 bg-cream p-5"><div className="flex items-start justify-between gap-4"><div><p className="eyebrow text-terracotta-700">Visit the kitchen</p><h3 className="mt-3 text-xl">Hours & location</h3></div><MapPin aria-hidden="true" className="h-5 w-5 shrink-0 text-terracotta-600" /></div><div className="mt-5 grid gap-5 border-t border-olive-900/10 pt-5 sm:grid-cols-2 lg:grid-cols-1"><div><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Opening hours</p><dl className="mt-3 space-y-2 text-xs">{restaurant.openingHours.map((hours) => <div key={hours.day} className="flex justify-between gap-4"><dt className="text-olive-500">{hours.day}</dt><dd className="font-medium text-olive-800">{hours.open === 'Closed' ? 'Closed' : `${hours.open} – ${hours.close}`}</dd></div>)}</dl></div><div><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Delivery address</p><address className="mt-3 not-italic text-xs leading-6 text-olive-600">{restaurant.address.line1}<br />{formatCityLine(restaurant.address.city, restaurant.address.state, restaurant.address.postalCode)}</address><p className="mt-3 text-xs text-success">{restaurant.isOpen ? 'Open now for delivery' : 'Currently closed'}</p></div></div></section>
 				</aside>
 			</main>
 
-			<section id="reviews" className="shell pt-16"><SectionHeading eyebrow="The table talk" title="What people say" description={`${restaurant.reviewCount.toLocaleString()} reviews · ${restaurant.rating} average`} /><div className="mt-7 grid gap-4 sm:grid-cols-2"><Reveal><div className="rounded-card border border-olive-900/10 bg-cream p-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Aggregate rating</p><div className="mt-4 flex items-center gap-3"><Rating rating={restaurant.rating} showReviews={false} /><span className="font-display text-3xl font-normal text-olive-900">{restaurant.rating}</span></div><p className="mt-3 text-sm leading-6 text-olive-600">Aggregate rating from verified Savora orders.</p></div></Reveal><Reveal delay={100}><div className="rounded-card border border-olive-900/10 bg-cream p-5"><p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-olive-500">Reviews recorded</p><p className="mt-3 font-display text-3xl font-normal text-olive-900">{restaurant.reviewCount.toLocaleString()}</p><p className="mt-3 text-sm leading-6 text-olive-600">Every rating comes from a delivered order.</p></div></Reveal></div></section>
+			<section id="reviews" className="shell pt-16">
+				<RestaurantReviews restaurantId={restaurant.id} restaurantName={restaurant.name} />
+			</section>
 			<div className="shell mt-16"><div className="flex items-center gap-3 border-t border-olive-900/10 pt-5 text-xs text-olive-500"><Users className="h-4 w-4 text-terracotta-600" /> A neighbourhood favourite, delivered with care.</div></div>
-			{selectedProduct ? <DishDialog product={selectedProduct} restaurantName={restaurant.name} deliveryFee={restaurant.deliveryFee} onClose={() => setSelectedProduct(null)} /> : null}
+			{selectedProduct ? <DishDetailDialog product={selectedProduct} restaurant={restaurant} onClose={() => setSelectedProduct(null)} /> : null}
 		</div>
 	);
 }

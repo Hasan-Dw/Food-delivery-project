@@ -97,9 +97,8 @@ export function DeliveryExperience() {
             <span className="mt-1 block italic text-terracotta">You can watch every step.</span>
           </h2>
           <p className="mt-5 max-w-lg text-[0.9375rem] leading-relaxed text-olive-500">
-            Follow your order from the pass to your door — the restaurant, the driver and the road in between. The
-            tracking experience is designed for real maps and live driver updates, and this prototype is clear about
-            what is simulated.
+            Follow your order from the pass to your door — the restaurant, the driver and the road in between. Live
+            driver positions, route progress and delivery updates are streamed from the Savora backend.
           </p>
 
           <ul className="mt-8 space-y-5">

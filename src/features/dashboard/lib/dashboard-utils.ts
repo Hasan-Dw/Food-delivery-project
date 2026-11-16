@@ -1,4 +1,5 @@
 import type { Address, Delivery, Driver, Order } from '@/types';
+import { formatCityLine } from '@/lib/format';
 
 export function completedRevenue(orders: Order[]): number {
   return orders
@@ -13,7 +14,7 @@ export function averageOrderValue(orders: Order[]): number {
 }
 
 export function formatAddress(address: Address): string {
-  return [address.line1, address.line2, `${address.city}, ${address.state} ${address.postalCode}`]
+  return [address.line1, address.line2, formatCityLine(address.city, address.state, address.postalCode)]
     .filter(Boolean)
     .join(' · ');
 }

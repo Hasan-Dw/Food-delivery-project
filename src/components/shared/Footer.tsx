@@ -54,7 +54,7 @@ export function Footer() {
       <div className="shell relative z-10">
         {/* Newsletter */}
         <div className="grid gap-8 border-b border-cream/10 py-14 md:py-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-20">
-          <div>
+          <div className="min-w-0">
             <p className="eyebrow mb-4 text-gold-200">The Savora letter</p>
             <h2 className="max-w-lg text-[clamp(2rem,3.4vw,3rem)] leading-[1.05] text-cream">
               New kitchens, seasonal menus, <em className="italic text-gold-200">good ideas.</em>
@@ -64,7 +64,7 @@ export function Footer() {
             </p>
           </div>
 
-          <div>
+          <div className="min-w-0">
             {subscribed ? (
               <div
                 role="status"
@@ -157,7 +157,7 @@ export function Footer() {
 
         {/* Bottom */}
         <div className="flex flex-col gap-5 border-t border-cream/10 py-7 text-[0.6875rem] text-cream/40 lg:flex-row lg:items-center lg:justify-between">
-          <p>© {new Date().getFullYear()} Savora. Made with care in Brooklyn, NY.</p>
+          <p>© {new Date().getFullYear()} Savora. Made with care in Latakia, Syria.</p>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             {['Privacy', 'Terms', 'Cookies', 'Licences'].map((label) => (

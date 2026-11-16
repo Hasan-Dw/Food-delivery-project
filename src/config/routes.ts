@@ -30,6 +30,7 @@ export const ROUTES = {
   adminDrivers: '/admin/drivers',
   adminDeliveries: '/admin/deliveries',
   adminOrders: '/admin/orders',
+  adminReviews: '/admin/reviews',
 
   // ── Owned by Team Member 2 — Cart & Order Flow ──────────────────────────
   cart: '/cart',

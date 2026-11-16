@@ -263,6 +263,58 @@ export class MockDeliveryService implements DeliveryService {
     return delivery;
   }
 
+  async release(deliveryId: string, reason: string): Promise<Delivery> {
+    await delay(320);
+    const delivery = findDeliveryOrThrow(deliveryId);
+    if (!['ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'].includes(delivery.status)) {
+      throw new ApiError(
+        {
+          code: 'delivery_not_releasable',
+          message: 'Delivered or cancelled deliveries cannot be released.',
+        },
+        409,
+      );
+    }
+
+    if (!delivery.driverId) {
+      throw new ApiError(
+        { code: 'driver_required', message: 'This delivery has no assigned driver to release.' },
+        409,
+      );
+    }
+
+    const order = findOrderForDelivery(delivery);
+    if (order.status === 'COMPLETED' || order.status === 'CANCELLED' || order.status === 'REJECTED') {
+      throw new ApiError(
+        {
+          code: 'order_closed',
+          message: 'This order is already closed; its delivery cannot be released.',
+        },
+        409,
+      );
+    }
+
+    const previousDriver = releaseDriver(delivery);
+    clearAssignmentFields(delivery);
+    pushAssignmentEvent(delivery, {
+      action: 'UNASSIGNED',
+      source: 'MANUAL',
+      previousDriver,
+      adminId: null,
+      reason,
+    });
+
+    attemptAutoAssignment(delivery.id, {
+      trigger: 'AFTER_UNASSIGN',
+      adminId: null,
+      excludeDriverIds: previousDriver ? [previousDriver.id] : [],
+      reason: `Automatic replacement after driver release: ${reason}`,
+      force: true,
+    });
+
+    return delivery;
+  }
+
   async reassign(
     deliveryId: string,
     driverId: string,

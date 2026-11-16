@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   Clock3,
@@ -23,7 +24,8 @@ import { ConfirmDialog } from '@/features/dashboard/components/ConfirmDialog';
 import { StatusBadge } from '@/features/dashboard/components/StatusBadge';
 import { formatAddress } from '@/features/dashboard/lib/dashboard-utils';
 import { TrackingMap } from '@/features/tracking/components/TrackingMap';
-import { useDriverActiveContext, useDriverDeliveryAction } from '../hooks/useDriverDashboard';
+import { DriverReleaseDialog } from '../components/DriverReleaseDialog';
+import { useDriverActiveContext, useDriverDeliveryAction, useDriverDeliveryRelease } from '../hooks/useDriverDashboard';
 import { useDriverLocationPublisher } from '../hooks/useDriverLocationPublisher';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/stores/toast-store';
@@ -78,8 +80,10 @@ export default function DriverActiveDeliveryPage() {
   const { user } = useAuth();
   const { profile, activeDelivery, order, tracking } = useDriverActiveContext();
   const action = useDriverDeliveryAction();
+  const release = useDriverDeliveryRelease();
   const notify = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [releaseOpen, setReleaseOpen] = useState(false);
 
   const activeStatus = activeDelivery.data?.status;
   const publisher = useDriverLocationPublisher({
@@ -180,6 +184,35 @@ export default function DriverActiveDeliveryPage() {
   );
   const blockedByKitchen = Boolean(next?.requiresReadyOrder && !orderIsReady);
   const stepIndex = steps.findIndex((step) => step.status === delivery.status);
+  const canRelease =
+    ['ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'].includes(delivery.status) &&
+    Boolean(delivery.driverId) &&
+    !action.isPending &&
+    !release.isPending;
+
+  const executeRelease = (reason: string) => {
+    release.mutate(
+      { deliveryId: delivery.id, reason },
+      {
+        onSuccess: () => {
+          setReleaseOpen(false);
+          notify({
+            tone: 'success',
+            title: 'Delivery released',
+            description:
+              'Dispatch has been asked for another driver. The customer’s order is still active.',
+          });
+        },
+        onError: (error) => {
+          notify({
+            tone: 'error',
+            title: 'Could not release delivery',
+            description: getErrorMessage(error),
+          });
+        },
+      },
+    );
+  };
 
   const executeAction = (deliveryAction: DeliveryAction) => {
     action.mutate(
@@ -427,6 +460,29 @@ export default function DriverActiveDeliveryPage() {
             )}
           </DashboardPanel>
 
+          <DashboardPanel eyebrow="Need help?" title="Release this delivery">
+            <p className="text-[0.8125rem] leading-relaxed text-olive-600">
+              If you cannot complete this run, release it so dispatch can assign another driver.
+              Releasing never cancels the customer’s order.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              className="mt-4"
+              disabled={!canRelease}
+              isLoading={release.isPending && releaseOpen}
+              onClick={() => setReleaseOpen(true)}
+              iconLeft={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
+            >
+              Release delivery
+            </Button>
+            <p className="mt-2 text-[0.625rem] leading-relaxed text-olive-500">
+              Available while assigned, picked up or on the way. Delivered and cancelled deliveries
+              cannot be released.
+            </p>
+          </DashboardPanel>
+
           <DashboardPanel eyebrow="Customer" title="Contact details">
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-olive-700/8 text-olive-700">
@@ -493,6 +549,14 @@ export default function DriverActiveDeliveryPage() {
         isLoading={action.isPending && action.variables?.action === 'DELIVER'}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={() => executeAction('DELIVER')}
+      />
+
+      <DriverReleaseDialog
+        open={releaseOpen}
+        deliveryStatus={delivery.status}
+        isLoading={release.isPending}
+        onCancel={() => !release.isPending && setReleaseOpen(false)}
+        onConfirm={executeRelease}
       />
     </div>
   );

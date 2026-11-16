@@ -50,7 +50,7 @@ export function HowItWorks() {
               <Reveal
                 key={title}
                 delay={index * 80}
-                className={index > 0 ? 'border-t border-olive-900/10 lg:border-l lg:border-t-0' : undefined}
+                className={index > 0 ? 'min-w-0 border-t border-olive-900/10 lg:border-l lg:border-t-0' : 'min-w-0'}
               >
                 <div className="flex h-full flex-col p-7 sm:p-9">
                   <div className="flex items-center justify-between gap-4">
