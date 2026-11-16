@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
   Injectable,
   Logger,
   NotFoundException,
@@ -447,71 +448,60 @@ export class DeliveriesService {
     reason: string,
   ): Promise<void> {
     const delivery = await this.getDocument(deliveryId);
-    const driverId = delivery.driverId;
+    await this.releaseAssignmentToPool(
+      actor,
+      delivery,
+      reason,
+      'Automatic replacement after account release',
+    );
+  }
 
-    if (!driverId) return;
-
-    const releasableStatuses: readonly string[] = [
-      DeliveryStatus.ASSIGNED,
-      DeliveryStatus.PICKED_UP,
-      DeliveryStatus.ON_THE_WAY,
-    ];
-    if (!releasableStatuses.includes(delivery.status)) return;
-
-    const now = new Date();
-    const updated = await this.deliveryModel
-      .findOneAndUpdate(
-        { _id: delivery._id, driverId, status: delivery.status },
-        {
-          $set: {
-            status: DeliveryStatus.PENDING_ASSIGNMENT,
-            driverId: null,
-            driverLocation: null,
-          },
-          $unset: { assignedAt: '', estimatedArrivalAt: '', pickedUpAt: '' },
-          $push: {
-            assignmentHistory: {
-              action: DeliveryAssignmentAction.UNASSIGNED,
-              source: AssignmentSource.MANUAL,
-              previousDriverId: driverId,
-              newDriverId: null,
-              driverId,
-              driverName: await this.driverName(driverId),
-              adminId: Types.ObjectId.isValid(actor.id)
-                ? new Types.ObjectId(actor.id)
-                : null,
-              reason,
-              at: now,
-            },
-          },
-        },
-        { new: true },
-      )
-      .exec();
-
-    if (!updated) {
+  /**
+   * Releases a delivery after a driver-related failure without changing the
+   * order lifecycle. The delivery remains assignable unless it is terminal.
+   */
+  async releaseForDriverFailure(
+    actor: AuthenticatedUser,
+    deliveryId: string,
+    reason: string,
+  ): Promise<DeliveryResponse> {
+    const delivery = await this.getDocument(deliveryId);
+    if (
+      delivery.status !== DeliveryStatus.ASSIGNED &&
+      delivery.status !== DeliveryStatus.PICKED_UP &&
+      delivery.status !== DeliveryStatus.ON_THE_WAY
+    ) {
       throw new ConflictException({
-        code: 'delivery_assignment_changed',
-        message: 'The delivery changed while releasing the assignment. Refresh and try again.',
+        code: 'delivery_not_releasable',
+        message: 'Delivered or cancelled deliveries cannot be reassigned.',
+      });
+    }
+    if (
+      actor.role === UserRole.DRIVER &&
+      (!actor.driverId || delivery.driverId?.toString() !== actor.driverId)
+    ) {
+      throw new ForbiddenException({
+        code: 'forbidden',
+        message: 'This delivery is not assigned to you.',
+      });
+    }
+    if (actor.role !== UserRole.DRIVER && actor.role !== UserRole.ADMIN) {
+      throw new ForbiddenException({
+        code: 'forbidden',
+        message: 'Only the assigned driver or platform operations can release this delivery.',
       });
     }
 
-    await this.releaseDriver(driverId, delivery._id);
-    void this.trackingGateway.broadcast(updated.orderId.toString());
+    const order = await this.getOrderForDelivery(delivery);
+    this.assertOrderAcceptsDelivery(order);
+    await this.releaseAssignmentToPool(
+      actor,
+      delivery,
+      reason,
+      'Automatic replacement after driver failure',
+    );
 
-    try {
-      await this.attemptAutomaticAssignment(delivery._id.toString(), {
-        trigger: AutoAssignmentTrigger.AFTER_UNASSIGN,
-        adminId: actor.id,
-        excludeDriverIds: [driverId.toString()],
-        force: true,
-        reason: `Automatic replacement after account release: ${reason}`,
-      });
-    } catch (error) {
-      this.logger.warn(
-        `Replacement assignment failed after account release: ${(error as Error).message}`,
-      );
-    }
+    return toDeliveryResponse(await this.getDocument(deliveryId));
   }
 
   async reassign(
@@ -825,21 +815,12 @@ export class DeliveriesService {
       return delivery;
     }
 
-    try {
-      const cancelled = await this.cancelDelivery(
-        delivery,
-        actorId ?? delivery.customerId.toString(),
-        reason,
-      );
-      return await this.deliveryModel.findById(cancelled.id).exec();
-    } catch (error) {
-      // Cancelling an order must not fail because the transportation record
-      // changed at the same instant. Log it and let the order transition stand.
-      this.logger.warn(
-        `Could not cancel delivery for order ${orderId}: ${(error as Error).message}`,
-      );
-      return delivery;
-    }
+    const cancelled = await this.cancelDelivery(
+      delivery,
+      actorId ?? delivery.customerId.toString(),
+      reason,
+    );
+    return await this.deliveryModel.findById(cancelled.id).exec();
   }
 
   async getDocument(deliveryId: string): Promise<DeliveryDocument> {
@@ -1103,8 +1084,8 @@ export class DeliveriesService {
     driverId: Types.ObjectId,
     deliveryId: Types.ObjectId,
     completed = false,
-  ): Promise<void> {
-    await this.driverModel
+  ): Promise<boolean> {
+    const result = await this.driverModel
       .updateOne(
         { _id: driverId, activeDeliveryId: deliveryId },
         {
@@ -1116,6 +1097,128 @@ export class DeliveriesService {
         },
       )
       .exec();
+    return result.modifiedCount === 1;
+  }
+
+  private async releaseAssignmentToPool(
+    actor: AuthenticatedUser,
+    delivery: DeliveryDocument,
+    reason: string,
+    replacementReason: string,
+  ): Promise<void> {
+    const driverId = delivery.driverId;
+    const releasableStatuses: readonly string[] = [
+      DeliveryStatus.ASSIGNED,
+      DeliveryStatus.PICKED_UP,
+      DeliveryStatus.ON_THE_WAY,
+    ];
+
+    if (!driverId) return;
+    if (!releasableStatuses.includes(delivery.status)) {
+      throw new ConflictException({
+        code: 'delivery_not_releasable',
+        message: 'Delivered or cancelled deliveries cannot be reassigned.',
+      });
+    }
+
+    const now = new Date();
+    const updated = await this.deliveryModel
+      .findOneAndUpdate(
+        { _id: delivery._id, driverId, status: delivery.status },
+        {
+          $set: {
+            status: DeliveryStatus.PENDING_ASSIGNMENT,
+            driverId: null,
+            driverLocation: null,
+          },
+          $unset: { assignedAt: '', estimatedArrivalAt: '', pickedUpAt: '' },
+          $push: {
+            assignmentHistory: {
+              action: DeliveryAssignmentAction.UNASSIGNED,
+              source: AssignmentSource.MANUAL,
+              previousDriverId: driverId,
+              newDriverId: null,
+              driverId,
+              driverName: await this.driverName(driverId),
+              adminId: Types.ObjectId.isValid(actor.id)
+                ? new Types.ObjectId(actor.id)
+                : null,
+              reason,
+              at: now,
+            },
+          },
+        },
+        { new: true },
+      )
+      .exec();
+
+    if (!updated) {
+      throw new ConflictException({
+        code: 'delivery_assignment_changed',
+        message: 'The delivery changed while releasing the assignment. Refresh and try again.',
+      });
+    }
+
+    const released = await this.releaseDriver(driverId, delivery._id);
+    if (!released) {
+      const restored = await this.deliveryModel
+        .findOneAndUpdate(
+          {
+            _id: delivery._id,
+            status: DeliveryStatus.PENDING_ASSIGNMENT,
+            driverId: null,
+            assignmentHistory: {
+              $elemMatch: {
+                action: DeliveryAssignmentAction.UNASSIGNED,
+                previousDriverId: driverId,
+                at: now,
+              },
+            },
+          },
+          {
+            $set: {
+              status: delivery.status,
+              driverId,
+              ...(delivery.assignedAt ? { assignedAt: delivery.assignedAt } : {}),
+              ...(delivery.estimatedArrivalAt
+                ? { estimatedArrivalAt: delivery.estimatedArrivalAt }
+                : {}),
+              ...(delivery.pickedUpAt ? { pickedUpAt: delivery.pickedUpAt } : {}),
+              ...(delivery.driverLocation ? { driverLocation: delivery.driverLocation } : {}),
+            },
+            $pop: { assignmentHistory: 1 },
+          },
+          { new: true },
+        )
+        .exec();
+
+      if (!restored) {
+        throw new InternalServerErrorException({
+          code: 'delivery_release_reconciliation_failed',
+          message: 'The delivery release could not be completed safely. Contact support.',
+        });
+      }
+
+      throw new ConflictException({
+        code: 'driver_release_failed',
+        message: 'The driver could not be released. The delivery was restored.',
+      });
+    }
+
+    void this.trackingGateway.broadcast(updated.orderId.toString());
+    try {
+      await this.attemptAutomaticAssignment(updated._id.toString(), {
+        trigger: AutoAssignmentTrigger.AFTER_UNASSIGN,
+        adminId: actor.id,
+        excludeDriverIds: [driverId.toString()],
+        force: true,
+        reason: `${replacementReason}: ${reason}`,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Replacement assignment failed after release: ${(error as Error).message}`,
+      );
+    }
   }
 
   private async cancelDelivery(

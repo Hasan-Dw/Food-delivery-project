@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
   Injectable,
   Logger,
   NotFoundException,
@@ -21,6 +22,10 @@ import {
   canReleaseAssignment,
 } from '../common/enums/delivery.enum';
 import { PaymentType, UserRole } from '../common/enums/user.enum';
+import {
+  SERVICE_AREA_CITY_FILTER,
+  isInsideServiceArea,
+} from '../common/constants/service-area.constant';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { fromCents, orderCodeFromId, toCents } from '../common/utils/money.util';
 import { PricingService } from '../checkout/pricing.service';
@@ -111,6 +116,23 @@ export class OrdersService {
     const now = new Date();
 
     const address = dto.deliveryAddress;
+    if (!SERVICE_AREA_CITY_FILTER.test(address.city.trim())) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'Savora currently delivers in Latakia only.',
+      });
+    }
+    if (
+      address.lat !== undefined &&
+      address.lng !== undefined &&
+      !isInsideServiceArea({ lat: address.lat, lng: address.lng })
+    ) {
+      throw new BadRequestException({
+        code: 'out_of_service_area',
+        message: 'That delivery pin is outside the Latakia service area.',
+        details: { deliveryAddress: ['Move the pin inside Latakia.'] },
+      });
+    }
     const order = new this.orderModel({
       _id: orderId,
       idempotencyKey: dto.idempotencyKey,
@@ -143,7 +165,7 @@ export class OrdersService {
         ...(address.line2?.trim() ? { line2: address.line2.trim() } : {}),
         city: address.city.trim(),
         state: address.state.trim(),
-        postalCode: address.postalCode.trim(),
+        postalCode: (address.postalCode ?? '').trim(),
         country: address.country.trim(),
         ...(address.instructions?.trim() ? { instructions: address.instructions.trim() } : {}),
         isDefault: false,
@@ -378,11 +400,43 @@ export class OrdersService {
     }
 
     if (target === OrderStatus.CANCELLED || target === OrderStatus.REJECTED) {
-      await this.deliveriesService.cancelForOrder(
-        updated._id.toString(),
-        reason ?? `Order ${target.toLowerCase()}.`,
-        actor.id,
-      );
+      try {
+        await this.deliveriesService.cancelForOrder(
+          updated._id.toString(),
+          reason ?? `Order ${target.toLowerCase()}.`,
+          actor.id,
+        );
+      } catch (error) {
+        const rollbackFilter: FilterQuery<OrderDocument> = {
+          _id: updated._id,
+          status: target,
+        };
+        const stampField = stamp?.field;
+        if (stampField) rollbackFilter[stampField] = now;
+
+        const rolledBack = await this.orderModel
+          .findOneAndUpdate(
+            rollbackFilter,
+            {
+              $set: { status: order.status },
+              ...(stampField ? { $unset: { [stampField]: '' } } : {}),
+              $pop: { statusHistory: 1 },
+            },
+            { new: true },
+          )
+          .exec();
+
+        if (!rolledBack) {
+          throw new InternalServerErrorException({
+            code: 'order_cancellation_reconciliation_failed',
+            message:
+              'The order cancellation could not be completed safely. Contact support.',
+          });
+        }
+
+        throw error;
+      }
+
       await this.promotionsService.releaseForOrder(updated._id.toString());
     }
 

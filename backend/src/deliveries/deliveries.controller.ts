@@ -114,6 +114,16 @@ export class DeliveriesController {
   }
 
   @Roles(UserRole.DRIVER, UserRole.ADMIN)
+  @Post(':id/release')
+  releaseForDriverFailure(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UnassignDeliveryDto,
+  ): Promise<DeliveryResponse> {
+    return this.deliveriesService.releaseForDriverFailure(user, id, dto.reason);
+  }
+
+  @Roles(UserRole.DRIVER, UserRole.ADMIN)
   @Post(':id/transition')
   transition(
     @CurrentUser() user: AuthenticatedUser,
