@@ -81,7 +81,8 @@ export interface AddressInput {
   line2?: string;
   city: string;
   state: string;
-  postalCode: string;
+  /** Optional: Syrian addresses usually have no postal code. */
+  postalCode?: string;
   country: string;
   instructions?: string;
   isDefault?: boolean;
@@ -540,6 +541,94 @@ export interface TrackingSnapshot {
   live: boolean;
 }
 
+/* ── Ratings & reviews ──────────────────────────────────────────────────── */
+
+/**
+ * Reviews are scoped to a dimension so one delivered order can carry a
+ * restaurant rating, a rating for each purchased dish and a delivery/service
+ * rating without overwriting each other.
+ */
+export type ReviewType = 'restaurant' | 'menu_item' | 'delivery';
+export type ReviewStatus = 'visible' | 'hidden';
+
+export interface ReviewAuthor {
+  id: ID;
+  name: string;
+  avatarKey: string;
+}
+
+export interface Review {
+  id: ID;
+  type: ReviewType;
+  /** Restaurant / dish rating, or the delivery+service average. */
+  rating: number;
+  deliveryRating: number | null;
+  serviceRating: number | null;
+  comment: string;
+  status: ReviewStatus;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  restaurantId: ID;
+  restaurantName: string;
+  restaurantImageKey: string;
+  menuItemId: ID | null;
+  menuItemName: string;
+  menuItemImageKey: string;
+  orderId: ID;
+  orderCode: string;
+  customer: ReviewAuthor;
+}
+
+/** Counts of visible reviews for each whole-star score. */
+export interface RatingDistribution {
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+}
+
+export interface ReviewSummary {
+  average: number;
+  total: number;
+  distribution: RatingDistribution;
+}
+
+export interface DriverReviewSummary extends ReviewSummary {
+  deliveryAverage: number | null;
+  serviceAverage: number | null;
+}
+
+export interface ReviewQuery {
+  page?: number;
+  perPage?: number;
+  orderId?: ID;
+  type?: ReviewType;
+}
+
+export interface AdminReviewQuery extends ReviewQuery {
+  status?: ReviewStatus;
+  restaurantId?: ID;
+}
+
+export interface CreateReviewInput {
+  orderId: ID;
+  /** Defaults to a restaurant review when omitted. */
+  type?: ReviewType;
+  rating?: number;
+  menuItemId?: ID;
+  deliveryRating?: number;
+  serviceRating?: number;
+  comment?: string;
+}
+
+export interface UpdateReviewInput {
+  rating?: number;
+  deliveryRating?: number;
+  serviceRating?: number;
+  comment?: string;
+}
+
 /* ── Promotions ─────────────────────────────────────────────────────────── */
 
 export interface Promotion {
@@ -613,6 +702,13 @@ export interface RestaurantRegistrationDetails {
   address: string;
   phone: string;
   description?: string;
+  /** Location details captured from the registration map. */
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface DriverRegistrationDetails {
@@ -635,6 +731,8 @@ export interface RegisterPayload {
   restaurant?: RestaurantRegistrationDetails;
   /** Required when registering a driver account. */
   driver?: DriverRegistrationDetails;
+  /** Optional default delivery address captured during customer registration. */
+  defaultAddress?: AddressInput;
 }
 
 export interface AuthSession {

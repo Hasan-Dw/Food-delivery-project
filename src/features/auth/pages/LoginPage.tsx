@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/features/auth/components/PasswordInput';
 import { AuthModeNotice } from '@/features/auth/components/AuthModeNotice';
+import { DashboardAccessPanel } from '@/features/auth/components/DashboardAccessPanel';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { loginSchema, type LoginValues } from '@/lib/validation';
 import { postLoginPath } from '@/lib/permissions';
@@ -17,9 +18,16 @@ import { env } from '@/config/env';
 import { site } from '@/config/site';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import type { UserRole } from '@/types';
 
 interface LocationState {
   from?: string;
+}
+
+type StaffRole = Extract<UserRole, 'ADMIN' | 'RESTAURANT_OWNER' | 'DRIVER'>;
+
+function isStaffRole(role: UserRole): role is StaffRole {
+  return role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'DRIVER';
 }
 
 /** Sign-in screen. */
@@ -34,6 +42,8 @@ export default function LoginPage() {
       ? state.from
       : ROUTES.profile;
   const [formError, setFormError] = useState<string | null>(null);
+  const [accessRole, setAccessRole] = useState<StaffRole | null>(null);
+  const [signedInName, setSignedInName] = useState('');
 
   const {
     register,
@@ -45,6 +55,10 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '', remember: true },
   });
 
+  if (accessRole && user) {
+    return <DashboardAccessPanel role={accessRole} fullName={signedInName || user.fullName} />;
+  }
+
   if (isAuthenticated) {
     return <Navigate to={from} replace />;
   }
@@ -52,7 +66,13 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
-      await signIn(values);
+      const session = await signIn(values);
+      // Staff accounts land on a choice instead of being pushed straight into
+      // the workspace; deep links still honour their requested destination.
+      if (isStaffRole(session.user.role) && !state?.from) {
+        setSignedInName(session.user.fullName);
+        setAccessRole(session.user.role);
+      }
     } catch (error) {
       setFormError(getErrorMessage(error));
     }
@@ -83,7 +103,7 @@ export default function LoginPage() {
           type="email"
           autoComplete="email"
           autoFocus
-          placeholder="maya@example.com"
+          placeholder="you@example.com"
           leading={<Mail aria-hidden="true" className="h-4 w-4" />}
           error={errors.email?.message}
           {...register('email')}

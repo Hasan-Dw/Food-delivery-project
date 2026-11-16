@@ -43,6 +43,15 @@ export const registerSchema = z
     driverPhone: z.string().trim().max(40, 'That contact number looks too long.').optional(),
     driverServiceArea: z.string().trim().max(120, 'Keep the service area under 120 characters.').optional(),
     driverVehicle: z.enum(['bike', 'scooter', 'car']).optional(),
+    restaurantCity: z.string().trim().max(80).optional(),
+    restaurantState: z.string().trim().max(80).optional(),
+    restaurantLatitude: z.number().min(-90).max(90).optional(),
+    restaurantLongitude: z.number().min(-180).max(180).optional(),
+    addressLine1: z.string().trim().max(160, 'Keep the address under 160 characters.').optional(),
+    addressCity: z.string().trim().max(80).optional(),
+    addressState: z.string().trim().max(80).optional(),
+    addressLatitude: z.number().min(-90).max(90).optional(),
+    addressLongitude: z.number().min(-180).max(180).optional(),
   })
   .superRefine((values, ctx) => {
     if (values.password !== values.confirmPassword) {
@@ -71,6 +80,13 @@ export const registerSchema = z
           message: 'Use digits, spaces, brackets or a leading +.',
         });
       }
+      if (values.restaurantLatitude === undefined || values.restaurantLongitude === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['restaurantLatitude'],
+          message: 'Pin your kitchen on the map so the address is verified.',
+        });
+      }
     }
 
     if (values.role === 'DRIVER') {
@@ -85,6 +101,17 @@ export const registerSchema = z
       }
       if (!values.driverVehicle) {
         ctx.addIssue({ code: 'custom', path: ['driverVehicle'], message: 'Choose a vehicle type.' });
+      }
+    }
+
+    if (values.role === 'CUSTOMER') {
+      required(values.addressLine1, 'addressLine1', 'Add the street for your delivery address.');
+      if (values.addressLatitude === undefined || values.addressLongitude === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['addressLatitude'],
+          message: 'Drop a pin on the map so we can deliver to the right door.',
+        });
       }
     }
   });
@@ -109,7 +136,12 @@ export const addressSchema = z.object({
   line2: z.string().trim().max(80, 'Keep this line under 80 characters.').optional(),
   city: z.string().trim().min(2, 'Enter a city.'),
   state: z.string().trim().min(2, 'Enter a state.'),
-  postalCode: z.string().trim().min(4, 'Enter a postal code.').max(10, 'That postal code looks too long.'),
+  postalCode: z
+    .string()
+    .trim()
+    .max(10, 'That postal code looks too long.')
+    .optional()
+    .or(z.literal('')),
   country: z.string().trim().min(2, 'Enter a country.'),
   instructions: z.string().trim().max(160, 'Keep instructions under 160 characters.').optional(),
   isDefault: z.boolean(),

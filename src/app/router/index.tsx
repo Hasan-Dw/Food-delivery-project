@@ -58,6 +58,7 @@ const AdminDeliveriesPage = lazy(
   () => import('@/features/admin-dashboard/pages/AdminDeliveriesPage'),
 );
 const AdminOrdersPage = lazy(() => import('@/features/admin-dashboard/pages/AdminOrdersPage'));
+const AdminReviewsPage = lazy(() => import('@/features/admin-dashboard/pages/AdminReviewsPage'));
 
 /**
  * Route map for this build.
@@ -132,6 +133,7 @@ export function AppRouter() {
             <Route path={ROUTES.adminDrivers} element={<AdminDriversPage />} />
             <Route path={ROUTES.adminDeliveries} element={<AdminDeliveriesPage />} />
             <Route path={ROUTES.adminOrders} element={<AdminOrdersPage />} />
+            <Route path={ROUTES.adminReviews} element={<AdminReviewsPage />} />
           </Route>
         </Route>
       </Routes>

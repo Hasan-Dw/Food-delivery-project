@@ -70,7 +70,7 @@ export function AuthLayout() {
           <div className="flex items-center gap-4">
             <span className="inline-flex items-center gap-1.5">
               <FlaskConical aria-hidden="true" className="h-3.5 w-3.5 text-olive-300" />
-              Demo environment · simulated sign-in
+              Latakia · cash on delivery
             </span>
             <a href={`mailto:${site.email}`} className="transition hover:text-olive-700">
               Need help?
@@ -107,8 +107,8 @@ export function AuthLayout() {
 
             <div className="mt-10 grid grid-cols-3 gap-3 border-t border-cream/15 pt-6">
               <MiniStat icon={<Timer className="h-4 w-4" />} value="28 min" label="Average delivery" />
-              <MiniStat icon={<Star className="h-4 w-4" />} value="240+" label="Independent kitchens" />
-              <MiniStat icon={<FlaskConical className="h-4 w-4" />} value="Preview" label="Browser-only sign-in" />
+              <MiniStat icon={<Star className="h-4 w-4" />} value="3" label="Latakia kitchens" />
+              <MiniStat icon={<FlaskConical className="h-4 w-4" />} value="COD" label="Pay on delivery" />
             </div>
           </div>
         </div>
