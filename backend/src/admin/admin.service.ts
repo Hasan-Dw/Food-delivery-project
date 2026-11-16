@@ -128,20 +128,12 @@ export class AdminService {
       }
 
       if (dto.status !== AccountStatus.APPROVED && driver.activeDeliveryId) {
-        try {
-          await this.deliveriesService.releaseAssignmentForAccountStatus(
-            actor,
-            driver.activeDeliveryId.toString(),
-            reason ||
-              `Driver account ${dto.status === AccountStatus.SUSPENDED ? 'suspended' : 'rejected'} by platform operations.`,
-          );
-        } catch (error) {
-          // The account decision must still succeed; surface the assignment
-          // problem in the log so operations can follow up manually.
-          this.logger.warn(
-            `Could not release delivery ${driver.activeDeliveryId.toString()} for driver ${driver._id.toString()}: ${(error as Error).message}`,
-          );
-        }
+        await this.deliveriesService.releaseAssignmentForAccountStatus(
+          actor,
+          driver.activeDeliveryId.toString(),
+          reason ||
+            `Driver account ${dto.status === AccountStatus.SUSPENDED ? 'suspended' : 'rejected'} by platform operations.`,
+        );
       }
 
       const driverUpdate: Record<string, unknown> = {

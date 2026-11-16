@@ -2,12 +2,13 @@ import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
+  IsMongoId,
   IsOptional,
   Max,
   Min,
 } from 'class-validator';
 
-import { ReviewStatus } from '../schemas/review.schema';
+import { ReviewStatus, ReviewType } from '../schemas/review.schema';
 
 export class AdminReviewsQueryDto {
   @IsOptional()
@@ -26,4 +27,12 @@ export class AdminReviewsQueryDto {
   @IsOptional()
   @IsEnum(ReviewStatus)
   status?: ReviewStatus;
+
+  @IsOptional()
+  @IsEnum(ReviewType)
+  type?: ReviewType;
+
+  @IsOptional()
+  @IsMongoId()
+  restaurantId?: string;
 }
