@@ -26,6 +26,47 @@ export interface CoordinatesInput {
   lng: number;
 }
 
+export type ServiceAreaGeometry =
+  | { type: 'Polygon'; coordinates: number[][][] }
+  | { type: 'MultiPolygon'; coordinates: number[][][][] };
+
+function pointInRing(point: CoordinatesInput, ring: number[][]): boolean {
+  let inside = false;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const [longitude, latitude] = ring[index] ?? [];
+    const [previousLongitude, previousLatitude] = ring[previous] ?? [];
+    if (
+      (latitude > point.lat) !== (previousLatitude > point.lat) &&
+      point.lng <
+        ((previousLongitude - longitude) * (point.lat - latitude)) /
+          (previousLatitude - latitude) +
+          longitude
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointInPolygon(point: CoordinatesInput, polygon: number[][][]): boolean {
+  const [outerRing, ...holes] = polygon;
+  return Boolean(
+    outerRing &&
+      pointInRing(point, outerRing) &&
+      !holes.some((hole) => pointInRing(point, hole)),
+  );
+}
+
+/** Checks a restaurant/pickup point against an admin-defined GeoJSON boundary. */
+export function isInsideServiceAreaGeometry(
+  point: CoordinatesInput,
+  geometry?: ServiceAreaGeometry | null,
+): boolean {
+  if (!geometry) return false;
+  if (geometry.type === 'Polygon') return pointInPolygon(point, geometry.coordinates);
+  return geometry.coordinates.some((polygon) => pointInPolygon(point, polygon));
+}
+
 export function haversineDistanceKm(a: CoordinatesInput, b: CoordinatesInput): number {
   const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
   const dLat = toRadians(b.lat - a.lat);

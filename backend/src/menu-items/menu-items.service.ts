@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,12 @@ import { paginate, type PaginatedResult } from '../common/dto/pagination-query.d
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { MenuCategory } from '../restaurants/schemas/menu-category.schema';
 import { RestaurantsService } from '../restaurants/restaurants.service';
+import type { MenuCategoryResponse } from '../restaurants/interfaces/restaurant-response.interface';
+import { toMenuCategoryResponse } from '../restaurants/restaurant.mapper';
+import type {
+  CreateMenuCategoryDto,
+  UpdateMenuCategoryDto,
+} from '../restaurants/dto/menu-category.dto';
 import { UploadsService } from '../uploads/uploads.service';
 import type { UploadedImageFile } from '../uploads/image-file.util';
 import type { CreateMenuItemDto, MenuOptionGroupDto } from './dto/create-menu-item.dto';
@@ -106,6 +113,187 @@ export class MenuItemsService {
       .exec();
 
     return documents.map(toMenuItemResponse);
+  }
+
+  /**
+   * Owner view of the menu. Unlike the public endpoint this works before the
+   * restaurant is approved, so owners can finish their menu during onboarding.
+   */
+  async listOwned(actor: AuthenticatedUser): Promise<MenuItemResponse[]> {
+    const restaurant = await this.restaurantsService.findOwnedRestaurantForUser(
+      actor.id,
+      actor.restaurantId,
+    );
+    const documents = await this.itemModel
+      .find({ restaurantId: restaurant._id })
+      .sort({ categoryId: 1, name: 1 })
+      .exec();
+
+    return documents.map(toMenuItemResponse);
+  }
+
+  async listCategoriesForOwner(
+    actor: AuthenticatedUser,
+  ): Promise<MenuCategoryResponse[]> {
+    const restaurant = await this.restaurantsService.findOwnedRestaurantForUser(
+      actor.id,
+      actor.restaurantId,
+    );
+    return this.listCategoriesForRestaurant(restaurant._id);
+  }
+
+  async createCategory(
+    actor: AuthenticatedUser,
+    input: CreateMenuCategoryDto,
+  ): Promise<MenuCategoryResponse> {
+    const restaurant = await this.restaurantsService.findOwnedRestaurantForUser(
+      actor.id,
+      actor.restaurantId,
+    );
+    const name = this.normaliseCategoryName(input.name);
+    await this.assertMenuCategoryNameAvailable(restaurant._id, name);
+
+    const last = await this.categoryModel
+      .findOne({ restaurantId: restaurant._id })
+      .sort({ sortOrder: -1 })
+      .exec();
+
+    try {
+      const document = await this.categoryModel.create({
+        restaurantId: restaurant._id,
+        name,
+        description: input.description?.trim() || undefined,
+        sortOrder: input.sortOrder ?? ((last?.sortOrder ?? 0) + 1),
+      });
+      return toMenuCategoryResponse(document);
+    } catch (error) {
+      if (this.isDuplicateKey(error)) throw this.menuCategoryExists();
+      throw error;
+    }
+  }
+
+  async updateCategory(
+    actor: AuthenticatedUser,
+    categoryId: string,
+    input: UpdateMenuCategoryDto,
+  ): Promise<MenuCategoryResponse> {
+    const document = await this.findMenuCategory(categoryId);
+    await this.restaurantsService.findOwnedRestaurant(
+      actor.id,
+      document.restaurantId.toString(),
+    );
+
+    if (input.name !== undefined) {
+      const name = this.normaliseCategoryName(input.name);
+      await this.assertMenuCategoryNameAvailable(
+        document.restaurantId,
+        name,
+        categoryId,
+      );
+      document.name = name;
+    }
+    if (input.description !== undefined) {
+      document.description = input.description.trim() || undefined;
+    }
+    if (input.sortOrder !== undefined) document.sortOrder = input.sortOrder;
+
+    try {
+      await document.save();
+    } catch (error) {
+      if (this.isDuplicateKey(error)) throw this.menuCategoryExists();
+      throw error;
+    }
+
+    return toMenuCategoryResponse(document);
+  }
+
+  /**
+   * Refuses to delete a section that still contains dishes. Owners must move or
+   * remove those dishes first, which avoids orphaned menu items.
+   */
+  async deleteCategory(actor: AuthenticatedUser, categoryId: string): Promise<void> {
+    const document = await this.findMenuCategory(categoryId);
+    await this.restaurantsService.findOwnedRestaurant(
+      actor.id,
+      document.restaurantId.toString(),
+    );
+
+    const itemCount = await this.itemModel.countDocuments({ categoryId: document._id });
+    if (itemCount > 0) {
+      throw new ConflictException({
+        code: 'menu_category_in_use',
+        message: `Move or delete the ${itemCount} dish${itemCount === 1 ? '' : 'es'} in this category first.`,
+        details: { items: [String(itemCount)] },
+      });
+    }
+
+    await document.deleteOne();
+  }
+
+  private async listCategoriesForRestaurant(
+    restaurantId: Types.ObjectId,
+  ): Promise<MenuCategoryResponse[]> {
+    const categories = await this.categoryModel
+      .find({ restaurantId })
+      .sort({ sortOrder: 1, name: 1 })
+      .exec();
+
+    return categories.map(toMenuCategoryResponse);
+  }
+
+  private async findMenuCategory(categoryId: string) {
+    const document = Types.ObjectId.isValid(categoryId)
+      ? await this.categoryModel.findById(categoryId).exec()
+      : null;
+
+    if (!document) {
+      throw new NotFoundException({
+        code: 'menu_category_not_found',
+        message: 'That menu category could not be found.',
+      });
+    }
+
+    return document;
+  }
+
+  private normaliseCategoryName(value: string): string {
+    const name = value.trim();
+    if (!name) {
+      throw new BadRequestException({
+        code: 'invalid_category_name',
+        message: 'A menu category needs a name.',
+        details: { name: ['Enter a category name.'] },
+      });
+    }
+    return name;
+  }
+
+  private async assertMenuCategoryNameAvailable(
+    restaurantId: Types.ObjectId,
+    name: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const query: FilterQuery<MenuCategory> = {
+      restaurantId,
+      name: new RegExp(`^${escapeRegExp(name)}$`, 'i'),
+    };
+    if (excludeId) query._id = { $ne: new Types.ObjectId(excludeId) };
+
+    if (await this.categoryModel.exists(query)) {
+      throw this.menuCategoryExists();
+    }
+  }
+
+  private menuCategoryExists(): ConflictException {
+    return new ConflictException({
+      code: 'menu_category_exists',
+      message: 'That menu category already exists.',
+      details: { name: ['Choose a different category name.'] },
+    });
+  }
+
+  private isDuplicateKey(error: unknown): boolean {
+    return (error as { code?: number }).code === 11000;
   }
 
   async getById(id: string): Promise<MenuItemResponse> {

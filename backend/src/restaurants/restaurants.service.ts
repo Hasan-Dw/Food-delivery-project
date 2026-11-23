@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -23,6 +24,10 @@ import type {
   RestaurantResponse,
 } from './interfaces/restaurant-response.interface';
 import { RestaurantSort, type RestaurantQueryDto } from './dto/restaurant-query.dto';
+import {
+  CreateRestaurantCategoryDto,
+  UpdateRestaurantCategoryDto,
+} from './dto/restaurant-category.dto';
 import {
   toMenuCategoryResponse,
   toRestaurantCategoryResponse,
@@ -140,6 +145,153 @@ export class RestaurantsService {
         return toRestaurantCategoryResponse(category, itemCount);
       }),
     );
+  }
+
+  async createCategory(
+    input: CreateRestaurantCategoryDto,
+  ): Promise<RestaurantCategoryResponse> {
+    const name = this.normaliseCategoryName(input.name);
+    await this.assertCategoryNameAvailable(name);
+    const imageKey = this.normaliseCategoryImage(input.imageKey);
+
+    const document = await this.categoryModel.create({
+      name,
+      slug: await this.generateUniqueCategorySlug(name),
+      imageKey,
+      description: input.description?.trim() || undefined,
+      sortOrder: input.sortOrder ?? 0,
+    });
+
+    return toRestaurantCategoryResponse(document, 0);
+  }
+
+  async updateCategory(
+    categoryId: string,
+    input: UpdateRestaurantCategoryDto,
+  ): Promise<RestaurantCategoryResponse> {
+    const document = await this.findCategory(categoryId);
+
+    if (input.name !== undefined) {
+      const name = this.normaliseCategoryName(input.name);
+      await this.assertCategoryNameAvailable(name, document._id.toString());
+      document.name = name;
+    }
+    if (input.imageKey !== undefined) {
+      document.imageKey = this.normaliseCategoryImage(input.imageKey);
+    }
+    if (input.description !== undefined) {
+      document.description = input.description.trim() || undefined;
+    }
+    if (input.sortOrder !== undefined) {
+      document.sortOrder = input.sortOrder;
+    }
+
+    await document.save();
+    const itemCount = await this.countRestaurantsUsingCategory(document.slug);
+    return toRestaurantCategoryResponse(document, itemCount);
+  }
+
+  /**
+   * Categories are referenced by slug from every restaurant document. Deleting
+   * one while restaurants still use it would leave broken discovery links, so
+   * it is refused until administrators move those restaurants first.
+   */
+  async deleteCategory(categoryId: string): Promise<void> {
+    const document = await this.findCategory(categoryId);
+    const itemCount = await this.restaurantModel.countDocuments({
+      categorySlugs: document.slug,
+    });
+
+    if (itemCount > 0) {
+      throw new ConflictException({
+        code: 'category_in_use',
+        message: `This category is still used by ${itemCount} restaurant${itemCount === 1 ? '' : 's'}.`,
+        details: { restaurants: [String(itemCount)] },
+      });
+    }
+
+    await document.deleteOne();
+  }
+
+  async findCategory(categoryId: string): Promise<RestaurantCategoryDocument> {
+    const document = Types.ObjectId.isValid(categoryId)
+      ? await this.categoryModel.findById(categoryId).exec()
+      : null;
+
+    if (!document) {
+      throw new NotFoundException({
+        code: 'restaurant_category_not_found',
+        message: 'That restaurant category could not be found.',
+      });
+    }
+
+    return document;
+  }
+
+  private async countRestaurantsUsingCategory(slug: string): Promise<number> {
+    return this.restaurantModel.countDocuments({
+      status: RestaurantStatus.APPROVED,
+      'address.city': SERVICE_AREA_CITY_FILTER,
+      categorySlugs: slug,
+    });
+  }
+
+  private normaliseCategoryName(value: string): string {
+    const name = value.trim();
+    if (name.length < 2) {
+      throw new BadRequestException({
+        code: 'invalid_category_name',
+        message: 'A category name needs at least two characters.',
+        details: { name: ['Enter a longer category name.'] },
+      });
+    }
+    return name;
+  }
+
+  private normaliseCategoryImage(value: string): string {
+    const imageKey = value.trim();
+    if (!imageKey) {
+      throw new BadRequestException({
+        code: 'invalid_category_image',
+        message: 'Choose an image for this category.',
+        details: { imageKey: ['Choose a category image.'] },
+      });
+    }
+    return imageKey;
+  }
+
+  private async assertCategoryNameAvailable(
+    name: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const pattern = new RegExp(`^${escapeRegExp(name)}$`, 'i');
+    const query: FilterQuery<RestaurantCategoryDocument> = { name: pattern };
+    if (excludeId) query._id = { $ne: new Types.ObjectId(excludeId) };
+
+    if (await this.categoryModel.exists(query)) {
+      throw new ConflictException({
+        code: 'restaurant_category_exists',
+        message: 'A restaurant category with that name already exists.',
+        details: { name: ['Choose a different name.'] },
+      });
+    }
+  }
+
+  private async generateUniqueCategorySlug(name: string): Promise<string> {
+    const base = toSlug(name) || `category-${Date.now()}`;
+    let candidate = base;
+    let counter = 2;
+
+    while (await this.categoryModel.exists({ slug: candidate })) {
+      candidate = `${base}-${counter}`;
+      counter += 1;
+      if (counter > 100) {
+        candidate = `${base}-${Math.random().toString(36).slice(2, 7)}`;
+        break;
+      }
+    }
+
+    return candidate;
   }
 
   async getFeatured(limit = 8): Promise<RestaurantResponse[]> {
@@ -419,6 +571,42 @@ export class RestaurantsService {
     }
 
     return document;
+  }
+
+  /**
+   * Resolves the restaurant an owner is managing. The JWT usually carries the
+   * attached restaurant, but older sessions may not, so the owner is used as a
+   * safe fallback. This deliberately ignores approval status: owners must be
+   * able to complete their profile and menu before review.
+   */
+  async findOwnedRestaurantForUser(
+    ownerId: string,
+    restaurantId?: string,
+  ): Promise<RestaurantDocument> {
+    if (restaurantId) return this.findOwnedRestaurant(ownerId, restaurantId);
+
+    const document = await this.restaurantModel
+      .findOne({ ownerId: new Types.ObjectId(ownerId) })
+      .sort({ createdAt: 1 })
+      .exec();
+
+    if (!document) {
+      throw new NotFoundException({
+        code: 'restaurant_not_found',
+        message: 'This account is not linked to a restaurant yet.',
+      });
+    }
+
+    return document;
+  }
+
+  /** Owner profile used by the dashboard; includes pending restaurants. */
+  async getOwnedProfile(
+    ownerId: string,
+    restaurantId?: string,
+  ): Promise<RestaurantResponse> {
+    const document = await this.findOwnedRestaurantForUser(ownerId, restaurantId);
+    return toRestaurantResponse(document);
   }
 
   /** Owners manage their own restaurant; administrators manage any. */

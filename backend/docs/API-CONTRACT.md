@@ -365,9 +365,12 @@ Owner routes require `RESTAURANT_OWNER` and `APPROVED`:
 ```
 
 `ownerId`, `status`, `featured`, `rating`, `reviewCount`, `distanceKm` and
-`badges` are platform-owned and absent from the DTOs. A new restaurant starts as
-`PENDING_APPROVAL`; it is not publicly visible until an admin approves it in a
-later phase. The seed script inserts approved fixtures directly.
+`badges` are platform-owned and absent from the DTOs. A restaurant created
+during owner registration starts as `PENDING_APPROVAL`; approving the owner
+account through `PATCH /admin/accounts/:id/status` publishes it, and
+suspending or rejecting the account hides it again. Restaurants added later by
+an already-approved owner are created `APPROVED`. The seed script inserts
+approved fixtures directly.
 
 Owner updates return `404` if the restaurant is not owned by the caller, so the
 API does not disclose another owner's records.

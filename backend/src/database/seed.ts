@@ -989,7 +989,7 @@ const DEMO_RESTAURANTS: SeedRestaurant[] = [
     rating: 4.8,
     reviewCount: 128,
     distanceKm: 1.2,
-    badges: ['Latakia demo', 'Popular'],
+    badges: ['Latakia', 'Popular'],
     featured: true,
   },
   {
@@ -1018,7 +1018,7 @@ const DEMO_RESTAURANTS: SeedRestaurant[] = [
     rating: 4.7,
     reviewCount: 96,
     distanceKm: 2.1,
-    badges: ['Latakia demo'],
+    badges: ['Latakia'],
     featured: true,
   },
   {
@@ -1047,7 +1047,7 @@ const DEMO_RESTAURANTS: SeedRestaurant[] = [
     rating: 4.9,
     reviewCount: 141,
     distanceKm: 2.8,
-    badges: ['Latakia demo', 'Family meals'],
+    badges: ['Latakia', 'Family meals'],
     featured: true,
   },
 ];
@@ -1195,7 +1195,6 @@ async function ensureDriverProfile(
   if (!document) {
     await usersService.createDriverProfile(user._id.toString(), {
       phone: user.phone,
-      serviceArea: profile.serviceArea,
       vehicle: profile.vehicle,
     });
     document = await driverModel.findOne({ userId: user._id }).exec();

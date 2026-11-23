@@ -53,13 +53,19 @@ export interface TrackingSnapshotResponse {
   destination: {
     label: string;
     address: string;
-    coordinates: Coordinates;
+    coordinates: Coordinates | null;
   };
   restaurant: {
     label: string;
     address: string;
-    coordinates: Coordinates;
+    coordinates: Coordinates | null;
   };
+  navigationStage: 'TO_RESTAURANT' | 'TO_CUSTOMER';
+  navigationDestination: {
+    label: string;
+    address: string;
+    coordinates: Coordinates;
+  } | null;
   route: {
     points: Coordinates[];
     distanceKm: number;
@@ -82,6 +88,7 @@ export interface TrackingSnapshotResponse {
 const PROGRESS_BY_STATUS: Record<DeliveryStatus, number> = {
   [DeliveryStatus.PENDING_ASSIGNMENT]: 0,
   [DeliveryStatus.ASSIGNED]: 0.15,
+  [DeliveryStatus.ARRIVED_AT_RESTAURANT]: 0.3,
   [DeliveryStatus.PICKED_UP]: 0.45,
   [DeliveryStatus.ON_THE_WAY]: 0.75,
   [DeliveryStatus.DELIVERED]: 1,
@@ -90,11 +97,6 @@ const PROGRESS_BY_STATUS: Record<DeliveryStatus, number> = {
 
 function roundDistance(value: number): number {
   return Math.round(value * 10) / 10;
-}
-
-function mergeSource(sources: EtaSource[]): EtaSource {
-  if (sources.every((source) => source === 'none')) return 'none';
-  return sources.includes('straight-line') ? 'straight-line' : 'osrm';
 }
 
 /**
@@ -188,9 +190,8 @@ export class TrackingService {
   ): Promise<TrackingSnapshotResponse> {
     const restaurant = await this.restaurantModel.findById(order.restaurantId).exec();
 
-    const restaurantCoordinates =
-      restaurant?.address?.coordinates ?? order.deliveryAddress.coordinates ?? null;
-    const destinationCoordinates = order.deliveryAddress.coordinates ?? restaurantCoordinates;
+    const restaurantCoordinates = restaurant?.address?.coordinates ?? null;
+    const destinationCoordinates = order.deliveryAddress.coordinates ?? null;
 
     const driver = delivery?.driverId
       ? await this.driverModel.findById(delivery.driverId).exec()
@@ -232,7 +233,7 @@ export class TrackingService {
         ]
           .filter(Boolean)
           .join(', '),
-        coordinates: destinationCoordinates ?? { lat: 0, lng: 0 },
+        coordinates: destinationCoordinates,
       },
       restaurant: {
         label: restaurant?.name ?? order.restaurantName,
@@ -241,8 +242,44 @@ export class TrackingService {
               .filter(Boolean)
               .join(', ')
           : '',
-        coordinates: restaurantCoordinates ?? { lat: 0, lng: 0 },
+        coordinates: restaurantCoordinates,
       },
+      navigationStage:
+        deliveryStatus === DeliveryStatus.DELIVERED ||
+        deliveryStatus === DeliveryStatus.PICKED_UP ||
+        deliveryStatus === DeliveryStatus.ON_THE_WAY
+          ? 'TO_CUSTOMER'
+          : 'TO_RESTAURANT',
+      navigationDestination:
+        deliveryStatus === DeliveryStatus.DELIVERED ||
+        deliveryStatus === DeliveryStatus.PICKED_UP ||
+        deliveryStatus === DeliveryStatus.ON_THE_WAY
+          ? destinationCoordinates
+            ? {
+                label: order.deliveryAddress.label,
+                address: [
+                  order.deliveryAddress.line1,
+                  order.deliveryAddress.city,
+                  order.deliveryAddress.state,
+                ]
+                  .filter(Boolean)
+                  .join(', '),
+                coordinates: destinationCoordinates,
+              }
+            : null
+          : restaurantCoordinates && restaurant
+            ? {
+                label: restaurant.name,
+                address: [
+                  restaurant.address.line1,
+                  restaurant.address.city,
+                  restaurant.address.state,
+                ]
+                  .filter(Boolean)
+                  .join(', '),
+                coordinates: restaurantCoordinates,
+              }
+            : null,
       route: {
         points: timing.points,
         distanceKm: timing.remainingDistanceKm ?? 0,
@@ -357,56 +394,27 @@ export class TrackingService {
       };
     }
 
-    const toCustomer = restaurantCoordinates
-      ? await this.routing.getRoute(
-          restaurantCoordinates,
-          destinationCoordinates,
-          vehicle,
-        )
-      : null;
-
     if (!position) {
-      // No driver yet: the kitchen is still the only active leg.
-      if (!toCustomer) return empty;
+      // No driver location means there is no navigable leg yet.
       return {
-        etaMinutes:
-          prepRemaining + PICKUP_BUFFER_MINUTES + toCustomer.durationMinutes,
-        remainingDistanceKm: roundDistance(toCustomer.distanceKm),
-        points: toCustomer.points,
-        geometry: toCustomer.geometry,
-        source: toCustomer.source,
+        ...empty,
+        etaMinutes: prepRemaining,
       };
     }
 
     if (!restaurantCoordinates) {
-      const direct = await this.routing.getRoute(position, destinationCoordinates, vehicle);
-      return {
-        etaMinutes: direct.durationMinutes + HANDOVER_BUFFER_MINUTES,
-        remainingDistanceKm: roundDistance(direct.distanceKm),
-        points: direct.points,
-        geometry: direct.geometry,
-        source: direct.source,
-      };
+      return { ...empty, etaMinutes: prepRemaining };
     }
 
     const toRestaurant = await this.routing.getRoute(position, restaurantCoordinates, vehicle);
-    const finalLeg =
-      toCustomer ??
-      (await this.routing.getRoute(restaurantCoordinates, destinationCoordinates, vehicle));
-
-    // Preparation and driver travel happen in parallel, so the pickup is ready
-    // after the longer of the two — not after their sum.
-    const readyInMinutes =
-      Math.max(toRestaurant.durationMinutes, prepRemaining) + PICKUP_BUFFER_MINUTES;
-
     return {
-      etaMinutes: readyInMinutes + finalLeg.durationMinutes,
-      remainingDistanceKm: roundDistance(
-        toRestaurant.distanceKm + finalLeg.distanceKm,
-      ),
-      points: [...toRestaurant.points, ...finalLeg.points],
-      geometry: mergeGeometry([toRestaurant.geometry, finalLeg.geometry]),
-      source: mergeSource([toRestaurant.source, finalLeg.source]),
+      // Before pickup, the active navigation leg is strictly driver ->
+      // restaurant. The customer leg is recalculated after pickup.
+      etaMinutes: Math.max(toRestaurant.durationMinutes, prepRemaining) + PICKUP_BUFFER_MINUTES,
+      remainingDistanceKm: roundDistance(toRestaurant.distanceKm),
+      points: toRestaurant.points,
+      geometry: toRestaurant.geometry,
+      source: toRestaurant.source,
     };
   }
 

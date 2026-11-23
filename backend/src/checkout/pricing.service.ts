@@ -237,6 +237,7 @@ export class PricingService {
         customerId: input.customerId,
         restaurantId: input.restaurantId,
         subtotalCents,
+        deliveryFeeCents,
       };
 
       if (input.strictPromotion) {
@@ -248,6 +249,8 @@ export class PricingService {
           title: promotion.title,
           description: promotion.description,
           discount: fromCents(promotion.discountCents),
+          discountType: promotion.promotion.discountType,
+          freeDelivery: promotion.freeDelivery,
         };
       } else {
         promotionPreview = await this.promotionsService.preview(evaluateInput);

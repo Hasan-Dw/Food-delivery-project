@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -14,6 +14,7 @@ import {
   Min,
 } from 'class-validator';
 import { DeliveryAction, AutoAssignmentTrigger } from '../../common/enums/delivery.enum';
+import { roundNumericValue } from '../../common/utils/dto-number.util';
 
 /**
  * The browser may send an `actorId` for display purposes. It is accepted by the
@@ -93,28 +94,28 @@ export class TransitionDeliveryDto {
 }
 
 export class DeliveryLocationDto {
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 6 })
+  @Transform(roundNumericValue(6))
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(-90)
   @Max(90)
   lat: number;
 
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 6 })
+  @Transform(roundNumericValue(6))
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(-180)
   @Max(180)
   lng: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @Transform(roundNumericValue(2))
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(0)
   @Max(360)
   heading?: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @Transform(roundNumericValue(2))
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(0)
   @Max(300)
   speedKph?: number;
