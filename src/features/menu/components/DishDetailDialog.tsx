@@ -20,6 +20,7 @@ import { ROUTES } from '@/config/routes';
 import { defaultSelectedOptions, optionAdjustedPrice } from '@/lib/product-options';
 import { formatCurrency, formatDeliveryWindow } from '@/lib/format';
 import { useCartStore } from '@/stores/cart-store';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useToast } from '@/stores/toast-store';
 import { cn } from '@/lib/cn';
 import { DishReviews } from '@/features/reviews/components/DishReviews';
@@ -51,18 +52,13 @@ export function DishDetailDialog({ product, restaurant, onClose }: DishDetailDia
   const unitPrice = optionAdjustedPrice(product, selectedOptions);
   const total = unitPrice * quantity;
 
+  useBodyScrollLock(true);
+
   const requestClose = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
-    const body = document.body;
-    const previousOverflow = body.style.overflow;
-    const previousPaddingRight = body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 40);
-
-    body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -90,8 +86,6 @@ export function DishDetailDialog({ product, restaurant, onClose }: DishDetailDia
     return () => {
       window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleKeyDown);
-      body.style.overflow = previousOverflow;
-      body.style.paddingRight = previousPaddingRight;
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [requestClose]);

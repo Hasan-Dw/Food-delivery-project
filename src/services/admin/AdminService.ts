@@ -1,4 +1,11 @@
-import type { AccountStatus, Driver, User, UserRole } from '@/types';
+import type {
+  AccountStatus,
+  AdminAnalytics,
+  AdminAnalyticsQuery,
+  Driver,
+  User,
+  UserRole,
+} from '@/types';
 
 export interface AdminAccountQuery {
   role?: UserRole;
@@ -10,18 +17,12 @@ export interface AdminDriverQuery {
 }
 
 /**
- * Actor context for audited admin mutations. Display-only: a real backend must
- * derive the administrator from the session token.
- */
-export interface AdminMutationOptions {
-  actorId?: string | null;
-}
-
-/**
  * Platform administration. A real backend must authorize every call from an
  * admin token; this contract only describes the operations the UI needs.
  */
 export interface AdminService {
+  /** Platform-wide statistics derived from the database by the API. */
+  getAnalytics(query?: AdminAnalyticsQuery): Promise<AdminAnalytics>;
   listAccounts(query?: AdminAccountQuery): Promise<User[]>;
   listDrivers(query?: AdminDriverQuery): Promise<Driver[]>;
   /** Approve, reject, suspend or reinstate an account. */
@@ -29,6 +30,5 @@ export interface AdminService {
     userId: string,
     status: AccountStatus,
     reason?: string,
-    options?: AdminMutationOptions,
   ): Promise<User>;
 }

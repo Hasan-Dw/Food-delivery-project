@@ -9,16 +9,19 @@ import type { TrackingListener, TrackingService, TrackingSubscription } from './
  * The API is mounted at `/api/v1`, but the Socket.IO gateway lives at the
  * server root. Derive the origin so both transports can share one base URL.
  */
-function socketOrigin(): string {
+function socketOrigin(): string | null {
   const base = env.apiBaseUrl.replace(/\/api\/v1\/?$/i, '');
-  if (typeof window !== 'undefined' && base) {
+  if (typeof window !== 'undefined' && (!base || base.startsWith('/'))) {
+    return window.location.origin;
+  }
+  if (base) {
     try {
       return new URL(base).origin;
     } catch {
-      // Fall through to the raw value for unusual deployments.
+      return null;
     }
   }
-  return base || (typeof window !== 'undefined' ? window.location.origin : '');
+  return null;
 }
 
 function openSocketStream(
@@ -30,7 +33,14 @@ function openSocketStream(
     return { unsubscribe: () => undefined, live: false };
   }
 
-  const socket: Socket = io(`${socketOrigin()}/tracking`, {
+  const origin = socketOrigin();
+  if (!origin) {
+    onError?.(new Error('Live tracking is unavailable because the API URL is invalid.'));
+    return { unsubscribe: () => undefined, live: false };
+  }
+
+  const socket: Socket = io(`${origin}/tracking`, {
+    path: '/socket.io',
     transports: ['websocket', 'polling'],
     auth: { token: authToken.get() ?? '' },
     withCredentials: true,

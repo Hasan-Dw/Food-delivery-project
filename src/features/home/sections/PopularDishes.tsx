@@ -87,7 +87,7 @@ export function PopularDishes() {
 
         <Reveal delay={100}>
           <p className="mt-8 text-center text-[0.6875rem] text-olive-500">
-            Adding a dish starts a cart in this preview. Checkout belongs to the cart &amp; order module.
+            Adding a dish starts a cart you can review and check out whenever you are ready.
           </p>
         </Reveal>
       </div>

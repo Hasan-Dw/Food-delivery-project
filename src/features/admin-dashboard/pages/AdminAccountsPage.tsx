@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Search, ShieldCheck, UserCheck, Users, UserX } from 'lucide-react';
-import { useAuth } from '@/app/providers/AuthProvider';
 import type { AccountStatus, User, UserRole } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -32,7 +31,6 @@ const roleOptions = [
 
 export default function AdminAccountsPage() {
   useDocumentTitle('Accounts');
-  const { user } = useAuth();
   const accounts = useAdminAccounts();
   const updateStatus = useUpdateAccountStatus();
   const notify = useToast();
@@ -84,9 +82,9 @@ export default function AdminAccountsPage() {
   };
 
   const submitChange = (reason?: string) => {
-    if (!dialog) return;
+    if (!dialog || updateStatus.isPending) return;
     updateStatus.mutate(
-      { userId: dialog.account.id, status: dialog.nextStatus, reason, actorId: user?.id ?? null },
+      { userId: dialog.account.id, status: dialog.nextStatus, reason },
       {
         onSuccess: (updated) => {
           notify({

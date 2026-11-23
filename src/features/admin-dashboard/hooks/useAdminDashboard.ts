@@ -4,18 +4,29 @@ import { services } from '@/services';
 import type {
   AccountStatus,
   AdminReviewQuery,
+  AnalyticsRange,
   Delivery,
   Driver,
   Order,
   Restaurant,
+  RestaurantCategory,
   User,
 } from '@/types';
+import type { RestaurantCategoryInput } from '@/services/restaurants/RestaurantService';
 
 export interface AdminDeliveryRow {
   delivery: Delivery;
   order?: Order;
   driver?: Driver;
   restaurant?: Restaurant;
+}
+
+/** Platform-wide statistics computed by the API, not by the browser. */
+export function useAdminAnalytics(range: AnalyticsRange = '30d') {
+  return useQuery({
+    queryKey: queryKeys.adminAnalytics(range),
+    queryFn: () => services.admin.getAnalytics({ range }),
+  });
 }
 
 export function useAdminAccounts() {
@@ -38,6 +49,56 @@ export function useAdminRestaurants() {
     queryKey: queryKeys.restaurants,
     queryFn: () => services.restaurants.list({ perPage: 100 }),
     select: (page) => page.items,
+  });
+}
+
+export function useAdminRestaurantCategories() {
+  return useQuery<RestaurantCategory[]>({
+    queryKey: queryKeys.restaurantCategories,
+    queryFn: () => services.restaurants.listCategories(),
+  });
+}
+
+export function useCreateRestaurantCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: RestaurantCategoryInput) =>
+      services.restaurants.createCategory(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.restaurantCategories });
+      queryClient.invalidateQueries({ queryKey: queryKeys.restaurants });
+    },
+  });
+}
+
+export function useUpdateRestaurantCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      categoryId,
+      input,
+    }: {
+      categoryId: string;
+      input: Partial<RestaurantCategoryInput>;
+    }) => services.restaurants.updateCategory(categoryId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.restaurantCategories });
+      queryClient.invalidateQueries({ queryKey: queryKeys.restaurants });
+    },
+  });
+}
+
+export function useDeleteRestaurantCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (categoryId: string) => services.restaurants.deleteCategory(categoryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.restaurantCategories });
+      queryClient.invalidateQueries({ queryKey: queryKeys.restaurants });
+    },
   });
 }
 
@@ -98,6 +159,7 @@ function useAdminInvalidation() {
   const queryClient = useQueryClient();
 
   return () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.allAdminAnalytics });
     queryClient.invalidateQueries({ queryKey: queryKeys.adminAccounts });
     queryClient.invalidateQueries({ queryKey: queryKeys.adminDrivers });
     queryClient.invalidateQueries({ queryKey: queryKeys.adminDeliveries });
@@ -118,13 +180,11 @@ export function useUpdateAccountStatus() {
       userId,
       status,
       reason,
-      actorId,
     }: {
       userId: string;
       status: AccountStatus;
       reason?: string;
-      actorId?: string | null;
-    }) => services.admin.updateAccountStatus(userId, status, reason, { actorId }),
+    }) => services.admin.updateAccountStatus(userId, status, reason),
     onSuccess: (user) => {
       invalidate();
       return user;

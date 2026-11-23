@@ -21,8 +21,8 @@ export type TrackingPhase = OrderStatus | DeliveryStatus | 'INCONSISTENT';
 export const orderStatusTransitions: Record<OrderStatus, readonly OrderStatus[]> = {
   PENDING: ['ACCEPTED', 'REJECTED', 'CANCELLED'],
   ACCEPTED: ['PREPARING', 'CANCELLED'],
-  PREPARING: ['READY', 'CANCELLED'],
-  READY: ['COMPLETED', 'CANCELLED'],
+  PREPARING: ['READY'],
+  READY: ['COMPLETED'],
   COMPLETED: [],
   REJECTED: [],
   CANCELLED: [],
@@ -30,7 +30,8 @@ export const orderStatusTransitions: Record<OrderStatus, readonly OrderStatus[]>
 
 export const deliveryStatusTransitions: Record<DeliveryStatus, readonly DeliveryStatus[]> = {
   PENDING_ASSIGNMENT: ['ASSIGNED', 'CANCELLED'],
-  ASSIGNED: ['PICKED_UP', 'CANCELLED'],
+  ASSIGNED: ['ARRIVED_AT_RESTAURANT', 'CANCELLED'],
+  ARRIVED_AT_RESTAURANT: ['PICKED_UP', 'CANCELLED'],
   PICKED_UP: ['ON_THE_WAY', 'CANCELLED'],
   ON_THE_WAY: ['DELIVERED', 'CANCELLED'],
   DELIVERED: [],
@@ -54,6 +55,7 @@ export const orderActionStatus: Record<OrderAction, OrderStatus> = {
 
 export const deliveryActionStatus: Record<DeliveryAction, DeliveryStatus> = {
   ASSIGN: 'ASSIGNED',
+  ARRIVE_AT_RESTAURANT: 'ARRIVED_AT_RESTAURANT',
   PICK_UP: 'PICKED_UP',
   START_TRANSIT: 'ON_THE_WAY',
   DELIVER: 'DELIVERED',
@@ -92,7 +94,12 @@ export function isActiveOrderStatus(status: OrderStatus): boolean {
 
 /** Deliveries that are still in motion (assigned through to delivered). */
 export function isActiveDeliveryStatus(status: DeliveryStatus): boolean {
-  return status === 'ASSIGNED' || status === 'PICKED_UP' || status === 'ON_THE_WAY';
+  return (
+    status === 'ASSIGNED' ||
+    status === 'ARRIVED_AT_RESTAURANT' ||
+    status === 'PICKED_UP' ||
+    status === 'ON_THE_WAY'
+  );
 }
 
 /**

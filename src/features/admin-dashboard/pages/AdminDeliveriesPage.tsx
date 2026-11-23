@@ -506,7 +506,7 @@ export default function AdminDeliveriesPage() {
                                 {row.driver.name}
                               </p>
                               <p className="mt-0.5 text-[0.6875rem] text-olive-500">
-                                {row.driver.vehicle} · {row.driver.serviceArea ?? 'area not set'}
+                                {row.driver.vehicle}
                               </p>
                             </>
                           ) : (
@@ -676,7 +676,6 @@ export default function AdminDeliveriesPage() {
         delivery={dialog?.delivery ?? null}
         order={dialogRow?.order}
         currentDriver={dialogRow?.driver}
-        restaurantCity={dialogRow?.restaurant?.address.city}
         drivers={drivers.data ?? []}
         isLoading={isMutating}
         onCancel={closeDialog}

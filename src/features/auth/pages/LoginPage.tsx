@@ -14,7 +14,6 @@ import { FormAlert } from '@/components/ui/FormAlert';
 import { loginSchema, type LoginValues } from '@/lib/validation';
 import { postLoginPath } from '@/lib/permissions';
 import { getErrorMessage } from '@/services/api/errors';
-import { env } from '@/config/env';
 import { site } from '@/config/site';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -48,7 +47,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -78,11 +76,6 @@ export default function LoginPage() {
     }
   });
 
-  const fillPreview = () => {
-    setFormError(null);
-    reset({ email: site.previewAccount.email, password: site.previewAccount.password, remember: true });
-  };
-
   return (
     <div>
       <p className="eyebrow text-terracotta-600">Welcome back</p>
@@ -93,7 +86,7 @@ export default function LoginPage() {
         Sign in to reorder favourites, manage delivery addresses and follow an order from kitchen to doorstep.
       </p>
 
-      <AuthModeNotice variant="login" onUsePreview={fillPreview} className="mt-6" />
+      <AuthModeNotice variant="login" className="mt-6" />
 
       <form onSubmit={onSubmit} noValidate className="mt-6 space-y-5">
         <FormAlert message={formError} />
@@ -146,9 +139,7 @@ export default function LoginPage() {
       </p>
 
       <p className="mt-6 border-t border-olive-900/10 pt-5 text-center text-[0.6875rem] leading-relaxed text-olive-500">
-        {env.useMocks
-          ? 'Preview mode: sign-in stays in this browser and no real credentials are checked. '
-          : 'Sign-in is handled by the Savora API. Your access token is kept for this browser session. '}
+        Sign-in is handled by the Savora API. Your access token is kept for this browser session.{' '}
         Questions?{' '}
         <a href={`mailto:${site.email}`} className="font-medium text-olive-600 underline-offset-4 hover:underline">
           Talk to the team.

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -13,34 +14,57 @@ import { PageLoader } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/StatePanel';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { DashboardPageHeader } from '@/features/dashboard/components/DashboardPageHeader';
-import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
+import { DashboardPanel, FilterTabs } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
 import { StatusBadge } from '@/features/dashboard/components/StatusBadge';
-import { completedRevenue } from '@/features/dashboard/lib/dashboard-utils';
 import {
   buildAdminDeliveryRows,
   useAdminAccounts,
+  useAdminAnalytics,
   useAdminDeliveries,
   useAdminOrders,
 } from '../hooks/useAdminDashboard';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getErrorMessage } from '@/services/api/errors';
-import { isActiveDeliveryStatus } from '@/lib/order-lifecycle';
 import { roleLabels } from '@/lib/permissions';
 import { formatCurrency, formatDay, formatMemberSince, pluralise } from '@/lib/format';
 import { ROUTES } from '@/config/routes';
+import type { AnalyticsRange } from '@/types';
+import { orderStatusMeta, deliveryStatusMeta } from '@/config/site';
+
+const rangeOptions: Array<{ value: AnalyticsRange; label: string }> = [
+  { value: '7d', label: '7 days' },
+  { value: '30d', label: '30 days' },
+  { value: '12m', label: '12 months' },
+];
+
+const rangeLabels: Record<AnalyticsRange, string> = {
+  '7d': 'last 7 days',
+  '30d': 'last 30 days',
+  '12m': 'last 12 months',
+};
 
 export default function AdminOverviewPage() {
   useDocumentTitle('Operations overview');
+  const [range, setRange] = useState<AnalyticsRange>('30d');
+  const analytics = useAdminAnalytics(range);
   const accounts = useAdminAccounts();
   const deliveries = useAdminDeliveries();
   const drivers = deliveries.drivers;
   const orders = useAdminOrders();
 
   const isLoading =
-    accounts.isLoading || drivers.isLoading || deliveries.deliveries.isLoading || orders.orders.isLoading;
+    analytics.isLoading ||
+    accounts.isLoading ||
+    drivers.isLoading ||
+    deliveries.deliveries.isLoading ||
+    orders.orders.isLoading;
   const error =
-    accounts.error ?? drivers.error ?? deliveries.deliveries.error ?? orders.orders.error;
+    analytics.error ??
+    accounts.error ??
+    drivers.error ??
+    deliveries.deliveries.error ??
+    orders.orders.error;
 
   if (isLoading) return <PageLoader label="Opening the control room…" />;
 
@@ -55,6 +79,7 @@ export default function AdminOverviewPage() {
             variant="outline"
             size="sm"
             onClick={() => {
+              void analytics.refetch();
               void accounts.refetch();
               void drivers.refetch();
               void deliveries.deliveries.refetch();
@@ -72,25 +97,23 @@ export default function AdminOverviewPage() {
   const allDrivers = drivers.data ?? [];
   const allDeliveries = deliveries.deliveries.data ?? [];
   const allOrders = orders.orders.data ?? [];
+  const summary = analytics.data?.summary;
 
   const pendingAccounts = allAccounts.filter(
     (account) => account.accountStatus === 'PENDING_APPROVAL' && account.role !== 'CUSTOMER',
   );
   const approvedDrivers = allDrivers.filter((driver) => driver.accountStatus === 'APPROVED');
-  const availableDrivers = approvedDrivers.filter(
-    (driver) => driver.availability === 'AVAILABLE' && !driver.activeDeliveryId,
-  );
-  const activeDeliveries = allDeliveries.filter((delivery) => isActiveDeliveryStatus(delivery.status));
   const awaitingAssignment = allDeliveries.filter(
     (delivery) => delivery.status === 'PENDING_ASSIGNMENT',
-  );
-  const activeOrders = allOrders.filter(
-    (order) => order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && order.status !== 'REJECTED',
   );
   const deliveryRows = buildAdminDeliveryRows(allDeliveries, allOrders, allDrivers);
   const recentOrders = [...allOrders]
     .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime())
     .slice(0, 6);
+  const revenueSeries = (analytics.data?.series ?? [])
+    .filter((point) => point.totalOrders > 0 || point.completedOrders > 0)
+    .slice(-7)
+    .reverse();
 
   return (
     <div className="space-y-7">
@@ -105,47 +128,147 @@ export default function AdminOverviewPage() {
         }
       />
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[0.75rem] text-olive-500">
+          Revenue recognised on completed orders
+          {analytics.data
+            ? ` · ${formatDay(analytics.data.period.start)} – ${formatDay(analytics.data.period.end)}`
+            : ''}
+        </p>
+        <FilterTabs value={range} onChange={setRange} options={rangeOptions} />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Pending approvals"
-          value={pendingAccounts.length}
+          value={summary?.pendingApprovals ?? pendingAccounts.length}
           hint="Owners and drivers waiting on a decision"
           icon={<UserCheck aria-hidden="true" className="h-4 w-4" />}
-          tone={pendingAccounts.length ? 'warning' : 'default'}
+          tone={(summary?.pendingApprovals ?? pendingAccounts.length) ? 'warning' : 'default'}
         />
         <StatCard
           label="Active deliveries"
-          value={activeDeliveries.length}
+          value={summary?.activeDeliveries ?? 0}
           hint="Assigned, picked up or on the way"
           icon={<Truck aria-hidden="true" className="h-4 w-4" />}
         />
         <StatCard
           label="Awaiting a driver"
-          value={awaitingAssignment.length}
+          value={summary?.unassignedDeliveries ?? awaitingAssignment.length}
           hint="Returned to PENDING_ASSIGNMENT"
           icon={<PackageSearch aria-hidden="true" className="h-4 w-4" />}
-          tone={awaitingAssignment.length ? 'danger' : 'default'}
+          tone={(summary?.unassignedDeliveries ?? awaitingAssignment.length) ? 'danger' : 'default'}
         />
         <StatCard
           label="Orders in progress"
-          value={activeOrders.length}
+          value={summary?.activeOrders ?? 0}
           hint="Across every restaurant"
           icon={<ShoppingBag aria-hidden="true" className="h-4 w-4" />}
         />
         <StatCard
           label="Available drivers"
-          value={availableDrivers.length}
-          hint={`${approvedDrivers.length} approved drivers on the platform`}
+          value={summary?.availableDrivers ?? 0}
+          hint={`${summary?.totalDrivers ?? approvedDrivers.length} driver accounts on the platform`}
           icon={<Users aria-hidden="true" className="h-4 w-4" />}
           tone="success"
         />
         <StatCard
           label="Completed order value"
-          value={formatCurrency(completedRevenue(allOrders))}
-          hint="Sample figure from completed orders"
+          value={formatCurrency(summary?.revenue ?? 0)}
+          hint={`Completed orders · ${rangeLabels[range]}`}
           icon={<CheckCircle2 aria-hidden="true" className="h-4 w-4" />}
           tone="success"
+          trend={
+            summary
+              ? {
+                  value: summary.revenueGrowthPercent,
+                  label: 'vs previous period',
+                }
+              : undefined
+          }
         />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <DashboardPanel eyebrow="Platform" title="Accounts & catalogue">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[0.8125rem]">
+            {[
+              { label: 'Customers', value: summary?.totalCustomers ?? 0 },
+              { label: 'Restaurant owners', value: summary?.totalOwners ?? 0 },
+              { label: 'Drivers', value: summary?.totalDrivers ?? 0 },
+              { label: 'Restaurants', value: summary?.totalRestaurants ?? 0 },
+              { label: 'Orders all time', value: summary?.totalOrders ?? 0 },
+              { label: 'Delivered runs', value: summary?.completedDeliveries ?? 0 },
+            ].map((item) => (
+              <div key={item.label}>
+                <dt className="text-[0.6875rem] uppercase tracking-[0.08em] text-olive-500">
+                  {item.label}
+                </dt>
+                <dd className="mt-0.5 font-display text-[1.35rem] leading-tight text-olive-900">
+                  {item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </DashboardPanel>
+
+        <DashboardPanel eyebrow="Revenue" title="Completed value over time">
+          {revenueSeries.length ? (
+            <ul className="divide-y divide-olive-900/8">
+              {revenueSeries.map((point) => (
+                <li
+                  key={point.key}
+                  className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[0.8125rem] font-medium text-olive-900">{point.label}</p>
+                    <p className="text-[0.625rem] text-olive-500">
+                      {point.completedOrders} completed · {point.totalOrders} placed
+                    </p>
+                  </div>
+                  <span className="whitespace-nowrap text-[0.8125rem] font-medium tabular-nums text-olive-800">
+                    {formatCurrency(point.revenue)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[0.8125rem] text-olive-500">
+              No completed orders in this period yet.
+            </p>
+          )}
+        </DashboardPanel>
+
+        <DashboardPanel eyebrow="Mix" title="Order & delivery status">
+          <div className="space-y-4">
+            <div>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-olive-500">
+                Orders
+              </p>
+              <ul className="mt-1.5 space-y-1.5">
+                {(analytics.data?.orderDistribution ?? []).map((slice) => (
+                  <li key={slice.status} className="flex items-center justify-between gap-2 text-[0.75rem]">
+                    <span className="text-olive-600">{orderStatusMeta[slice.status].short}</span>
+                    <span className="tabular-nums text-olive-900">{slice.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-olive-500">
+                Deliveries
+              </p>
+              <ul className="mt-1.5 space-y-1.5">
+                {(analytics.data?.deliveryDistribution ?? []).map((slice) => (
+                  <li key={slice.status} className="flex items-center justify-between gap-2 text-[0.75rem]">
+                    <span className="text-olive-600">{deliveryStatusMeta[slice.status].short}</span>
+                    <span className="tabular-nums text-olive-900">{slice.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </DashboardPanel>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -197,7 +320,7 @@ export default function AdminOverviewPage() {
                   <div className="min-w-0">
                     <p className="truncate text-[0.8125rem] font-medium text-olive-900">{driver.name}</p>
                     <p className="mt-0.5 text-[0.6875rem] text-olive-500">
-                      {driver.serviceArea ?? 'Service area not set'} · {driver.activeDeliveryId ? 'On delivery' : 'No active delivery'}
+                      {driver.activeDeliveryId ? 'On delivery' : 'No active delivery'}
                     </p>
                   </div>
                   <StatusBadge status={driver.availability} />

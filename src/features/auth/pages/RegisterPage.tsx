@@ -23,7 +23,6 @@ import { AuthModeNotice } from '@/features/auth/components/AuthModeNotice';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { LocationPickerMap } from '@/features/location/components/LocationPickerMap';
 import type { GeocodedPlace } from '@/features/location/geocoding';
-import { serviceAreas } from '@/stores/location-store';
 import {
   getPasswordStrength,
   registerSchema,
@@ -76,11 +75,6 @@ const vehicleOptions = [
   { value: 'car', label: 'Car' },
 ];
 
-const neighbourhoodOptions = serviceAreas.map((area) => ({
-  value: area.region,
-  label: `${area.city} · ${area.region}`,
-}));
-
 function streetLine(place: GeocodedPlace | null): string {
   return place?.address?.line1?.trim() || '';
 }
@@ -117,13 +111,12 @@ export default function RegisterPage() {
       restaurantPhone: '',
       restaurantDescription: '',
       driverPhone: '',
-      driverServiceArea: '',
       driverVehicle: 'bike',
       restaurantCity: 'Latakia',
-      restaurantState: serviceAreas[0].region,
+      restaurantState: 'Latakia',
       addressLine1: '',
       addressCity: 'Latakia',
-      addressState: serviceAreas[0].region,
+      addressState: 'Latakia',
     },
   });
 
@@ -180,7 +173,6 @@ export default function RegisterPage() {
       'restaurantLatitude',
       'restaurantLongitude',
       'driverPhone',
-      'driverServiceArea',
       'driverVehicle',
       'addressLine1',
       'addressLatitude',
@@ -219,7 +211,7 @@ export default function RegisterPage() {
           label: 'Home',
           line1: values.addressLine1 ?? '',
           city: values.addressCity || 'Latakia',
-          state: values.addressState || serviceAreas[0].region,
+          state: values.addressState || 'Latakia',
           postalCode: '',
           country: 'Syria',
           isDefault: true,
@@ -233,7 +225,6 @@ export default function RegisterPage() {
       if (values.role === 'DRIVER') {
         payload.driver = {
           phone: values.driverPhone ?? '',
-          serviceArea: values.driverServiceArea ?? '',
           vehicle: (values.driverVehicle ?? 'bike') as VehicleType,
         };
         payload.phone = values.driverPhone;
@@ -352,13 +343,6 @@ export default function RegisterPage() {
               {...register('addressLine1')}
             />
 
-            <Select
-              label="Neighbourhood"
-              options={neighbourhoodOptions}
-              error={errors.addressState?.message}
-              {...register('addressState')}
-            />
-
             <div>
               <p className="text-[0.8125rem] font-medium text-olive-800">Pin your door</p>
               <p className="mt-1 text-[0.6875rem] leading-relaxed text-olive-500">
@@ -410,13 +394,6 @@ export default function RegisterPage() {
               leading={<MapPin aria-hidden="true" className="h-4 w-4" />}
               error={errors.restaurantAddress?.message}
               {...register('restaurantAddress')}
-            />
-
-            <Select
-              label="Neighbourhood"
-              options={neighbourhoodOptions}
-              error={errors.restaurantState?.message}
-              {...register('restaurantState')}
             />
 
             <div>
@@ -482,14 +459,6 @@ export default function RegisterPage() {
               leading={<Phone aria-hidden="true" className="h-4 w-4" />}
               error={errors.driverPhone?.message}
               {...register('driverPhone')}
-            />
-
-            <Input
-              label="Service area"
-              placeholder="Latakia · Sheikh Daher"
-              leading={<MapPin aria-hidden="true" className="h-4 w-4" />}
-              error={errors.driverServiceArea?.message}
-              {...register('driverServiceArea')}
             />
 
             <Select
