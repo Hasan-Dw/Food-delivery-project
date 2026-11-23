@@ -44,14 +44,14 @@ function CartSummary({
         <span>${total.toFixed(2)}</span>
       </div>
 
-      <button
-        onClick={onCheckout}
-        disabled={items.length === 0}
-        className="mt-5 w-full rounded-lg bg-orange-500 px-4 py-3 font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Proceed to Checkout
-      </button>
-    </div>
+      <button onClick={onCheckout}
+  disabled={items.length === 0}
+  className="mt-5 w-full rounded-lg bg-terracotta px-4 py-3 font-semibold
+   text-cream shadow-soft transition-all duration-200 hover:bg-terracotta/90
+    hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed 
+    disabled:opacity-50 disabled:shadow-none">
+  Proceed to Checkout</button>
+  </div>
   );
 }
 

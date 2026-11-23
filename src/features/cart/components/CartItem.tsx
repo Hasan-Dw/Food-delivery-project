@@ -72,12 +72,16 @@ function CartItem({
             +
           </button>
 
-          <button
-            onClick={() => onRemove(item.id)}
-            className="ml-auto text-red-500"
-          >
-            Remove
-          </button>
+          <button type="button"
+  onClick={() => onRemove(item.id)}
+  className="ml-auto inline-flex items-center 
+  gap-2 rounded-full border border-terracotta/20 bg-terracotta/5
+   px-4 py-2 text-xs font-semibold text-terracotta 
+   transition-all duration-200 hover:border-terracotta hover:bg-terracotta
+    hover:text-cream hover:shadow-soft focus:outline-none focus:ring-2 
+    focus:ring-terracotta/40 focus:ring-offset-2">
+  Remove
+</button>
         </div>
 
         {/* Item Total */}
