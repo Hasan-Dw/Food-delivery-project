@@ -51,6 +51,7 @@ export interface RestaurantCategoryResponse {
   slug: string;
   imageKey: string;
   itemCount: number;
+  sortOrder: number;
   description?: string;
 }
 
@@ -58,5 +59,6 @@ export interface MenuCategoryResponse {
   id: string;
   restaurantId: string;
   name: string;
+  sortOrder: number;
   description?: string;
 }

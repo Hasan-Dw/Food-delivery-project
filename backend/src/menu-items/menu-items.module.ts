@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RestaurantsModule } from '../restaurants/restaurants.module';
-import { MenuItemsController, RestaurantMenuItemsController } from './menu-items.controller';
+import {
+  MenuCategoriesController,
+  MenuItemsController,
+  RestaurantMenuItemsController,
+} from './menu-items.controller';
 import { MenuItemsService } from './menu-items.service';
 import { MenuItem, MenuItemSchema } from './schemas/menu-item.schema';
 import { UploadsModule } from '../uploads/uploads.module';
@@ -12,7 +16,7 @@ import { UploadsModule } from '../uploads/uploads.module';
     RestaurantsModule,
     UploadsModule,
   ],
-  controllers: [MenuItemsController, RestaurantMenuItemsController],
+  controllers: [MenuItemsController, RestaurantMenuItemsController, MenuCategoriesController],
   providers: [MenuItemsService],
   exports: [MenuItemsService],
 })

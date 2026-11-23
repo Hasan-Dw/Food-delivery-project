@@ -142,8 +142,8 @@ export class AuthService {
     if (role === UserRole.DRIVER && dto.driver) {
       await this.usersService.createDriverProfile(user._id.toString(), {
         phone: dto.driver.phone,
-        serviceArea: dto.driver.serviceArea,
         vehicle: dto.driver.vehicle,
+        serviceArea: dto.driver.serviceArea,
       });
     }
 

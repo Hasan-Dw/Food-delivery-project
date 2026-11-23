@@ -169,10 +169,8 @@ From the repository root:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api/v1
-VITE_DATA_SOURCE=http
 ```
 
-See `../src/services/README.md` for hybrid-mode behavior. With
-`VITE_DATA_SOURCE=http`, auth, profile, restaurants, menus, checkout, orders,
-deliveries, drivers, promotions and tracking use this API. Restaurant analytics
-and the admin dashboard remain local preview read models.
+See `../src/services/README.md` for the service layout. Every feature — auth,
+profile, restaurants, menus, checkout, orders, deliveries, drivers, promotions,
+tracking, restaurant analytics and admin analytics — uses this API.

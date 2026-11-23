@@ -24,10 +24,15 @@ import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.
 import { MAX_IMAGE_BYTES } from '../uploads/image-file.util';
 import type { UploadedImageFile } from '../uploads/image-file.util';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
+import {
+  CreateMenuCategoryDto,
+  UpdateMenuCategoryDto,
+} from '../restaurants/dto/menu-category.dto';
 import { MenuItemQueryDto } from './dto/menu-item-query.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import type { MenuItemResponse } from './interfaces/menu-item-response.interface';
+import type { MenuCategoryResponse } from '../restaurants/interfaces/restaurant-response.interface';
 import { MenuItemsService } from './menu-items.service';
 
 @ApiTags('Menu items')
@@ -129,9 +134,71 @@ export class MenuItemsController {
 export class RestaurantMenuItemsController {
   constructor(private readonly menuItemsService: MenuItemsService) {}
 
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @RequireApproved()
+  @Get('mine/menu-items')
+  listOwned(@CurrentUser() user: AuthenticatedUser): Promise<MenuItemResponse[]> {
+    return this.menuItemsService.listOwned(user);
+  }
+
   @Public()
   @Get(':id/menu-items')
   listByRestaurant(@Param('id') id: string): Promise<MenuItemResponse[]> {
     return this.menuItemsService.listByRestaurant(id);
+  }
+}
+
+/**
+ * Owner menu-section endpoints. A dedicated prefix avoids colliding with the
+ * public `GET /restaurants/:id/menu-categories` route, where `mine` would
+ * otherwise be parsed as a restaurant id.
+ */
+@ApiTags('Menu categories')
+@Controller('restaurant-menu-categories')
+export class MenuCategoriesController {
+  constructor(private readonly menuItemsService: MenuItemsService) {}
+
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @RequireApproved()
+  @Get()
+  list(@CurrentUser() user: AuthenticatedUser): Promise<MenuCategoryResponse[]> {
+    return this.menuItemsService.listCategoriesForOwner(user);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @RequireApproved()
+  @Post()
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateMenuCategoryDto,
+  ): Promise<MenuCategoryResponse> {
+    return this.menuItemsService.createCategory(user, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @RequireApproved()
+  @Patch(':categoryId')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('categoryId') categoryId: string,
+    @Body() dto: UpdateMenuCategoryDto,
+  ): Promise<MenuCategoryResponse> {
+    return this.menuItemsService.updateCategory(user, categoryId, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @RequireApproved()
+  @Delete(':categoryId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('categoryId') categoryId: string,
+  ): Promise<void> {
+    await this.menuItemsService.deleteCategory(user, categoryId);
   }
 }

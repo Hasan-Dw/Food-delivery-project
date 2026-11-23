@@ -584,6 +584,98 @@ describe('Savora API (e2e)', () => {
     expect(list.body.data.total).toBe(1);
   });
 
+  it('publishes a registered restaurant after admin account approval', async () => {
+    const owner = await registerOwner();
+    const restaurantId = owner.user.restaurantId as string;
+    const admin = await loginAsAdmin();
+
+    const before = await request(app.getHttpServer())
+      .get('/api/v1/restaurants')
+      .expect(200);
+    expect(before.body.data.total).toBe(0);
+
+    const ownerRecord = await userModel.findOne({ email: owner.user.email }).exec();
+    await request(app.getHttpServer())
+      .patch(`/api/v1/admin/accounts/${ownerRecord?._id.toString()}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: AccountStatus.APPROVED })
+      .expect(200);
+
+    const detail = await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${restaurantId}`)
+      .expect(200);
+    expect(detail.body.data.id).toBe(restaurantId);
+    expect(detail.body.data.name).toBe('Test Kitchen');
+
+    const list = await request(app.getHttpServer())
+      .get('/api/v1/restaurants')
+      .expect(200);
+    expect(list.body.data.items.map((item: { id: string }) => item.id)).toContain(
+      restaurantId,
+    );
+  });
+
+  it('publishes restaurants added by an already-approved owner', async () => {
+    const owner = await registerOwner();
+    const admin = await loginAsAdmin();
+    const ownerRecord = await userModel.findOne({ email: owner.user.email }).exec();
+    await request(app.getHttpServer())
+      .patch(`/api/v1/admin/accounts/${ownerRecord?._id.toString()}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: AccountStatus.APPROVED })
+      .expect(200);
+
+    // The JWT still carries the pending account status, so sign in again.
+    const session = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: owner.user.email, password: PASSWORD })
+      .expect(200);
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/restaurants')
+      .set(bearer(session.body.data.accessToken))
+      .send({ name: 'Second Kitchen', address: { line1: '2 Test Street' } })
+      .expect(201);
+
+    const stored = await restaurantModel.findById(created.body.data.id).exec();
+    expect(stored?.status).toBe(RestaurantStatus.APPROVED);
+
+    const detail = await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${created.body.data.id}`)
+      .expect(200);
+    expect(detail.body.data.name).toBe('Second Kitchen');
+  });
+
+  it('hides a restaurant again when the owner account is suspended', async () => {
+    const owner = await registerOwner();
+    const restaurantId = owner.user.restaurantId as string;
+    const admin = await loginAsAdmin();
+    const ownerRecord = await userModel.findOne({ email: owner.user.email }).exec();
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/admin/accounts/${ownerRecord?._id.toString()}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: AccountStatus.APPROVED })
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${restaurantId}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/admin/accounts/${ownerRecord?._id.toString()}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: AccountStatus.SUSPENDED })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/restaurants/${restaurantId}`)
+      .expect(404);
+    const list = await request(app.getHttpServer())
+      .get('/api/v1/restaurants')
+      .expect(200);
+    expect(list.body.data.total).toBe(0);
+  });
+
   it('enforces menu ownership and availability management', async () => {
     const ownerA = await registerOwner(uniqueEmail('owner-a'), 'Menu Kitchen A');
     const ownerB = await registerOwner(uniqueEmail('owner-b'), 'Menu Kitchen B');
@@ -659,6 +751,133 @@ describe('Savora API (e2e)', () => {
       .query({ restaurantId: ownerA.user.restaurantId })
       .expect(200);
     expect(publicList.body.data.total).toBe(1);
+  });
+
+  it('lets admins manage restaurant categories and owners only select them', async () => {
+    const admin = await loginAsAdmin();
+    const owner = await registerOwner();
+    await approveUser(owner.user.email);
+
+    // Owners cannot mutate the platform catalog.
+    await request(app.getHttpServer())
+      .post('/api/v1/restaurant-categories')
+      .set(bearer(owner.accessToken))
+      .send({ name: 'Owner Category', imageKey: 'category-burgers' })
+      .expect(403);
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/restaurant-categories')
+      .set(bearer(admin.accessToken))
+      .send({ name: 'Test Category', imageKey: 'category-pizza', sortOrder: 5 })
+      .expect(201);
+    const categoryId = created.body.data.id as string;
+    expect(created.body.data.slug).toBe('test-category');
+
+    // Duplicate names are rejected case-insensitively.
+    await request(app.getHttpServer())
+      .post('/api/v1/restaurant-categories')
+      .set(bearer(admin.accessToken))
+      .send({ name: 'test category', imageKey: 'category-pizza' })
+      .expect(409);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurant-categories/${categoryId}`)
+      .set(bearer(admin.accessToken))
+      .send({ name: 'Test Category Renamed', sortOrder: 6 })
+      .expect(200);
+    expect(updated.body.data.name).toBe('Test Category Renamed');
+
+    // The public catalog exposes the category to guests.
+    const publicList = await request(app.getHttpServer())
+      .get('/api/v1/restaurant-categories')
+      .expect(200);
+    expect(
+      publicList.body.data.some(
+        (category: { id: string }) => category.id === categoryId,
+      ),
+    ).toBe(true);
+
+    // Assigning the category slug filters public discovery.
+    const restaurantId = owner.user.restaurantId as string;
+    await restaurantModel.updateOne(
+      { _id: restaurantId },
+      { $set: { status: RestaurantStatus.APPROVED, categorySlugs: ['test-category'] } },
+    );
+
+    const filtered = await request(app.getHttpServer())
+      .get('/api/v1/restaurants')
+      .query({ category: 'test-category' })
+      .expect(200);
+    expect(filtered.body.data.items.map((item: { id: string }) => item.id)).toEqual([
+      restaurantId,
+    ]);
+
+    // A category still referenced by a restaurant cannot be deleted.
+    await request(app.getHttpServer())
+      .delete(`/api/v1/restaurant-categories/${categoryId}`)
+      .set(bearer(admin.accessToken))
+      .expect(409);
+
+    // Once unassigned it can be removed.
+    await restaurantModel.updateOne(
+      { _id: restaurantId },
+      { $set: { categorySlugs: [] } },
+    );
+    await request(app.getHttpServer())
+      .delete(`/api/v1/restaurant-categories/${categoryId}`)
+      .set(bearer(admin.accessToken))
+      .expect(204);
+  });
+
+  it('scopes menu categories to the owning restaurant', async () => {
+    const ownerA = await registerOwner(uniqueEmail('cat-owner-a'), 'Cat Kitchen A');
+    const ownerB = await registerOwner(uniqueEmail('cat-owner-b'), 'Cat Kitchen B');
+    await approveUser(ownerA.user.email);
+    await approveUser(ownerB.user.email);
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/restaurant-menu-categories')
+      .set(bearer(ownerA.accessToken))
+      .send({ name: 'Chef Specials', description: 'Limited menu.' })
+      .expect(201);
+    const categoryId = created.body.data.id as string;
+
+    const mine = await request(app.getHttpServer())
+      .get('/api/v1/restaurant-menu-categories')
+      .set(bearer(ownerA.accessToken))
+      .expect(200);
+    expect(mine.body.data.some((c: { id: string }) => c.id === categoryId)).toBe(true);
+
+    const theirs = await request(app.getHttpServer())
+      .get('/api/v1/restaurant-menu-categories')
+      .set(bearer(ownerB.accessToken))
+      .expect(200);
+    expect(theirs.body.data.some((c: { id: string }) => c.id === categoryId)).toBe(false);
+
+    // Owner B cannot rename or delete owner A's section.
+    await request(app.getHttpServer())
+      .patch(`/api/v1/restaurant-menu-categories/${categoryId}`)
+      .set(bearer(ownerB.accessToken))
+      .send({ name: 'Hijacked' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/restaurant-menu-categories/${categoryId}`)
+      .set(bearer(ownerB.accessToken))
+      .expect(403);
+
+    // Duplicate names within the same restaurant are rejected.
+    await request(app.getHttpServer())
+      .post('/api/v1/restaurant-menu-categories')
+      .set(bearer(ownerA.accessToken))
+      .send({ name: 'chef specials' })
+      .expect(409);
+
+    // The same name is allowed for a different restaurant.
+    await request(app.getHttpServer())
+      .post('/api/v1/restaurant-menu-categories')
+      .set(bearer(ownerB.accessToken))
+      .send({ name: 'Chef Specials' })
+      .expect(201);
   });
 
   /* ── Phase 2: orders, deliveries, checkout and promotions ─────────────── */
@@ -919,6 +1138,7 @@ describe('Savora API (e2e)', () => {
     const driver = await registerDriverSession();
 
     const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+    const admin = await loginAsAdmin();
 
     await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
 
@@ -931,6 +1151,17 @@ describe('Savora API (e2e)', () => {
     expect(assigned.body.data.estimatedArrivalAt).toBeTruthy();
 
     const deliveryId = assigned.body.data.id as string;
+    const beforePickup = await request(app.getHttpServer())
+      .get(`/api/v1/orders/${order.id}/tracking`)
+      .set(bearer(driver.accessToken))
+      .expect(200);
+    expect(beforePickup.body.data.navigationStage).toBe('TO_RESTAURANT');
+    expect(beforePickup.body.data.navigationDestination.label).toBe(
+      beforePickup.body.data.restaurant.label,
+    );
+    expect(beforePickup.body.data.route.points.at(-1)).toEqual(
+      beforePickup.body.data.restaurant.coordinates,
+    );
 
     // A driver cannot see or advance another driver's delivery.
     const otherDriver = await registerDriverSession();
@@ -941,13 +1172,22 @@ describe('Savora API (e2e)', () => {
       .expect(403);
     expect(forbidden.body.code).toBe('forbidden');
 
-    for (const action of ['PICK_UP', 'START_TRANSIT', 'DELIVER']) {
+    for (const action of ['ARRIVE_AT_RESTAURANT', 'PICK_UP', 'START_TRANSIT', 'DELIVER']) {
       await request(app.getHttpServer())
         .post(`/api/v1/deliveries/${deliveryId}/transition`)
         .set(bearer(driver.accessToken))
         .send({ action })
         .expect(201);
     }
+
+    const afterPickup = await request(app.getHttpServer())
+      .get(`/api/v1/orders/${order.id}/tracking`)
+      .set(bearer(driver.accessToken))
+      .expect(200);
+    expect(afterPickup.body.data.navigationStage).toBe('TO_CUSTOMER');
+    expect(afterPickup.body.data.navigationDestination.coordinates).toEqual(
+      afterPickup.body.data.destination.coordinates,
+    );
 
     const completed = await request(app.getHttpServer())
       .get(`/api/v1/orders/${order.id}`)
@@ -1048,7 +1288,7 @@ describe('Savora API (e2e)', () => {
       .expect(200);
     const deliveryId = assigned.body.data.id as string;
 
-    for (const action of ['PICK_UP', 'START_TRANSIT', 'DELIVER']) {
+    for (const action of ['ARRIVE_AT_RESTAURANT', 'PICK_UP', 'START_TRANSIT', 'DELIVER']) {
       await request(app.getHttpServer())
         .post(`/api/v1/deliveries/${deliveryId}/transition`)
         .set(bearer(driver.accessToken))
@@ -1315,6 +1555,7 @@ describe('Savora API (e2e)', () => {
       const customer = await registerCustomer();
       const driver = await registerDriverSession();
       const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+      const admin = await loginAsAdmin();
 
       await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
       const delivery = await request(app.getHttpServer())
@@ -1325,11 +1566,11 @@ describe('Savora API (e2e)', () => {
       const cancellations = await Promise.all([
         request(app.getHttpServer())
           .post(`/api/v1/orders/${order.id}/transition`)
-          .set(bearer(customer.accessToken))
+          .set(bearer(admin.accessToken))
           .send({ action: 'CANCEL' }),
         request(app.getHttpServer())
           .post(`/api/v1/orders/${order.id}/transition`)
-          .set(bearer(customer.accessToken))
+          .set(bearer(admin.accessToken))
           .send({ action: 'CANCEL' }),
       ]);
       expect(cancellations.map((response) => response.status).sort()).toEqual([201, 409]);
@@ -1417,6 +1658,11 @@ describe('Savora API (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/deliveries/${deliveryId}/transition`)
         .set(bearer(driver.accessToken))
+        .send({ action: 'ARRIVE_AT_RESTAURANT' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(`/api/v1/deliveries/${deliveryId}/transition`)
+        .set(bearer(driver.accessToken))
         .send({ action: 'PICK_UP' })
         .expect(201);
       await request(app.getHttpServer())
@@ -1450,6 +1696,61 @@ describe('Savora API (e2e)', () => {
         .send({ status: AccountStatus.SUSPENDED })
         .expect(200);
       expect(repeated.body.data.accountStatus).toBe(AccountStatus.SUSPENDED);
+    });
+
+    it('rejects client actorId and approves accounts from the authenticated admin', async () => {
+      const driverEmail = uniqueEmail('p2-pending-driver');
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          fullName: 'Pending Review Driver',
+          email: driverEmail,
+          password: PASSWORD,
+          role: 'DRIVER',
+          driver: {
+            phone: '+1 917 555 0120',
+            serviceArea: 'Latakia',
+            vehicle: 'bike',
+          },
+        })
+        .expect(201);
+      const admin = await loginAsAdmin();
+      const driverUser = await userModel.findOne({ email: driverEmail }).lean();
+      expect(driverUser).toBeTruthy();
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/admin/accounts/${driverUser?._id.toString()}/status`)
+        .set(bearer(admin.accessToken))
+        .send({
+          status: AccountStatus.APPROVED,
+          reason: 'Documents verified.',
+          actorId: '000000000000000000000000',
+        })
+        .expect(400);
+
+      const rejected = await request(app.getHttpServer())
+        .patch(`/api/v1/admin/accounts/${driverUser?._id.toString()}/status`)
+        .set(bearer(admin.accessToken))
+        .send({
+          status: AccountStatus.REJECTED,
+          reason: 'Documents incomplete.',
+        })
+        .expect(200);
+      expect(rejected.body.data.accountStatus).toBe(AccountStatus.REJECTED);
+
+      const approved = await request(app.getHttpServer())
+        .patch(`/api/v1/admin/accounts/${driverUser?._id.toString()}/status`)
+        .set(bearer(admin.accessToken))
+        .send({
+          status: AccountStatus.APPROVED,
+          reason: 'Documents verified after review.',
+        })
+        .expect(200);
+
+      expect(approved.body.data.accountStatus).toBe(AccountStatus.APPROVED);
+      expect((await userModel.findById(driverUser?._id).lean())?.accountStatus).toBe(
+        AccountStatus.APPROVED,
+      );
     });
 
     it('does not finalize suspension when active delivery release fails', async () => {
@@ -1597,6 +1898,389 @@ describe('Savora API (e2e)', () => {
       })
       .expect(403);
     expect(forbidden.body.code).toBe('forbidden');
+  });
+
+  it('scopes coupons per restaurant and enforces the platform redemption rules', async () => {
+    const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+    const otherOwner = await registerOwner(
+      uniqueEmail('promo-other-owner'),
+      'Other Coupon Kitchen',
+    );
+    await approveUser(otherOwner.user.email);
+    const otherRestaurantId = otherOwner.user.restaurantId as string;
+    await restaurantModel.updateOne(
+      { _id: otherRestaurantId },
+      {
+        $set: {
+          status: RestaurantStatus.APPROVED,
+          isOpen: true,
+          minOrder: 0,
+          deliveryFee: 3,
+        },
+      },
+    );
+
+    const admin = await loginAsAdmin();
+    const customer = await registerCustomer();
+
+    // Owners can only create coupons for their own restaurant.
+    const ownerCoupon = await request(app.getHttpServer())
+      .post('/api/v1/restaurant-promotions')
+      .set(bearer(owner.accessToken))
+      .send({
+        code: 'OWNER10',
+        title: 'Owner ten percent',
+        discountType: 'PERCENTAGE',
+        value: 10,
+        usageLimit: 10,
+        perCustomerLimit: 2,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+    expect(ownerCoupon.body.data).toMatchObject({
+      code: 'OWNER10',
+      scope: 'RESTAURANT',
+      restaurantId,
+      status: 'ACTIVE',
+      usageCount: 0,
+      usageLimit: 10,
+      perCustomerLimit: 2,
+    });
+    const ownerCouponId = ownerCoupon.body.data.id as string;
+
+    const ownerGlobal = await request(app.getHttpServer())
+      .post('/api/v1/restaurant-promotions')
+      .set(bearer(owner.accessToken))
+      .send({
+        code: 'OWNERGLOBAL',
+        title: 'Owner global attempt',
+        scope: 'GLOBAL',
+        discountType: 'FIXED',
+        value: 5,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(403);
+    expect(ownerGlobal.body.code).toBe('promotion_global_forbidden');
+
+    const ownerForeign = await request(app.getHttpServer())
+      .post('/api/v1/restaurant-promotions')
+      .set(bearer(owner.accessToken))
+      .send({
+        code: 'OWNERFOREIGN',
+        title: 'Owner foreign attempt',
+        restaurantId: otherRestaurantId,
+        discountType: 'FIXED',
+        value: 5,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(403);
+    expect(ownerForeign.body.code).toBe('promotion_restaurant_forbidden');
+
+    // A different owner cannot read, edit, inspect or delete the coupon.
+    const foreignList = await request(app.getHttpServer())
+      .get('/api/v1/restaurant-promotions')
+      .set(bearer(otherOwner.accessToken))
+      .expect(200);
+    expect(
+      (foreignList.body.data as Array<{ id: string }>).some(
+        (entry) => entry.id === ownerCouponId,
+      ),
+    ).toBe(false);
+
+    const foreignUpdate = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurant-promotions/${ownerCouponId}`)
+      .set(bearer(otherOwner.accessToken))
+      .send({ title: 'Hijacked coupon' })
+      .expect(403);
+    expect(foreignUpdate.body.code).toBe('promotion_not_owned');
+
+    const foreignUsage = await request(app.getHttpServer())
+      .get(`/api/v1/restaurant-promotions/${ownerCouponId}/usage`)
+      .set(bearer(otherOwner.accessToken))
+      .expect(403);
+    expect(foreignUsage.body.code).toBe('promotion_not_owned');
+
+    const foreignDelete = await request(app.getHttpServer())
+      .delete(`/api/v1/restaurant-promotions/${ownerCouponId}`)
+      .set(bearer(otherOwner.accessToken))
+      .expect(403);
+    expect(foreignDelete.body.code).toBe('promotion_not_owned');
+
+    // Admins manage platform-wide coupons and can filter both scopes.
+    const globalCoupon = await request(app.getHttpServer())
+      .post('/api/v1/promotions')
+      .set(bearer(admin.accessToken))
+      .send({
+        code: 'PLATFORM5',
+        title: 'Platform five dollars',
+        scope: 'GLOBAL',
+        discountType: 'FIXED',
+        value: 5,
+        minOrder: 20,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+    expect(globalCoupon.body.data).toMatchObject({
+      code: 'PLATFORM5',
+      scope: 'GLOBAL',
+      status: 'ACTIVE',
+    });
+    expect(globalCoupon.body.data.restaurantId).toBeUndefined();
+
+    const scheduled = await request(app.getHttpServer())
+      .post('/api/v1/promotions')
+      .set(bearer(admin.accessToken))
+      .send({
+        code: 'SOON15',
+        title: 'Scheduled coupon',
+        discountType: 'PERCENTAGE',
+        value: 15,
+        startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+        expiresAt: new Date(Date.now() + 172_800_000).toISOString(),
+      })
+      .expect(201);
+    expect(scheduled.body.data.status).toBe('SCHEDULED');
+
+    const globalList = await request(app.getHttpServer())
+      .get('/api/v1/promotions/admin?scope=GLOBAL')
+      .set(bearer(admin.accessToken))
+      .expect(200);
+    const globalCodes = (globalList.body.data as Array<{ code: string }>).map(
+      (entry) => entry.code,
+    );
+    expect(globalCodes).toContain('PLATFORM5');
+    expect(globalCodes).not.toContain('OWNER10');
+
+    const otherRestaurantList = await request(app.getHttpServer())
+      .get(`/api/v1/promotions/admin?scope=RESTAURANT&restaurantId=${otherRestaurantId}`)
+      .set(bearer(admin.accessToken))
+      .expect(200);
+    expect(otherRestaurantList.body.data).toEqual([]);
+
+    const scheduledList = await request(app.getHttpServer())
+      .get('/api/v1/promotions/admin?status=SCHEDULED')
+      .set(bearer(admin.accessToken))
+      .expect(200);
+    expect(
+      (scheduledList.body.data as Array<{ code: string }>).some(
+        (entry) => entry.code === 'SOON15',
+      ),
+    ).toBe(true);
+
+    // An expired coupon can never be re-activated without a new expiry date.
+    const expired = await request(app.getHttpServer())
+      .post('/api/v1/promotions')
+      .set(bearer(admin.accessToken))
+      .send({
+        code: 'OLDPROMO',
+        title: 'Soon expired',
+        discountType: 'FIXED',
+        value: 2,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+    await promotionModel.updateOne(
+      { _id: expired.body.data.id },
+      { $set: { expiresAt: new Date(Date.now() - 60_000) } },
+    );
+    const reactivate = await request(app.getHttpServer())
+      .patch(`/api/v1/promotions/${expired.body.data.id}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ active: true })
+      .expect(409);
+    expect(reactivate.body.code).toBe('promotion_expired');
+
+    // Restaurant-scoped coupons are rejected at a different restaurant.
+    await request(app.getHttpServer())
+      .post('/api/v1/promotions')
+      .set(bearer(admin.accessToken))
+      .send({
+        code: 'OTHERONLY',
+        title: 'Other restaurant only',
+        scope: 'RESTAURANT',
+        restaurantId: otherRestaurantId,
+        discountType: 'FIXED',
+        value: 4,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+
+    const wrongRestaurant = await request(app.getHttpServer())
+      .post('/api/v1/promotions/validate')
+      .set(bearer(customer.accessToken))
+      .send({ code: 'OTHERONLY', restaurantId, subtotal: 25 })
+      .expect(201);
+    expect(wrongRestaurant.body.data.valid).toBe(false);
+    expect(wrongRestaurant.body.data.message).toContain('not available for this restaurant');
+
+    // Free delivery discounts the server-computed delivery fee, capped here.
+    await request(app.getHttpServer())
+      .post('/api/v1/restaurant-promotions')
+      .set(bearer(owner.accessToken))
+      .send({
+        code: 'FREEDEL',
+        title: 'Free delivery capped',
+        discountType: 'FREE_DELIVERY',
+        maxDiscount: 2,
+        perCustomerLimit: 2,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+
+    const freeQuote = await request(app.getHttpServer())
+      .post('/api/v1/checkout/quote')
+      .set(bearer(customer.accessToken))
+      .send({
+        restaurantId,
+        items: [{ productId: itemId, quantity: 2, selectedOptions: [] }],
+        couponCode: 'freedel',
+      })
+      .expect(201);
+    expect(freeQuote.body.data).toMatchObject({
+      subtotal: 25,
+      deliveryFee: 3,
+      discount: 2,
+      total: 28.5,
+    });
+    expect(freeQuote.body.data.promotion).toMatchObject({
+      valid: true,
+      freeDelivery: true,
+      discount: 2,
+    });
+
+    const freeOrder = await placeOrder(customer.accessToken, restaurantId, itemId, {
+      couponCode: 'FREEDEL',
+    });
+    expect(freeOrder.totals.discount).toBe(2);
+    expect(freeOrder.totals.total).toBe(28.5);
+
+    // First-order-only coupons reject customers with prior orders.
+    await request(app.getHttpServer())
+      .post('/api/v1/promotions')
+      .set(bearer(admin.accessToken))
+      .send({
+        code: 'FIRST5',
+        title: 'First order five',
+        discountType: 'FIXED',
+        value: 5,
+        firstOrderOnly: true,
+        perCustomerLimit: 5,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+
+    const returningCustomer = await request(app.getHttpServer())
+      .post('/api/v1/promotions/validate')
+      .set(bearer(customer.accessToken))
+      .send({ code: 'FIRST5', restaurantId, subtotal: 25 })
+      .expect(201);
+    expect(returningCustomer.body.data.valid).toBe(false);
+    expect(returningCustomer.body.data.message).toContain('first orders only');
+
+    const newcomer = await registerCustomer();
+    const firstTimer = await request(app.getHttpServer())
+      .post('/api/v1/promotions/validate')
+      .set(bearer(newcomer.accessToken))
+      .send({ code: 'FIRST5', restaurantId, subtotal: 25 })
+      .expect(201);
+    expect(firstTimer.body.data.valid).toBe(true);
+    expect(firstTimer.body.data.discount).toBe(5);
+
+    // A total usage limit is enforced before a second redemption.
+    const once = await request(app.getHttpServer())
+      .post('/api/v1/promotions')
+      .set(bearer(admin.accessToken))
+      .send({
+        code: 'ONCE3',
+        title: 'Only once',
+        discountType: 'FIXED',
+        value: 3,
+        usageLimit: 1,
+        perCustomerLimit: 5,
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .expect(201);
+    const onceId = once.body.data.id as string;
+
+    const onceOrder = await placeOrder(newcomer.accessToken, restaurantId, itemId, {
+      couponCode: 'ONCE3',
+    });
+    expect(onceOrder.couponCode).toBe('ONCE3');
+    expect(onceOrder.totals.discount).toBe(3);
+
+    const thirdCustomer = await registerCustomer();
+    const exhausted = await request(app.getHttpServer())
+      .post('/api/v1/promotions/validate')
+      .set(bearer(thirdCustomer.accessToken))
+      .send({ code: 'ONCE3', restaurantId, subtotal: 25 })
+      .expect(201);
+    expect(exhausted.body.data.valid).toBe(false);
+    expect(exhausted.body.data.message).toContain('usage limit');
+
+    // Usage statistics are only returned to the owner and admin.
+    const ownerUsage = await request(app.getHttpServer())
+      .get(`/api/v1/restaurant-promotions/${ownerCouponId}/usage`)
+      .set(bearer(owner.accessToken))
+      .expect(200);
+    expect(ownerUsage.body.data).toMatchObject({
+      totalRedemptions: 0,
+      totalDiscount: 0,
+    });
+
+    const adminUsage = await request(app.getHttpServer())
+      .get(`/api/v1/promotions/${onceId}/usage`)
+      .set(bearer(admin.accessToken))
+      .expect(200);
+    expect(adminUsage.body.data).toMatchObject({
+      totalRedemptions: 1,
+      totalDiscount: 3,
+    });
+    expect(adminUsage.body.data.recent).toHaveLength(1);
+    expect(adminUsage.body.data.recent[0].orderId).toBe(onceOrder.id);
+
+    // Unused coupons can be removed; redeemed coupons must be deactivated.
+    await request(app.getHttpServer())
+      .delete(`/api/v1/promotions/${globalCoupon.body.data.id}`)
+      .set(bearer(admin.accessToken))
+      .expect(204);
+
+    const usedDelete = await request(app.getHttpServer())
+      .delete(`/api/v1/promotions/${onceId}`)
+      .set(bearer(admin.accessToken))
+      .expect(409);
+    expect(usedDelete.body.code).toBe('promotion_in_use');
+
+    // Deactivating a coupon immediately blocks new redemptions.
+    const ownerDeactivated = await request(app.getHttpServer())
+      .patch(`/api/v1/restaurant-promotions/${ownerCouponId}/status`)
+      .set(bearer(owner.accessToken))
+      .send({ active: false })
+      .expect(200);
+    expect(ownerDeactivated.body.data.status).toBe('INACTIVE');
+
+    const inactiveValidation = await request(app.getHttpServer())
+      .post('/api/v1/promotions/validate')
+      .set(bearer(customer.accessToken))
+      .send({ code: 'OWNER10', restaurantId, subtotal: 25 })
+      .expect(201);
+    expect(inactiveValidation.body.data.valid).toBe(false);
+    expect(inactiveValidation.body.data.message).toContain('not active');
+
+    // An owner may remove an unused coupon of their own.
+    await request(app.getHttpServer())
+      .delete(`/api/v1/restaurant-promotions/${ownerCouponId}`)
+      .set(bearer(owner.accessToken))
+      .expect(204);
+
+    const afterDelete = await request(app.getHttpServer())
+      .get('/api/v1/restaurant-promotions')
+      .set(bearer(owner.accessToken))
+      .expect(200);
+    expect(
+      (afterDelete.body.data as Array<{ code: string }>).some(
+        (entry) => entry.code === 'OWNER10',
+      ),
+    ).toBe(false);
   });
 
   /* ── Phase 3: authorization, image uploads and live delivery data ─────── */
@@ -1838,6 +2522,58 @@ describe('Savora API (e2e)', () => {
     });
   }, 60000);
 
+  it('accepts browser-precision GPS and persists a normalized driver fix', async () => {
+    const driver = await registerDriverSession();
+
+    // A real `navigator.geolocation` reading has far more decimal places than
+    // a fixed validation limit. It must be normalized, not rejected: a 400
+    // here is what left `lastLocation` empty and blocked auto-assignment.
+    const published = await request(app.getHttpServer())
+      .put(`/api/v1/drivers/${driver.driverId}/location`)
+      .set(bearer(driver.accessToken))
+      .send({
+        lat: 35.521547423412,
+        lng: 35.791276382145,
+        heading: 123.4567,
+        speedKph: 12.34567,
+      })
+      .expect(200);
+
+    expect(published.body.data).toMatchObject({
+      driverId: driver.driverId,
+      lat: 35.521547,
+      lng: 35.791276,
+      heading: 123.46,
+      speedKph: 12.35,
+    });
+
+    const stored = await driverModel
+      .findById(driver.driverId)
+      .select('lastLocation')
+      .lean()
+      .exec();
+    expect(stored?.lastLocation).toMatchObject({
+      lat: 35.521547,
+      lng: 35.791276,
+    });
+    expect(stored?.lastLocation?.updatedAt).toBeInstanceOf(Date);
+
+    const fetched = await request(app.getHttpServer())
+      .get(`/api/v1/drivers/${driver.driverId}/location`)
+      .set(bearer(driver.accessToken))
+      .expect(200);
+    expect(fetched.body.data).toMatchObject({ lat: 35.521547, lng: 35.791276 });
+
+    // Impossible coordinates are still rejected, so normalization did not
+    // weaken the range checks.
+    const impossible = await request(app.getHttpServer())
+      .put(`/api/v1/drivers/${driver.driverId}/location`)
+      .set(bearer(driver.accessToken))
+      .send({ lat: 91, lng: 35.791276 })
+      .expect(400);
+    expect(impossible.body.code).toBe('validation_failed');
+  }, 60000);
+
   it('returns owner analytics calculated from the restaurant orders in MongoDB', async () => {
     const { owner, restaurantId, itemId } = await setupRestaurantWithMenu(12.5);
     const customer = await registerCustomer();
@@ -1988,6 +2724,169 @@ describe('Savora API (e2e)', () => {
       .get('/api/v1/restaurants/mine/analytics?range=2020-01-01..2026-01-01')
       .set(bearer(owner.accessToken))
       .expect(400);
+  }, 60000);
+
+  it('returns zeroed platform analytics for an empty database', async () => {
+    const admin = await loginAsAdmin();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/admin/analytics?range=7d')
+      .set(bearer(admin.accessToken))
+      .expect(200);
+
+    const analytics = response.body.data;
+    expect(analytics.range).toBe('7d');
+    expect(analytics.granularity).toBe('day');
+    expect(analytics.series).toHaveLength(7);
+    expect(analytics.summary).toMatchObject({
+      totalCustomers: 0,
+      totalOwners: 0,
+      totalDrivers: 0,
+      totalRestaurants: 0,
+      totalOrders: 0,
+      pendingOrders: 0,
+      activeOrders: 0,
+      completedOrders: 0,
+      cancelledOrders: 0,
+      revenue: 0,
+      averageOrderValue: 0,
+      previousRevenue: 0,
+      revenueGrowthPercent: null,
+    });
+    expect(analytics.orderDistribution).toEqual([]);
+    expect(analytics.deliveryDistribution).toEqual([]);
+    expect(
+      analytics.series.every(
+        (point: { revenue: number; totalOrders: number; completedOrders: number }) =>
+          point.revenue === 0 && point.totalOrders === 0 && point.completedOrders === 0,
+      ),
+    ).toBe(true);
+  }, 60000);
+
+  it('returns platform analytics that match the database records', async () => {
+    const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const admin = await loginAsAdmin();
+
+    const completed = await placeOrder(customer.accessToken, restaurantId, itemId);
+    const cancelled = await placeOrder(customer.accessToken, restaurantId, itemId);
+    await orderModel.updateOne(
+      { _id: completed.id },
+      { $set: { status: 'COMPLETED', completedAt: new Date() } },
+    );
+    await orderModel.updateOne(
+      { _id: cancelled.id },
+      { $set: { status: 'CANCELLED', cancelledAt: new Date() } },
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/admin/analytics?range=30d')
+      .set(bearer(admin.accessToken))
+      .expect(200);
+
+    const analytics = response.body.data;
+    expect(analytics.series).toHaveLength(30);
+    expect(analytics.summary).toMatchObject({
+      totalCustomers: 1,
+      totalOwners: 1,
+      totalRestaurants: 1,
+      totalOrders: 2,
+      pendingOrders: 0,
+      completedOrders: 1,
+      cancelledOrders: 1,
+      previousRevenue: 0,
+      revenueGrowthPercent: null,
+    });
+    expect(analytics.summary.totalDrivers).toBe(0);
+    expect(analytics.summary.revenue).toBeCloseTo(completed.totals.total, 2);
+    expect(analytics.summary.averageOrderValue).toBeCloseTo(completed.totals.total, 2);
+    expect(analytics.orderDistribution).toEqual(
+      expect.arrayContaining([
+        { status: 'COMPLETED', count: 1 },
+        { status: 'CANCELLED', count: 1 },
+      ]),
+    );
+
+    const seriesRevenue = analytics.series.reduce(
+      (total: number, point: { revenue: number }) => total + point.revenue,
+      0,
+    );
+    expect(seriesRevenue).toBeCloseTo(analytics.summary.revenue, 2);
+    expect(owner.user.role).toBe('RESTAURANT_OWNER');
+  }, 60000);
+
+  it('restricts platform analytics to administrators', async () => {
+    const { owner } = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const driver = await registerDriverSession();
+
+    for (const session of [owner, customer, driver]) {
+      await request(app.getHttpServer())
+        .get('/api/v1/admin/analytics')
+        .set(bearer(session.accessToken))
+        .expect(403);
+    }
+    await request(app.getHttpServer()).get('/api/v1/admin/analytics').expect(401);
+  }, 60000);
+
+  it('auto-assigns the nearest eligible driver using fresh GPS coordinates', async () => {
+    const { owner, restaurantId, itemId } = await setupRestaurantWithMenu();
+    const customer = await registerCustomer();
+    const nearDriver = await registerDriverSession();
+    const farDriver = await registerDriverSession();
+    const now = new Date();
+
+    // The restaurant sits at the Latakia city centre used by the fixtures.
+    await driverModel.updateOne(
+      { _id: nearDriver.driverId },
+      {
+        $set: {
+          availability: 'AVAILABLE',
+          activeDeliveryId: null,
+          lastLocation: { lat: 35.52, lng: 35.7918, updatedAt: now },
+        },
+      },
+    );
+    await driverModel.updateOne(
+      { _id: farDriver.driverId },
+      {
+        $set: {
+          availability: 'AVAILABLE',
+          activeDeliveryId: null,
+          lastLocation: { lat: 35.56, lng: 35.82, updatedAt: now },
+        },
+      },
+    );
+
+    const order = await placeOrder(customer.accessToken, restaurantId, itemId);
+    await advanceOrder(owner.accessToken, order.id, ['ACCEPT', 'PREPARE', 'READY']);
+
+    const delivery = await request(app.getHttpServer())
+      .get(`/api/v1/deliveries/by-order/${order.id}`)
+      .set(bearer(customer.accessToken))
+      .expect(200);
+
+    expect(delivery.body.data.status).toBe('ASSIGNED');
+    expect(delivery.body.data.driverId).toBe(nearDriver.driverId);
+    expect(delivery.body.data.autoAssignment).toMatchObject({
+      status: 'ASSIGNED',
+      lastTrigger: 'ORDER_READY',
+    });
+
+    const assignmentEvent = (
+      delivery.body.data.assignmentHistory as Array<Record<string, unknown>>
+    ).find((event) => event.action === 'ASSIGNED');
+    expect(assignmentEvent).toMatchObject({
+      newDriverId: nearDriver.driverId,
+      source: 'AUTOMATIC',
+    });
+
+    const nearDoc = await driverModel.findById(nearDriver.driverId).lean();
+    expect(nearDoc?.availability).toBe('ON_DELIVERY');
+    expect(nearDoc?.activeDeliveryId?.toString()).toBe(delivery.body.data.id);
+    const farDoc = await driverModel.findById(farDriver.driverId).lean();
+    expect(farDoc?.availability).toBe('AVAILABLE');
+    expect(farDoc?.activeDeliveryId).toBeNull();
   }, 60000);
 
   it('lets the owner update and persist the restaurant description', async () => {

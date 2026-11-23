@@ -355,6 +355,12 @@ export class OrdersService {
     }
 
     if (action === OrderAction.CANCEL && actor.role === UserRole.CUSTOMER) {
+      if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.ACCEPTED) {
+        throw new ConflictException({
+          code: 'order_cancellation_window_closed',
+          message: 'This order can only be cancelled before the restaurant starts preparing it.',
+        });
+      }
       const delivery = await this.deliveryModel.findOne({ orderId: order._id }).exec();
       if (
         delivery &&

@@ -2,6 +2,7 @@
 export enum DeliveryStatus {
   PENDING_ASSIGNMENT = 'PENDING_ASSIGNMENT',
   ASSIGNED = 'ASSIGNED',
+  ARRIVED_AT_RESTAURANT = 'ARRIVED_AT_RESTAURANT',
   PICKED_UP = 'PICKED_UP',
   ON_THE_WAY = 'ON_THE_WAY',
   DELIVERED = 'DELIVERED',
@@ -11,6 +12,7 @@ export enum DeliveryStatus {
 /** Driver-facing transportation actions. Assignment is a separate operation. */
 export enum DeliveryAction {
   ASSIGN = 'ASSIGN',
+  ARRIVE_AT_RESTAURANT = 'ARRIVE_AT_RESTAURANT',
   PICK_UP = 'PICK_UP',
   START_TRANSIT = 'START_TRANSIT',
   DELIVER = 'DELIVER',
@@ -33,6 +35,7 @@ export enum AutoAssignmentTrigger {
   ORDER_READY = 'ORDER_READY',
   DRIVER_AVAILABLE = 'DRIVER_AVAILABLE',
   DRIVER_LOCATION_UPDATED = 'DRIVER_LOCATION_UPDATED',
+  SCHEDULED_RETRY = 'SCHEDULED_RETRY',
   AFTER_UNASSIGN = 'AFTER_UNASSIGN',
   ADMIN_RETRY = 'ADMIN_RETRY',
 }
@@ -47,6 +50,7 @@ export enum AutoAssignmentStatus {
 
 export const DELIVERY_ACTION_TARGET: Record<DeliveryAction, DeliveryStatus> = {
   [DeliveryAction.ASSIGN]: DeliveryStatus.ASSIGNED,
+  [DeliveryAction.ARRIVE_AT_RESTAURANT]: DeliveryStatus.ARRIVED_AT_RESTAURANT,
   [DeliveryAction.PICK_UP]: DeliveryStatus.PICKED_UP,
   [DeliveryAction.START_TRANSIT]: DeliveryStatus.ON_THE_WAY,
   [DeliveryAction.DELIVER]: DeliveryStatus.DELIVERED,
@@ -58,7 +62,14 @@ export const DELIVERY_STATUS_TRANSITIONS: Record<DeliveryStatus, readonly Delive
     DeliveryStatus.ASSIGNED,
     DeliveryStatus.CANCELLED,
   ],
-  [DeliveryStatus.ASSIGNED]: [DeliveryStatus.PICKED_UP, DeliveryStatus.CANCELLED],
+  [DeliveryStatus.ASSIGNED]: [
+    DeliveryStatus.ARRIVED_AT_RESTAURANT,
+    DeliveryStatus.CANCELLED,
+  ],
+  [DeliveryStatus.ARRIVED_AT_RESTAURANT]: [
+    DeliveryStatus.PICKED_UP,
+    DeliveryStatus.CANCELLED,
+  ],
   [DeliveryStatus.PICKED_UP]: [DeliveryStatus.ON_THE_WAY, DeliveryStatus.CANCELLED],
   [DeliveryStatus.ON_THE_WAY]: [DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED],
   [DeliveryStatus.DELIVERED]: [],
@@ -74,5 +85,8 @@ export function canTransitionDeliveryStatus(
 
 /** Only a pre-pickup assignment may be released back to the pool. */
 export function canReleaseAssignment(status: DeliveryStatus): boolean {
-  return status === DeliveryStatus.ASSIGNED;
+  return (
+    status === DeliveryStatus.ASSIGNED ||
+    status === DeliveryStatus.ARRIVED_AT_RESTAURANT
+  );
 }
