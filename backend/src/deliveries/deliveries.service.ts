@@ -6,6 +6,8 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
@@ -27,7 +29,6 @@ import {
   DEFAULT_PREP_MINUTES,
   HANDOVER_BUFFER_MINUTES,
   PICKUP_BUFFER_MINUTES,
-  serviceAreasCompatible,
   type CoordinatesInput,
 } from '../common/utils/geo.util';
 import { RoutingService, type RouteSource } from '../routing/routing.service';
@@ -52,6 +53,7 @@ export const MAX_AUTOMATIC_ATTEMPTS = 5;
 
 const ACTIVE_DELIVERY_STATUSES = [
   DeliveryStatus.ASSIGNED,
+  DeliveryStatus.ARRIVED_AT_RESTAURANT,
   DeliveryStatus.PICKED_UP,
   DeliveryStatus.ON_THE_WAY,
 ];
@@ -76,11 +78,33 @@ interface RankedDriver {
   routeSource?: RouteSource;
 }
 
+interface DriverExclusion {
+  driverId: string;
+  reason: string;
+}
+
+interface RankedCandidates {
+  candidates: RankedDriver[];
+  total: number;
+  excluded: DriverExclusion[];
+  restaurantCoordinates: CoordinatesInput | null;
+}
+
 /** Normalises a mongoose subdocument coordinate pair. */
 function coordinatesOf(
   value: { lat?: number; lng?: number } | null | undefined,
 ): CoordinatesInput | null {
-  if (!value || typeof value.lat !== 'number' || typeof value.lng !== 'number') {
+  if (
+    !value ||
+    typeof value.lat !== 'number' ||
+    typeof value.lng !== 'number' ||
+    !Number.isFinite(value.lat) ||
+    !Number.isFinite(value.lng) ||
+    value.lat < -90 ||
+    value.lat > 90 ||
+    value.lng < -180 ||
+    value.lng > 180
+  ) {
     return null;
   }
   return { lat: value.lat, lng: value.lng };
@@ -96,9 +120,12 @@ function isDuplicateKey(error: unknown): boolean {
 }
 
 @Injectable()
-export class DeliveriesService {
+export class DeliveriesService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DeliveriesService.name);
   private readonly maxLocationAgeMinutes: number;
+  private readonly retryIntervalMs: number;
+  private retryTimer?: ReturnType<typeof setInterval>;
+  private retryInProgress = false;
 
   constructor(
     @InjectModel(Delivery.name)
@@ -117,6 +144,82 @@ export class DeliveriesService {
   ) {
     this.maxLocationAgeMinutes =
       config.get<number>('tracking.maxLocationAgeMinutes') ?? 10;
+    this.retryIntervalMs =
+      config.get<number>('assignment.retryIntervalMs') ?? 30_000;
+  }
+
+  onModuleInit(): void {
+    this.retryTimer = setInterval(() => {
+      void this.retryPendingAssignments();
+    }, this.retryIntervalMs);
+  }
+
+  onModuleDestroy(): void {
+    if (this.retryTimer) clearInterval(this.retryTimer);
+  }
+
+  /**
+   * Revisit only a bounded set of READY orders and their pending deliveries.
+   * Delivery/driver compare-and-set updates make overlapping instances safe.
+   */
+  async retryPendingAssignments(): Promise<number> {
+    if (this.retryInProgress) return 0;
+    this.retryInProgress = true;
+
+    try {
+      const deliveries = await this.deliveryModel
+        .find({
+          status: DeliveryStatus.PENDING_ASSIGNMENT,
+          driverId: null,
+          'autoAssignment.status': { $ne: AutoAssignmentStatus.EXHAUSTED },
+        })
+        .select('_id orderId')
+        .sort({ createdAt: 1, _id: 1 })
+        .limit(100)
+        .exec();
+      if (deliveries.length === 0) return 0;
+
+      const readyOrders = await this.orderModel
+        .find({
+          _id: { $in: deliveries.map((delivery) => delivery.orderId) },
+          status: OrderStatus.READY,
+        })
+        .select('_id')
+        .exec();
+      const readyOrderIds = new Set(readyOrders.map((order) => order._id.toString()));
+
+      let assigned = 0;
+      for (const delivery of deliveries) {
+        if (!readyOrderIds.has(delivery.orderId.toString())) continue;
+        try {
+          const result = await this.attemptAutomaticAssignment(delivery._id.toString(), {
+            trigger: AutoAssignmentTrigger.SCHEDULED_RETRY,
+            force: false,
+          });
+          if (result.assigned) assigned += 1;
+        } catch (error) {
+          this.logger.warn(
+            `Automatic retry failed for delivery ${delivery._id.toString()}: ${
+              error instanceof Error ? error.message : 'unknown error'
+            }`,
+          );
+        }
+      }
+
+      if (assigned > 0) {
+        this.logger.log(`Automatic retry assigned ${assigned} pending delivery(ies).`);
+      }
+      return assigned;
+    } catch (error) {
+      this.logger.error(
+        `Automatic retry cycle failed: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return 0;
+    } finally {
+      this.retryInProgress = false;
+    }
   }
 
   /**
@@ -291,7 +394,7 @@ export class DeliveriesService {
     const restaurant = await this.restaurantModel
       .findById(delivery.restaurantId)
       .exec();
-    this.assertDriverAssignable(driver, restaurant);
+    await this.assertDriverAssignable(driver);
 
     const result = await this.attachDriver({
       deliveryId,
@@ -379,7 +482,9 @@ export class DeliveriesService {
       .findOneAndUpdate(
         {
           _id: delivery._id,
-          status: DeliveryStatus.ASSIGNED,
+          status: {
+            $in: [DeliveryStatus.ASSIGNED, DeliveryStatus.ARRIVED_AT_RESTAURANT],
+          },
           driverId: previousDriverId,
         },
         {
@@ -468,6 +573,7 @@ export class DeliveriesService {
     const delivery = await this.getDocument(deliveryId);
     if (
       delivery.status !== DeliveryStatus.ASSIGNED &&
+      delivery.status !== DeliveryStatus.ARRIVED_AT_RESTAURANT &&
       delivery.status !== DeliveryStatus.PICKED_UP &&
       delivery.status !== DeliveryStatus.ON_THE_WAY
     ) {
@@ -512,7 +618,13 @@ export class DeliveriesService {
   ): Promise<DeliveryResponse> {
     const delivery = await this.getDocument(deliveryId);
 
-    if (delivery.status !== DeliveryStatus.ASSIGNED || !delivery.driverId) {
+    if (
+      ![
+        DeliveryStatus.ASSIGNED,
+        DeliveryStatus.ARRIVED_AT_RESTAURANT,
+      ].includes(delivery.status as DeliveryStatus) ||
+      !delivery.driverId
+    ) {
       throw new ConflictException({
         code: 'delivery_not_reassignable',
         message: 'Only an assigned, not-yet-picked-up delivery can be reassigned.',
@@ -533,7 +645,7 @@ export class DeliveriesService {
     const restaurant = await this.restaurantModel
       .findById(delivery.restaurantId)
       .exec();
-    this.assertDriverAssignable(driver, restaurant);
+    await this.assertDriverAssignable(driver);
 
     const reserved = await this.reserveDriver(driver, delivery._id);
     if (!reserved) {
@@ -633,6 +745,16 @@ export class DeliveriesService {
 
     if (action === DeliveryAction.CANCEL) {
       return this.cancelDelivery(delivery, actor.id, 'Cancelled by platform operations.');
+    }
+
+    if (
+      action === DeliveryAction.PICK_UP &&
+      delivery.status !== DeliveryStatus.ARRIVED_AT_RESTAURANT
+    ) {
+      throw new ConflictException({
+        code: 'restaurant_arrival_required',
+        message: 'Confirm arrival at the restaurant before confirming pickup.',
+      });
     }
 
     if (action === DeliveryAction.PICK_UP && order.status !== OrderStatus.READY) {
@@ -916,15 +1038,29 @@ export class DeliveriesService {
     const restaurant = await this.restaurantModel
       .findById(delivery.restaurantId)
       .exec();
-    const candidates = await this.rankCandidates(
+    const ranked = await this.rankCandidates(
       restaurant,
       options.excludeDriverIds ?? [],
     );
+    const restaurantCoordinates = ranked.restaurantCoordinates
+      ? `${ranked.restaurantCoordinates.lat},${ranked.restaurantCoordinates.lng}`
+      : 'missing';
+    const exclusionSummary = this.summariseExclusions(ranked.excluded);
 
-    const excluded = new Set(options.excludeDriverIds ?? []);
-    for (const candidate of candidates) {
-      if (excluded.has(candidate.driver._id.toString())) continue;
+    this.logger.log(
+      `Assignment attempt delivery=${delivery._id.toString()} order=${order._id.toString()} ` +
+        `restaurant=${delivery.restaurantId.toString()} restaurantCoordinates=${restaurantCoordinates} ` +
+        `candidates=${ranked.total} eligible=${ranked.candidates.length} trigger=${options.trigger}.`,
+    );
+    if (ranked.excluded.length > 0) {
+      this.logger.log(
+        `Assignment exclusions delivery=${delivery._id.toString()}: ${ranked.excluded
+          .map((entry) => `${entry.driverId}=${entry.reason}`)
+          .join(', ')}.`,
+      );
+    }
 
+    for (const candidate of ranked.candidates) {
       const result = await this.attachDriver({
         deliveryId: delivery._id.toString(),
         order,
@@ -936,7 +1072,13 @@ export class DeliveriesService {
           `Automatic assignment — ${this.candidateRationale(candidate)}`,
       });
 
-      if (!result) continue;
+      if (!result) {
+        this.logger.warn(
+          `Assignment reservation lost delivery=${delivery._id.toString()} ` +
+            `driver=${candidate.driver._id.toString()} result=retry_next_candidate.`,
+        );
+        continue;
+      }
 
       await this.persistAutoAssignment(
         delivery._id,
@@ -945,6 +1087,13 @@ export class DeliveriesService {
         options.trigger,
         options.reason ?? `Automatic assignment — ${this.candidateRationale(candidate)}`,
         candidate,
+      );
+
+      this.logger.log(
+        `Assignment selected delivery=${delivery._id.toString()} ` +
+          `driver=${candidate.driver._id.toString()} distanceKm=${candidate.distanceKm} ` +
+          `etaMinutes=${candidate.etaMinutes} source=${candidate.routeSource ?? 'unknown'} ` +
+          `trigger=${options.trigger} result=ASSIGNED.`,
       );
 
       return {
@@ -959,9 +1108,29 @@ export class DeliveriesService {
       };
     }
 
-    const reason = restaurant
-      ? `No approved, available driver in ${restaurant.address?.city ?? 'this area'} is free right now.`
-      : 'No approved, available driver is free right now.';
+    const current = await this.deliveryModel
+      .findById(delivery._id)
+      .select('status driverId')
+      .exec();
+    if (
+      !current ||
+      current.status !== DeliveryStatus.PENDING_ASSIGNMENT ||
+      current.driverId
+    ) {
+      return skipped('Delivery was assigned while candidates were evaluated.');
+    }
+
+    const reason = !ranked.restaurantCoordinates
+      ? 'The restaurant has no valid map coordinates, so no driver can be ranked by distance.'
+      : ranked.total === 0
+        ? 'No driver profile exists yet. A driver must register, be approved and publish GPS before automatic assignment.'
+        : `No eligible driver for this delivery. Checked ${ranked.total} profile(s): ${exclusionSummary}.`;
+
+    this.logger.warn(
+      `Assignment exhausted delivery=${delivery._id.toString()} ` +
+        `order=${order._id.toString()} restaurant=${delivery.restaurantId.toString()} ` +
+        `result=NO_ELIGIBLE_DRIVER reason=${reason}`,
+    );
 
     await this.persistAutoAssignment(
       delivery._id,
@@ -1109,6 +1278,7 @@ export class DeliveriesService {
     const driverId = delivery.driverId;
     const releasableStatuses: readonly string[] = [
       DeliveryStatus.ASSIGNED,
+      DeliveryStatus.ARRIVED_AT_RESTAURANT,
       DeliveryStatus.PICKED_UP,
       DeliveryStatus.ON_THE_WAY,
     ];
@@ -1320,76 +1490,148 @@ export class DeliveriesService {
   private async rankCandidates(
     restaurant: RestaurantDocument | null,
     excludeDriverIds: string[],
-  ): Promise<RankedDriver[]> {
-    const filter: FilterQuery<DriverProfileDocument> = {
-      accountStatus: AccountStatus.APPROVED,
-      availability: DriverAvailability.AVAILABLE,
-      activeDeliveryId: null,
-    };
-    if (excludeDriverIds.length > 0) {
+  ): Promise<RankedCandidates> {
+    const excludedIds = new Set(
+      excludeDriverIds.filter((id) => Types.ObjectId.isValid(id)),
+    );
+    const filter: FilterQuery<DriverProfileDocument> = {};
+    if (excludedIds.size > 0) {
       filter._id = {
-        $nin: excludeDriverIds.filter((id) => Types.ObjectId.isValid(id)).map(
-          (id) => new Types.ObjectId(id),
-        ),
+        $nin: Array.from(excludedIds).map((id) => new Types.ObjectId(id)),
       };
     }
 
+    // Every profile is evaluated so an operator can see why it was skipped.
+    // The eligibility rules themselves still live below, not in the query.
     const drivers = await this.driverModel.find(filter).limit(200).exec();
-    if (drivers.length === 0) return [];
+    const restaurantCoordinates = coordinatesOf(restaurant?.address?.coordinates);
+    const maxAgeMs = this.maxLocationAgeMinutes * 60_000;
+    const now = Date.now();
+    const excluded: DriverExclusion[] = [];
+    const eligibleProfiles: Array<{
+      driver: DriverProfileDocument;
+      location: CoordinatesInput;
+    }> = [];
+
+    for (const driver of drivers) {
+      const driverId = driver._id.toString();
+      const lastLocation = driver.lastLocation;
+
+      if (excludedIds.has(driverId)) {
+        excluded.push({ driverId, reason: 'excluded_by_request' });
+        continue;
+      }
+      if (driver.accountStatus !== AccountStatus.APPROVED) {
+        excluded.push({
+          driverId,
+          reason: `account_${String(driver.accountStatus).toLowerCase()}`,
+        });
+        continue;
+      }
+      if (driver.availability !== DriverAvailability.AVAILABLE) {
+        excluded.push({
+          driverId,
+          reason: `availability_${String(driver.availability).toLowerCase()}`,
+        });
+        continue;
+      }
+      if (driver.activeDeliveryId) {
+        excluded.push({ driverId, reason: 'active_delivery' });
+        continue;
+      }
+      if (!lastLocation) {
+        excluded.push({ driverId, reason: 'missing_gps' });
+        continue;
+      }
+      if (
+        !Number.isFinite(lastLocation.lat) ||
+        !Number.isFinite(lastLocation.lng) ||
+        lastLocation.lat < -90 ||
+        lastLocation.lat > 90 ||
+        lastLocation.lng < -180 ||
+        lastLocation.lng > 180
+      ) {
+        excluded.push({ driverId, reason: 'invalid_gps' });
+        continue;
+      }
+      if (
+        !(lastLocation.updatedAt instanceof Date) ||
+        !Number.isFinite(lastLocation.updatedAt.getTime())
+      ) {
+        excluded.push({ driverId, reason: 'invalid_gps_timestamp' });
+        continue;
+      }
+
+      const locationAgeMs = now - lastLocation.updatedAt.getTime();
+      if (locationAgeMs > maxAgeMs) {
+        excluded.push({ driverId, reason: 'stale_gps' });
+        continue;
+      }
+      if (locationAgeMs < 0) {
+        excluded.push({ driverId, reason: 'future_gps_timestamp' });
+        continue;
+      }
+      if (!restaurantCoordinates) {
+        excluded.push({ driverId, reason: 'restaurant_missing_coordinates' });
+        continue;
+      }
+
+      eligibleProfiles.push({
+        driver,
+        location: { lat: lastLocation.lat, lng: lastLocation.lng },
+      });
+    }
+
+    if (eligibleProfiles.length === 0) {
+      return {
+        candidates: [],
+        total: drivers.length,
+        excluded,
+        restaurantCoordinates,
+      };
+    }
 
     const users = await this.userModel
-      .find({ _id: { $in: drivers.map((driver) => driver.userId) } })
+      .find({
+        _id: { $in: eligibleProfiles.map(({ driver }) => driver.userId) },
+      })
       .select('fullName')
       .exec();
     const names = new Map(users.map((user) => [user._id.toString(), user.fullName]));
-
     const counts = await this.assignmentCounts();
-    const coordinates = coordinatesOf(restaurant?.address?.coordinates);
-    const restaurantArea = restaurant?.address?.city ?? null;
-    const maxAgeMs = this.maxLocationAgeMinutes * 60_000;
-    const now = Date.now();
 
-    // Travel time is the ranking signal, so a driver without a usable GPS fix
-    // cannot be ranked and is excluded rather than guessed at.
+    // Travel time from the driver to the RESTAURANT is the ranking signal.
+    // Customer coordinates are never used here.
     const candidates = (
       await Promise.all(
-        drivers.map(async (driver): Promise<RankedDriver | null> => {
-          if (!serviceAreasCompatible(driver.serviceArea, restaurantArea)) return null;
+        eligibleProfiles.map(async ({ driver, location }): Promise<RankedDriver | null> => {
+          try {
+            const travel = await this.routing.travelTime(
+              location,
+              restaurantCoordinates as CoordinatesInput,
+              driver.vehicle,
+            );
 
-          const lastLocation = driver.lastLocation;
-          if (!lastLocation) return null;
-          if (now - lastLocation.updatedAt.getTime() > maxAgeMs) return null;
-
-          const location = { lat: lastLocation.lat, lng: lastLocation.lng };
-          const recentAssignments = counts.get(driver._id.toString()) ?? 0;
-          const name = names.get(driver.userId.toString()) ?? 'Driver';
-
-          if (!coordinates) {
-            return { driver, name, distanceKm: null, etaMinutes: null, recentAssignments };
+            return {
+              driver,
+              name: names.get(driver.userId.toString()) ?? 'Driver',
+              distanceKm: travel.distanceKm,
+              etaMinutes: travel.minutes,
+              recentAssignments: counts.get(driver._id.toString()) ?? 0,
+              routeSource: travel.source,
+            };
+          } catch {
+            excluded.push({
+              driverId: driver._id.toString(),
+              reason: 'routing_failed',
+            });
+            return null;
           }
-
-          const travel = await this.routing.travelTime(
-            location,
-            coordinates,
-            driver.vehicle,
-          );
-
-          return {
-            driver,
-            name,
-            distanceKm: travel.distanceKm,
-            etaMinutes: travel.minutes,
-            recentAssignments,
-            routeSource: travel.source,
-          };
         }),
       )
     ).filter((candidate): candidate is RankedDriver => candidate !== null);
 
-    return candidates.sort((a, b) => {
-      if (a.etaMinutes !== null && b.etaMinutes !== null && a.etaMinutes !== b.etaMinutes) {
-        return a.etaMinutes - b.etaMinutes;
-      }
+    candidates.sort((a, b) => {
       if (a.distanceKm !== null && b.distanceKm === null) return -1;
       if (a.distanceKm === null && b.distanceKm !== null) return 1;
       if (
@@ -1399,11 +1641,21 @@ export class DeliveriesService {
       ) {
         return a.distanceKm - b.distanceKm;
       }
+      if (a.etaMinutes !== null && b.etaMinutes !== null && a.etaMinutes !== b.etaMinutes) {
+        return a.etaMinutes - b.etaMinutes;
+      }
       if (a.recentAssignments !== b.recentAssignments) {
         return a.recentAssignments - b.recentAssignments;
       }
       return a.name.localeCompare(b.name);
     });
+
+    return {
+      candidates,
+      total: drivers.length,
+      excluded,
+      restaurantCoordinates,
+    };
   }
 
   private async assignmentCounts(): Promise<Map<string, number>> {
@@ -1433,10 +1685,22 @@ export class DeliveriesService {
     trigger: AutoAssignmentTrigger,
     reason?: string,
     candidate?: RankedDriver,
-  ): Promise<void> {
-    await this.deliveryModel
+  ): Promise<boolean> {
+    const filter: FilterQuery<DeliveryDocument> = {
+      _id: deliveryId,
+      ...(status === AutoAssignmentStatus.ASSIGNED && candidate
+        ? {
+            status: DeliveryStatus.ASSIGNED,
+            driverId: candidate.driver._id,
+          }
+        : {
+            status: DeliveryStatus.PENDING_ASSIGNMENT,
+            driverId: null,
+          }),
+    };
+    const result = await this.deliveryModel
       .updateOne(
-        { _id: deliveryId },
+        filter,
         {
           $set: {
             autoAssignment: {
@@ -1451,11 +1715,19 @@ export class DeliveriesService {
       )
       .exec();
 
+    if (result.modifiedCount !== 1) {
+      this.logger.warn(
+        `Skipped stale automatic-assignment metadata for delivery ${deliveryId.toString()}.`,
+      );
+      return false;
+    }
+
     if (candidate) {
       this.logger.debug(
         `Auto assignment for ${deliveryId.toString()} selected ${candidate.name}.`,
       );
     }
+    return true;
   }
 
   /**
@@ -1563,16 +1835,30 @@ export class DeliveriesService {
 
   private candidateRationale(candidate: RankedDriver): string {
     if (candidate.distanceKm === null) {
-      return `Matched by service area${candidate.driver.serviceArea ? ` (${candidate.driver.serviceArea})` : ''}`;
+      return 'No measurable distance available.';
     }
     const suffix = candidate.routeSource === 'straight-line' ? ' (estimated)' : '';
     return `${candidate.distanceKm.toFixed(1)} km by road · about ${candidate.etaMinutes} min${suffix}`;
+  }
+
+  /** Human-readable exclusion counts; never includes driver names or contact data. */
+  private summariseExclusions(excluded: DriverExclusion[]): string {
+    const counts = new Map<string, number>();
+    for (const entry of excluded) {
+      counts.set(entry.reason, (counts.get(entry.reason) ?? 0) + 1);
+    }
+    if (counts.size === 0) return 'no exclusions recorded';
+    return Array.from(counts.entries())
+      .map(([reason, count]) => `${count} ${reason.split('_').join(' ')}`)
+      .join(', ');
   }
 
   private targetStatus(action: DeliveryAction): DeliveryStatus {
     switch (action) {
       case DeliveryAction.PICK_UP:
         return DeliveryStatus.PICKED_UP;
+      case DeliveryAction.ARRIVE_AT_RESTAURANT:
+        return DeliveryStatus.ARRIVED_AT_RESTAURANT;
       case DeliveryAction.START_TRANSIT:
         return DeliveryStatus.ON_THE_WAY;
       case DeliveryAction.DELIVER:
@@ -1612,10 +1898,7 @@ export class DeliveriesService {
     return driver;
   }
 
-  private assertDriverAssignable(
-    driver: DriverProfileDocument,
-    restaurant: RestaurantDocument | null,
-  ): void {
+  private async assertDriverAssignable(driver: DriverProfileDocument): Promise<void> {
     if (driver.accountStatus !== AccountStatus.APPROVED) {
       throw new ConflictException({
         code: 'driver_not_approved',
@@ -1626,14 +1909,6 @@ export class DeliveriesService {
       throw new ConflictException({
         code: 'driver_unavailable',
         message: 'That driver already has an active delivery or is offline.',
-      });
-    }
-    if (
-      !serviceAreasCompatible(driver.serviceArea, restaurant?.address?.city ?? null)
-    ) {
-      throw new ConflictException({
-        code: 'driver_outside_service_area',
-        message: `That driver operates in ${driver.serviceArea}; this delivery is in ${restaurant?.address?.city ?? 'another area'}.`,
       });
     }
   }

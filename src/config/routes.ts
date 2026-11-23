@@ -31,6 +31,8 @@ export const ROUTES = {
   adminDeliveries: '/admin/deliveries',
   adminOrders: '/admin/orders',
   adminReviews: '/admin/reviews',
+  adminCategories: '/admin/categories',
+  adminPromotions: '/admin/promotions',
 
   // ── Owned by Team Member 2 — Cart & Order Flow ──────────────────────────
   cart: '/cart',
@@ -42,6 +44,7 @@ export const ROUTES = {
   dashboardOrders: '/restaurant/orders',
   dashboardMenu: '/restaurant/menu',
   dashboardCategories: '/restaurant/categories',
+  dashboardPromotions: '/restaurant/coupons',
   dashboardSettings: '/restaurant/settings',
 
   // ── Owned by Team Member 4 — Restaurant Discovery ───────────────────────

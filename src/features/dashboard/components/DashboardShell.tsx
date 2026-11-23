@@ -175,7 +175,7 @@ export function DashboardShell({ nav, roleLabel, workspaceLabel, children }: Das
             <div className="hidden items-center gap-2 rounded-full border border-olive-900/10 bg-cream px-3 py-1.5 sm:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
               <span className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-olive-600">
-                Demo workspace
+                Operations workspace
               </span>
             </div>
 

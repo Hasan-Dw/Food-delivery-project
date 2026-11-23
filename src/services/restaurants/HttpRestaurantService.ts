@@ -1,6 +1,10 @@
 import type { Paginated, Restaurant, RestaurantCategory, RestaurantQuery } from '@/types';
 import type { ApiClient } from '@/services/api/client';
-import type { RestaurantService, RestaurantUpdateInput } from './RestaurantService';
+import type {
+  RestaurantCategoryInput,
+  RestaurantService,
+  RestaurantUpdateInput,
+} from './RestaurantService';
 
 function imageBody(file: File): FormData {
   const form = new FormData();
@@ -37,6 +41,34 @@ export class HttpRestaurantService implements RestaurantService {
   async getFeatured(): Promise<Restaurant[]> {
     const response = await this.client.get<Restaurant[]>('/restaurants/featured');
     return response.data;
+  }
+
+  async getMine(): Promise<Restaurant> {
+    const response = await this.client.get<Restaurant>('/restaurants/mine/profile');
+    return response.data;
+  }
+
+  async createCategory(input: RestaurantCategoryInput): Promise<RestaurantCategory> {
+    const response = await this.client.post<RestaurantCategory>(
+      '/restaurant-categories',
+      input,
+    );
+    return response.data;
+  }
+
+  async updateCategory(
+    categoryId: string,
+    input: Partial<RestaurantCategoryInput>,
+  ): Promise<RestaurantCategory> {
+    const response = await this.client.patch<RestaurantCategory>(
+      `/restaurant-categories/${encodeURIComponent(categoryId)}`,
+      input,
+    );
+    return response.data;
+  }
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    await this.client.delete(`/restaurant-categories/${encodeURIComponent(categoryId)}`);
   }
 
   async update(restaurantId: string, input: RestaurantUpdateInput): Promise<Restaurant> {

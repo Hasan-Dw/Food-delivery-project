@@ -49,8 +49,8 @@ export interface CreateUserInput {
 
 export interface DriverApplicationInput {
   phone: string;
-  serviceArea: string;
   vehicle: VehicleType;
+  serviceArea?: string;
 }
 
 function normaliseEmail(email: string): string {
@@ -317,8 +317,8 @@ export class UsersService {
     const driver = await this.driverModel.create({
       userId: new Types.ObjectId(userId),
       vehicle: application.vehicle,
-      serviceArea: application.serviceArea.trim(),
       phone: application.phone?.trim() ?? '',
+      serviceArea: application.serviceArea?.trim() || 'Latakia',
       accountStatus: AccountStatus.PENDING_APPROVAL,
     });
 

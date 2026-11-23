@@ -9,6 +9,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { services } from '@/services';
 import { getErrorMessage } from '@/services/api/errors';
 import { useToast } from '@/stores/toast-store';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { ReviewCard } from './ReviewCard';
 import { ReviewDialog } from './ReviewDialog';
 import { StarDisplay } from './Stars';
@@ -45,6 +46,8 @@ export function OrderReviewDialog({ order, open, initialTarget, onClose }: Order
   const [target, setTarget] = useState<Target | 'delivery' | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  useBodyScrollLock(open);
+
   const myReviews = useQuery({
     queryKey: queryKeys.myReviews({ orderId: order.id, scope: 'order' }),
     queryFn: () => services.reviews.listMine({ orderId: order.id, page: 1, perPage: 100 }),
@@ -61,15 +64,12 @@ export function OrderReviewDialog({ order, open, initialTarget, onClose }: Order
 
   useEffect(() => {
     if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !target) onClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
     };
   }, [open, target, onClose]);
 

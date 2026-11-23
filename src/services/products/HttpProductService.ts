@@ -1,6 +1,11 @@
 import type { Paginated, Product, ProductCategory } from '@/types';
 import type { ApiClient } from '@/services/api/client';
-import type { ProductQuery, ProductService, ProductInput } from './ProductService';
+import type {
+  MenuCategoryInput,
+  ProductQuery,
+  ProductService,
+  ProductInput,
+} from './ProductService';
 /**
  * Menu items and menu sections exposed by the Savora API.
  *
@@ -29,6 +34,41 @@ export class HttpProductService implements ProductService {
       `/restaurants/${encodeURIComponent(restaurantId)}/menu-categories`,
     );
     return response.data;
+  }
+
+  async listMine(): Promise<Product[]> {
+    const response = await this.client.get<Product[]>('/restaurants/mine/menu-items');
+    return response.data;
+  }
+
+  async listMineCategories(): Promise<ProductCategory[]> {
+    const response = await this.client.get<ProductCategory[]>('/restaurant-menu-categories');
+    return response.data;
+  }
+
+  async createCategory(input: MenuCategoryInput): Promise<ProductCategory> {
+    const response = await this.client.post<ProductCategory>(
+      '/restaurant-menu-categories',
+      input,
+    );
+    return response.data;
+  }
+
+  async updateCategory(
+    categoryId: string,
+    input: Partial<MenuCategoryInput>,
+  ): Promise<ProductCategory> {
+    const response = await this.client.patch<ProductCategory>(
+      `/restaurant-menu-categories/${encodeURIComponent(categoryId)}`,
+      input,
+    );
+    return response.data;
+  }
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    await this.client.delete(
+      `/restaurant-menu-categories/${encodeURIComponent(categoryId)}`,
+    );
   }
 
   async list(query: ProductQuery = {}): Promise<Paginated<Product>> {

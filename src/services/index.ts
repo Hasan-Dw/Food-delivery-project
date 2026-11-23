@@ -1,18 +1,4 @@
-import { env } from '@/config/env';
 import { apiClient } from './api';
-import { MockAdminService } from '@/mocks/services/MockAdminService';
-import { MockAuthService } from '@/mocks/services/MockAuthService';
-import { MockCheckoutService } from '@/mocks/services/MockCheckoutService';
-import { MockDeliveryService } from '@/mocks/services/MockDeliveryService';
-import { MockDriverService } from '@/mocks/services/MockDriverService';
-import { MockOrderService } from '@/mocks/services/MockOrderService';
-import { MockProductService } from '@/mocks/services/MockProductService';
-import { MockPromotionService } from '@/mocks/services/MockPromotionService';
-import { MockRestaurantAnalyticsService } from '@/mocks/services/MockRestaurantAnalyticsService';
-import { MockRestaurantService } from '@/mocks/services/MockRestaurantService';
-import { MockReviewService } from '@/mocks/services/MockReviewService';
-import { MockTrackingService } from '@/mocks/services/MockTrackingService';
-import { MockUserService } from '@/mocks/services/MockUserService';
 import { HttpAuthService } from './auth/HttpAuthService';
 import { HttpAdminService } from './admin/HttpAdminService';
 import { HttpCheckoutService } from './checkout/HttpCheckoutService';
@@ -59,32 +45,25 @@ export interface Services {
 /**
  * Single composition root for data access.
  *
- * Set `VITE_DATA_SOURCE=http` and `VITE_API_BASE_URL` to send auth, profile,
- * restaurants, analytics, menu, orders, deliveries, drivers, promotions,
- * checkout, tracking and image management to the NestJS API. Only the
- * admin-dashboard read models remain local where no endpoint exists.
+ * Every feature — auth, profiles, restaurants, analytics, menus, orders,
+ * deliveries, drivers, promotions, checkout, tracking and administration — is
+ * served by the NestJS API. There is no mock composition path, so an API
+ * failure surfaces as an error state instead of fabricated data.
  */
-const useBackend = !env.useMocks;
-
 export const services: Services = {
-  auth: useBackend ? new HttpAuthService(apiClient) : new MockAuthService(),
-  users: useBackend ? new HttpUserService(apiClient) : new MockUserService(),
-  restaurants: useBackend ? new HttpRestaurantService(apiClient) : new MockRestaurantService(),
-  reviews: useBackend ? new HttpReviewService(apiClient) : new MockReviewService(),
-  products: useBackend ? new HttpProductService(apiClient) : new MockProductService(),
-
-  orders: useBackend ? new HttpOrderService(apiClient) : new MockOrderService(),
-  deliveries: useBackend ? new HttpDeliveryService(apiClient) : new MockDeliveryService(),
-  drivers: useBackend ? new HttpDriverService(apiClient) : new MockDriverService(),
-  tracking: useBackend ? new HttpTrackingService(apiClient) : new MockTrackingService(),
-  promotions: useBackend ? new HttpPromotionService(apiClient) : new MockPromotionService(),
-  checkout: useBackend ? new HttpCheckoutService(apiClient) : new MockCheckoutService(),
-
-  // The API now exposes owner-scoped analytics; keep fixtures for mock mode.
-  analytics: useBackend
-    ? new HttpRestaurantAnalyticsService(apiClient)
-    : new MockRestaurantAnalyticsService(),
-  admin: useBackend ? new HttpAdminService(apiClient) : new MockAdminService(),
+  auth: new HttpAuthService(apiClient),
+  users: new HttpUserService(apiClient),
+  restaurants: new HttpRestaurantService(apiClient),
+  reviews: new HttpReviewService(apiClient),
+  products: new HttpProductService(apiClient),
+  orders: new HttpOrderService(apiClient),
+  deliveries: new HttpDeliveryService(apiClient),
+  drivers: new HttpDriverService(apiClient),
+  tracking: new HttpTrackingService(apiClient),
+  promotions: new HttpPromotionService(apiClient),
+  checkout: new HttpCheckoutService(apiClient),
+  analytics: new HttpRestaurantAnalyticsService(apiClient),
+  admin: new HttpAdminService(apiClient),
 };
 
 export type {

@@ -4,6 +4,7 @@ export const queryKeys = {
   restaurants: ['restaurants'] as const,
   featuredRestaurants: ['restaurants', 'featured'] as const,
   restaurant: (idOrSlug: string) => ['restaurants', idOrSlug] as const,
+  restaurantMine: (ownerId: string) => ['restaurants', 'mine', ownerId] as const,
   popularProducts: ['products', 'popular'] as const,
   restaurantProducts: (restaurantId: string) => ['products', 'restaurant', restaurantId] as const,
   productCategories: (restaurantId: string) => ['product-categories', restaurantId] as const,
@@ -20,6 +21,15 @@ export const queryKeys = {
   adminReviews: (query: Record<string, string | undefined> = {}) =>
     ['admin', 'reviews', query] as const,
   promotions: ['promotions'] as const,
+  adminPromotions: (query: Record<string, string | undefined> = {}) =>
+    ['admin', 'promotions', query] as const,
+  allAdminPromotions: ['admin', 'promotions'] as const,
+  promotionUsage: (promotionId: string) =>
+    ['promotions', promotionId, 'usage'] as const,
+  restaurantPromotions: ['restaurant-promotions'] as const,
+  restaurantPromotionUsage: (promotionId: string) =>
+    ['restaurant-promotions', promotionId, 'usage'] as const,
+  promotionPolicy: ['restaurant-promotions', 'policy'] as const,
   checkoutQuote: (restaurantId: string, signature: string, couponCode: string) =>
     ['checkout', 'quote', restaurantId, signature, couponCode] as const,
   orders: ['orders'] as const,
@@ -42,6 +52,8 @@ export const queryKeys = {
   deliveryForOrder: (orderId: string) => ['deliveries', 'order', orderId] as const,
   activeDelivery: (driverId: string) => ['deliveries', 'active', driverId] as const,
   driverDeliveries: (driverId: string) => ['deliveries', 'driver', driverId] as const,
+  adminAnalytics: (range: string) => ['admin', 'analytics', range] as const,
+  allAdminAnalytics: ['admin', 'analytics'] as const,
   adminAccounts: ['admin', 'accounts'] as const,
   adminDrivers: ['admin', 'drivers'] as const,
   adminDeliveries: ['admin', 'deliveries'] as const,

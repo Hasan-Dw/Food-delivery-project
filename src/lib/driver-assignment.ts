@@ -7,10 +7,8 @@ import type { Coordinates, Delivery, Driver, VehicleType } from '@/types';
  * service, so a backend, a unit test and the mock service can all use the same
  * ordering rules.
  *
- * Accuracy note: driver locations in this prototype are illustrative. When a
- * driver has no coordinates, or the restaurant address has no coordinates, the
- * ranking falls back to the coarse service-area match (borough level) and
- * recent-assignment fairness. It never invents a GPS distance.
+ * Drivers without a current valid GPS location are excluded. Assignment must
+ * never infer a nearest driver from legacy service-area data.
  */
 
 export const vehicleSpeedKph: Record<VehicleType, number> = {
@@ -46,39 +44,12 @@ export function estimateTravelMinutes(distanceKm: number, vehicle: VehicleType):
   return Math.max(1, Math.round((distanceKm / speed) * 60 + pickupBufferMinutes));
 }
 
-/** City zones that contain every neighbourhood we seed as a driver area. */
-const LATAKIA_ZONES = new Set(['latakia']);
-
-/**
- * Reduce a human service-area label to its coarse zone. The demo uses labels
- * such as `Latakia · Al-Ziraa`; the first segment is the zone. A production
- * system should replace this with explicit zone ids/polygons.
- */
-export function normalizeServiceArea(value?: string | null): string | null {
-  if (!value) return null;
-  const [group] = value.split('·');
-  const normalized = group?.trim().toLowerCase();
-  return normalized ? normalized : null;
-}
-
-/**
- * Borough-level compatibility. Unknown values are treated as compatible so the
- * assignment system degrades to distance/fairness instead of silently
- * discarding every driver.
- */
+/** Legacy compatibility helper. Service-area data is never an eligibility rule. */
 export function serviceAreasCompatible(
-  driverServiceArea?: string | null,
-  restaurantServiceArea?: string | null,
+  _driverServiceArea?: string | null,
+  _restaurantServiceArea?: string | null,
 ): boolean {
-  const driverZone = normalizeServiceArea(driverServiceArea);
-  const restaurantZone = normalizeServiceArea(restaurantServiceArea);
-  if (!driverZone || !restaurantZone) return true;
-  // Mirror the API: "All boroughs" (and any area containing "all") is a wildcard.
-  if (driverZone.includes('all') || restaurantZone.includes('all')) return true;
-  // Restaurants store the city while drivers are grouped by Latakia
-  // neighbourhood, so a city-level match covers every neighbourhood in it.
-  if (LATAKIA_ZONES.has(driverZone) || LATAKIA_ZONES.has(restaurantZone)) return true;
-  return driverZone === restaurantZone;
+  return true;
 }
 
 export interface RankedDriverCandidate {
@@ -111,36 +82,44 @@ export interface RankDriversInput {
  * 1. approved account;
  * 2. AVAILABLE availability;
  * 3. no active delivery;
- * 4. compatible delivery service area;
- * 5. excluded ids are skipped (used after a manual unassign).
+ * 4. excluded ids are skipped (used after a manual unassign).
  *
  * Ranking: distance, then estimated travel time, then assignment fairness.
  */
 export function rankEligibleDrivers({
   drivers,
   restaurantCoordinates,
-  restaurantServiceArea,
   locationFor,
   recentAssignmentCounts = {},
   excludeDriverIds = [],
 }: RankDriversInput): RankedDriverCandidate[] {
   const excluded = new Set(excludeDriverIds);
+  const isValidLocation = (location: Coordinates | null | undefined): location is Coordinates =>
+    Boolean(
+      location &&
+        Number.isFinite(location.lat) &&
+        Number.isFinite(location.lng) &&
+        location.lat >= -90 &&
+        location.lat <= 90 &&
+        location.lng >= -180 &&
+        location.lng <= 180,
+    );
 
   const candidates = drivers
-    .filter(
-      (driver) =>
+    .filter((driver) => {
+      const location = locationFor(driver.id);
+      return (
         !excluded.has(driver.id) &&
         driver.accountStatus === 'APPROVED' &&
         driver.availability === 'AVAILABLE' &&
         driver.activeDeliveryId === null &&
-        serviceAreasCompatible(driver.serviceArea, restaurantServiceArea),
-    )
+        Boolean(restaurantCoordinates) &&
+        isValidLocation(location)
+      );
+    })
     .map<RankedDriverCandidate>((driver) => {
-      const location = locationFor(driver.id) ?? null;
-      const hasDistance = Boolean(location && restaurantCoordinates);
-      const distanceKm = hasDistance
-        ? haversineDistanceKm(restaurantCoordinates as Coordinates, location as Coordinates)
-        : null;
+      const location = locationFor(driver.id) as Coordinates;
+      const distanceKm = haversineDistanceKm(restaurantCoordinates as Coordinates, location);
       const etaMinutes =
         distanceKm !== null ? estimateTravelMinutes(distanceKm, driver.vehicle) : null;
 
@@ -149,13 +128,13 @@ export function rankEligibleDrivers({
         location,
         distanceKm,
         etaMinutes,
-        serviceAreaMatch: serviceAreasCompatible(driver.serviceArea, restaurantServiceArea),
+        serviceAreaMatch: true,
         recentAssignmentCount: recentAssignmentCounts[driver.id] ?? 0,
         matchedBy: distanceKm !== null ? 'DISTANCE' : 'SERVICE_AREA',
         rationale:
           distanceKm !== null
             ? `${distanceKm.toFixed(1)} km away · about ${etaMinutes} min`
-            : `Matched by service area${driver.serviceArea ? ` (${driver.serviceArea})` : ''}`,
+            : 'No measurable distance available.',
       };
     });
 

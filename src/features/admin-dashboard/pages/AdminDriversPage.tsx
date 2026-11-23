@@ -68,7 +68,7 @@ export default function AdminDriversPage() {
       if (statusFilter !== 'ALL' && driver.accountStatus !== statusFilter) return false;
       if (availabilityFilter !== 'ALL' && driver.availability !== availabilityFilter) return false;
       if (query) {
-        const haystack = `${driver.name} ${driver.phone} ${driver.serviceArea ?? ''}`.toLowerCase();
+        const haystack = `${driver.name} ${driver.phone}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -100,7 +100,7 @@ export default function AdminDriversPage() {
   }
 
   const submitChange = (reason?: string) => {
-    if (!dialog) return;
+    if (!dialog || updateStatus.isPending) return;
     updateStatus.mutate(
       { userId: dialog.account.id, status: dialog.nextStatus, reason },
       {
@@ -221,7 +221,7 @@ export default function AdminDriversPage() {
                         <p className="font-medium text-olive-900">{driver.name}</p>
                         <p className="mt-0.5 text-[0.6875rem] text-olive-500">{driver.phone}</p>
                         <p className="mt-0.5 text-[0.625rem] text-olive-500">
-                          {driver.serviceArea ?? 'Service area not set'} · joined {formatDate(driver.createdAt)}
+                          joined {formatDate(driver.createdAt)}
                         </p>
                       </td>
                       <td className="px-5 py-4 text-olive-600">
@@ -234,7 +234,7 @@ export default function AdminDriversPage() {
                           {formatRating(driver.rating)} · {driver.completedDeliveries} deliveries
                         </p>
                         <p className="mt-0.5 text-[0.625rem] text-olive-500">
-                          {formatCurrency(driver.totalEarnings)} sample earnings
+                          {formatCurrency(driver.totalEarnings)} recorded payouts
                         </p>
                       </td>
                       <td className="px-5 py-4">

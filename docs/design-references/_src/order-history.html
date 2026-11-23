@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Order history</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div data-header="Restaurants" data-cart="3"></div>
+
+<main>
+  <div class="shell page-head">
+    <div class="page-head-row">
+      <div>
+        <span class="eyebrow">Your table, remembered</span>
+        <h1>Order history</h1>
+        <p class="lede">Every kitchen you have ordered from, every receipt, and a one-tap way to have it again.</p>
+      </div>
+      <a class="btn btn-primary" href="restaurants.html">Order again <i data-icon="arrowRight"></i></a>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat-mini">
+        <div class="label">Orders placed</div>
+        <div class="value">24</div>
+      </div>
+      <div class="stat-mini">
+        <div class="label">Favourite kitchen</div>
+        <div class="value" style="font-size:21px">Saffron &amp; Oak</div>
+      </div>
+      <div class="stat-mini">
+        <div class="label">Saved with offers</div>
+        <div class="value">$86.40</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell section-pad" style="padding-top:18px">
+    <div class="flex items-center justify-between">
+      <div class="eyebrow bare">In progress</div>
+      <span class="badge badge-success"><span class="dot" style="width:5px;height:5px;border-radius:50%;background:currentColor"></span> Live demo</span>
+    </div>
+
+    <div class="active-order mt-12">
+      <img src="/public/assets/products/dish-butter-chicken-900.webp" alt="" />
+      <div>
+        <div class="label">Arriving in 14 minutes</div>
+        <div class="name">Saffron &amp; Oak · 3 items</div>
+        <div class="meta">Order #SV-10482 · Placed today at 7:02 PM · Andre is on the way</div>
+        <div class="progress"><span style="width:68%"></span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--display);font-size:26px;color:var(--cream)">$109.91</div>
+        <a class="btn btn-primary btn-sm mt-8" href="track-order.html">Track order <i data-icon="arrowRight"></i></a>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" type="button">All orders <span class="count">24</span></button>
+      <button class="tab" type="button">Delivered <span class="count">22</span></button>
+      <button class="tab" type="button">Cancelled <span class="count">1</span></button>
+      <button class="tab" type="button">Scheduled <span class="count">1</span></button>
+      <div class="grow"></div>
+      <div class="sort">
+        <i data-icon="sort"></i>
+        <select class="select"><option>Newest first</option><option>Oldest first</option><option>Highest total</option></select>
+      </div>
+    </div>
+
+    <div class="card history-card">
+      <img src="/public/assets/products/dish-truffle-pizza-900.webp" alt="" />
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="name">Nonna Lucia</span>
+          <span class="badge badge-success">Delivered</span>
+        </div>
+        <div class="items">Truffle mushroom pizza · Pesto rigatoni · Burrata</div>
+        <div class="meta">
+          <span>28 Oct 2026</span><span class="dot-sep"></span><span>Italian</span><span class="dot-sep"></span><span>Arrived in 32 min</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="total">$48.20</div>
+        <div class="actions">
+          <button class="btn btn-soft btn-xs" type="button">Receipt</button>
+          <button class="btn btn-outline btn-xs" type="button">Reorder</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card history-card">
+      <img src="/public/assets/products/dish-tonkotsu-900.webp" alt="" />
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="name">Koji Sushi</span>
+          <span class="badge badge-success">Delivered</span>
+        </div>
+        <div class="items">Tonkotsu ramen · Salmon nigiri · Green goddess bowl</div>
+        <div class="meta">
+          <span>24 Oct 2026</span><span class="dot-sep"></span><span>Japanese</span><span class="dot-sep"></span><span>Arrived in 41 min</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="total">$63.10</div>
+        <div class="actions">
+          <button class="btn btn-soft btn-xs" type="button">Receipt</button>
+          <button class="btn btn-outline btn-xs" type="button">Reorder</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card history-card">
+      <img src="/public/assets/products/dish-smash-burger-900.webp" alt="" />
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="name">Patty Club</span>
+          <span class="badge badge-success">Delivered</span>
+        </div>
+        <div class="items">Double smash burger · Chicken sandwich · Cookies</div>
+        <div class="meta">
+          <span>19 Oct 2026</span><span class="dot-sep"></span><span>Burgers</span><span class="dot-sep"></span><span>Arrived in 26 min</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="total">$39.80</div>
+        <div class="actions">
+          <button class="btn btn-soft btn-xs" type="button">Receipt</button>
+          <button class="btn btn-outline btn-xs" type="button">Reorder</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card history-card">
+      <img src="/public/assets/products/dish-green-goddess-900.webp" alt="" />
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="name">Green Bowl</span>
+          <span class="badge badge-outline">Refunded</span>
+        </div>
+        <div class="items">Green goddess bowl · Chipotle salmon</div>
+        <div class="meta">
+          <span>14 Oct 2026</span><span class="dot-sep"></span><span>Healthy</span><span class="dot-sep"></span><span>Cancelled by kitchen</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="total">$34.00</div>
+        <div class="actions">
+          <button class="btn btn-soft btn-xs" type="button">Receipt</button>
+          <button class="btn btn-outline btn-xs" type="button">Reorder</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card history-card">
+      <img src="/public/assets/products/dish-birria-tacos-900.webp" alt="" />
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="name">Casa Veracruz</span>
+          <span class="badge badge-success">Delivered</span>
+        </div>
+        <div class="items">Birria tacos · Burrata · Chocolate torte</div>
+        <div class="meta">
+          <span>09 Oct 2026</span><span class="dot-sep"></span><span>Mexican</span><span class="dot-sep"></span><span>Arrived in 37 min</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="total">$44.60</div>
+        <div class="actions">
+          <button class="btn btn-soft btn-xs" type="button">Receipt</button>
+          <button class="btn btn-outline btn-xs" type="button">Reorder</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card history-card">
+      <img src="/public/assets/products/dish-chocolate-torte-900.webp" alt="" />
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="name">Crème &amp; Crust</span>
+          <span class="badge badge-success">Delivered</span>
+        </div>
+        <div class="items">Chocolate torte · Cookies · Pesto rigatoni</div>
+        <div class="meta">
+          <span>02 Oct 2026</span><span class="dot-sep"></span><span>Bakery</span><span class="dot-sep"></span><span>Arrived in 22 min</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="total">$31.50</div>
+        <div class="actions">
+          <button class="btn btn-soft btn-xs" type="button">Receipt</button>
+          <button class="btn btn-outline btn-xs" type="button">Reorder</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mt-20">
+      <span class="tiny">Showing 6 of 24 orders</span>
+      <div class="pagination" style="margin-top:0">
+        <span class="page-dot on">1</span>
+        <span class="page-dot">2</span>
+        <span class="page-dot">3</span>
+        <span class="page-dot">4</span>
+        <span class="page-dot"><i data-icon="arrowRight"></i></span>
+      </div>
+    </div>
+
+    <div class="note-box mt-24">
+      <i data-icon="info"></i>
+      <p>Order history is demo data stored locally. Real order records belong behind the order-service API — see the integration notes in <strong>docs/BACKEND-INTEGRATION.md</strong>.</p>
+    </div>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="mock.js"></script>
+</body>
+</html>

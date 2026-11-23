@@ -5,7 +5,6 @@ import { Textarea } from '@/components/ui/Textarea';
 import { ConfirmDialog } from '@/features/dashboard/components/ConfirmDialog';
 import { StatusBadge } from '@/features/dashboard/components/StatusBadge';
 import { canAssignDelivery, driverAssignmentBlockReason } from '@/lib/permissions';
-import { serviceAreasCompatible } from '@/lib/driver-assignment';
 
 interface AdminAssignmentDialogProps {
   open: boolean;
@@ -13,8 +12,6 @@ interface AdminAssignmentDialogProps {
   delivery: Delivery | null;
   order?: Order;
   currentDriver?: Driver;
-  /** Restaurant city used for the coarse service-area pre-check. */
-  restaurantCity?: string;
   drivers: Driver[];
   isLoading?: boolean;
   onCancel: () => void;
@@ -54,7 +51,6 @@ export function AdminAssignmentDialog({
   delivery,
   order,
   currentDriver,
-  restaurantCity,
   drivers,
   isLoading = false,
   onCancel,
@@ -78,8 +74,7 @@ export function AdminAssignmentDialog({
   const eligibleDrivers = drivers.filter(
     (driver) =>
       driver.id !== delivery.driverId &&
-      canAssignDelivery(driver) &&
-      serviceAreasCompatible(driver.serviceArea, restaurantCity),
+      canAssignDelivery(driver),
   );
   const blockedDrivers = drivers.filter(
     (driver) =>
@@ -94,9 +89,6 @@ export function AdminAssignmentDialog({
 
   const blockReason = (driver: Driver): string => {
     if (!canAssignDelivery(driver)) return driverAssignmentBlockReason(driver) ?? 'Unavailable';
-    if (!serviceAreasCompatible(driver.serviceArea, restaurantCity)) {
-      return `Outside the delivery service area${restaurantCity ? ` (${restaurantCity})` : ''}`;
-    }
     return 'Unavailable';
   };
 
@@ -148,9 +140,6 @@ export function AdminAssignmentDialog({
           <div>
             <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-olive-500">Delivery</p>
             <p className="mt-0.5 text-[0.8125rem] font-medium text-olive-900">{delivery.id}</p>
-            {restaurantCity ? (
-              <p className="mt-0.5 text-[0.6875rem] text-olive-500">Service area · {restaurantCity}</p>
-            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {order ? <StatusBadge status={order.status} /> : null}
@@ -172,7 +161,7 @@ export function AdminAssignmentDialog({
               { value: '', label: eligibleDrivers.length ? 'Select an eligible driver' : 'No eligible drivers' },
               ...eligibleDrivers.map((driver) => ({
                 value: driver.id,
-                label: `${driver.name} · ${driver.vehicle}${driver.serviceArea ? ` · ${driver.serviceArea}` : ''}`,
+                label: `${driver.name} · ${driver.vehicle}`,
               })),
             ]}
           />

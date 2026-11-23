@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Menu manager</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div class="dash">
+  <div data-sidebar="Menu"></div>
+
+  <div class="dash-main">
+    <div data-dash-top="Menu"></div>
+
+    <div class="dash-body">
+      <div class="dash-head">
+        <div>
+          <span class="eyebrow">Saffron &amp; Oak</span>
+          <h1 class="mt-8">Menu manager</h1>
+          <p>38 dishes across 6 categories. Changes go live to the marketplace immediately.</p>
+        </div>
+        <div class="dash-actions">
+          <button class="btn btn-soft btn-sm" type="button"><i data-icon="filter"></i> Import</button>
+          <button class="btn btn-primary btn-sm" type="button"><i data-icon="plus"></i> Add dish</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="label"><span>Published</span></div>
+          <div class="value">31</div>
+          <div class="delta">Visible in marketplace</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Hidden</span></div>
+          <div class="value">5</div>
+          <div class="delta down">Out of stock or seasonal</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Drafts</span></div>
+          <div class="value">2</div>
+          <div class="delta">Not yet published</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Menu score</span></div>
+          <div class="value">92<span style="font-size:14px;font-family:var(--sans);color:var(--olive-400)">/100</span></div>
+          <div class="delta">Photography and copy complete</div>
+        </div>
+      </div>
+
+      <div class="toolbar mt-20">
+        <div class="input-icon" style="width:250px">
+          <i data-icon="search"></i>
+          <input class="input" placeholder="Search dishes" style="height:36px;font-size:11px" />
+        </div>
+        <select class="select" style="width:auto;height:36px;font-size:11px;padding:0 30px 0 12px">
+          <option>All categories</option><option>Small plates</option><option>Mains</option><option>Sides</option><option>Desserts</option>
+        </select>
+        <span class="chip active">All 38</span>
+        <span class="chip">Published 31</span>
+        <span class="chip">Hidden 5</span>
+        <div class="grow"></div>
+        <span class="availability"><span class="mini-switch"></span> Kitchen open</span>
+      </div>
+
+      <div class="menu-grid mt-20">
+        <div class="category-card">
+          <div class="photo">
+            <img src="/public/assets/products/dish-burrata-900.webp" alt="" />
+            <span class="count">8 dishes</span>
+          </div>
+          <div class="body">
+            <div class="name">Small plates</div>
+            <div class="meta">Avg. $11.40 · 92% available</div>
+            <div class="foot"><span>Updated today</span><span class="badge badge-success">Live</span></div>
+          </div>
+        </div>
+        <div class="category-card">
+          <div class="photo">
+            <img src="/public/assets/products/dish-butter-chicken-900.webp" alt="" />
+            <span class="count">9 dishes</span>
+          </div>
+          <div class="body">
+            <div class="name">Mains</div>
+            <div class="meta">Avg. $18.20 · 100% available</div>
+            <div class="foot"><span>Updated 2d ago</span><span class="badge badge-success">Live</span></div>
+          </div>
+        </div>
+        <div class="category-card">
+          <div class="photo">
+            <img src="/public/assets/products/dish-green-goddess-900.webp" alt="" />
+            <span class="count">7 dishes</span>
+          </div>
+          <div class="body">
+            <div class="name">Bowls &amp; greens</div>
+            <div class="meta">Avg. $15.00 · 71% available</div>
+            <div class="foot"><span>2 hidden</span><span class="badge badge-gold">Needs review</span></div>
+          </div>
+        </div>
+        <div class="category-card">
+          <div class="photo">
+            <img src="/public/assets/products/dish-chocolate-torte-900.webp" alt="" />
+            <span class="count">6 dishes</span>
+          </div>
+          <div class="body">
+            <div class="name">Desserts</div>
+            <div class="meta">Avg. $8.60 · 83% available</div>
+            <div class="foot"><span>Updated 4d ago</span><span class="badge badge-success">Live</span></div>
+          </div>
+        </div>
+        <div class="category-card">
+          <div class="photo">
+            <img src="/public/assets/products/dish-pesto-rigatoni-900.webp" alt="" />
+            <span class="count">5 dishes</span>
+          </div>
+          <div class="body">
+            <div class="name">Pasta</div>
+            <div class="meta">Avg. $16.80 · 80% available</div>
+            <div class="foot"><span>Updated 1w ago</span><span class="badge badge-success">Live</span></div>
+          </div>
+        </div>
+        <div class="category-card">
+          <div class="photo">
+            <img src="/public/assets/products/dish-chicken-sandwich-900.webp" alt="" />
+            <span class="count">3 dishes</span>
+          </div>
+          <div class="body">
+            <div class="name">Sides</div>
+            <div class="meta">Avg. $6.20 · 67% available</div>
+            <div class="foot"><span>Draft changes</span><span class="badge badge-outline">Draft</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-20" style="overflow:hidden">
+        <div class="panel-head" style="padding:16px 18px 12px;margin-bottom:0">
+          <div>
+            <h2>All dishes</h2>
+            <p>Drag rows to reorder within a category.</p>
+          </div>
+          <a href="dashboard-categories.html">Manage categories</a>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:28px"></th>
+              <th>Dish</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Sold (7d)</th>
+              <th>Availability</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-butter-chicken-900.webp" alt="" /><div><div class="strong">Butter chicken</div><div style="font-size:9px;color:var(--olive-400)">Signature · Vegetarian option</div></div></div></td>
+              <td>Mains</td><td class="strong">$18.50</td><td>84</td>
+              <td><span class="availability"><span class="mini-switch"></span> In stock</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-saffron-bowl-900.webp" alt="" /><div><div class="strong">Saffron chicken bowl</div><div style="font-size:9px;color:var(--olive-400)">Gluten free · High protein</div></div></div></td>
+              <td>Bowls &amp; greens</td><td class="strong">$15.00</td><td>71</td>
+              <td><span class="availability"><span class="mini-switch"></span> In stock</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-burrata-900.webp" alt="" /><div><div class="strong">Burrata &amp; heirloom tomato</div><div style="font-size:9px;color:var(--olive-400)">Small plate · Vegetarian</div></div></div></td>
+              <td>Small plates</td><td class="strong">$12.00</td><td>46</td>
+              <td><span class="availability"><span class="mini-switch"></span> In stock</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-birria-tacos-900.webp" alt="" /><div><div class="strong">Birria tacos</div><div style="font-size:9px;color:var(--olive-400)">Three pieces · Spicy</div></div></div></td>
+              <td>Small plates</td><td class="strong">$14.00</td><td>38</td>
+              <td><span class="availability"><span class="mini-switch off"></span> Sold out</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-green-goddess-900.webp" alt="" /><div><div class="strong">Green goddess bowl</div><div style="font-size:9px;color:var(--olive-400)">Vegan · Gluten free</div></div></div></td>
+              <td>Bowls &amp; greens</td><td class="strong">$14.00</td><td>33</td>
+              <td><span class="availability"><span class="mini-switch"></span> In stock</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-cookies-900.webp" alt="" /><div><div class="strong">Chocolate chip cookies</div><div style="font-size:9px;color:var(--olive-400)">Four pieces · Baked daily</div></div></div></td>
+              <td>Desserts</td><td class="strong">$7.00</td><td>29</td>
+              <td><span class="availability"><span class="mini-switch off"></span> Hidden</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span style="color:var(--olive-300);letter-spacing:-2px">⋮⋮</span></td>
+              <td><div class="dish-cell"><img src="/public/assets/products/dish-chocolate-torte-900.webp" alt="" /><div><div class="strong">Dark chocolate torte</div><div style="font-size:9px;color:var(--olive-400)">Draft · needs photography</div></div></div></td>
+              <td>Desserts</td><td class="strong">$9.50</td><td>—</td>
+              <td><span class="availability"><span class="mini-switch off"></span> Draft</span></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-xs" type="button">Edit</button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="flex items-center justify-between" style="padding:12px 18px;border-top:1px solid var(--line)">
+          <span class="tiny">Showing 7 of 38 dishes</span>
+          <div class="pagination" style="margin-top:0">
+            <span class="page-dot on">1</span><span class="page-dot">2</span><span class="page-dot">3</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="tiny mt-16" style="text-align:center">Demo menu manager · publishing, drag-and-drop and availability persist only in local mock state.</p>
+    </div>
+  </div>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>

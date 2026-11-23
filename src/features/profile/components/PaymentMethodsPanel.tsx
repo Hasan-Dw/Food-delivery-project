@@ -110,7 +110,7 @@ export function PaymentMethodsPanel({
 
         <p className="mt-4 flex items-center gap-2 text-[0.6875rem] text-olive-500">
           <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
-          Prototype only — no card data is stored or transmitted.
+          Card management is not available in this release.
         </p>
       </SectionFrame>
     </section>

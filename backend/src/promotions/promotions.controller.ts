@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -15,11 +17,14 @@ import { UserRole } from '../common/enums/user.enum';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { toCents } from '../common/utils/money.util';
 import { CreatePromotionDto } from './dto/create-promotion.dto';
+import { PromotionQueryDto } from './dto/promotion-query.dto';
+import { PromotionStatusDto } from './dto/promotion-status.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { ValidatePromotionDto } from './dto/validate-promotion.dto';
 import type {
   PromotionPreview,
   PromotionResponse,
+  PromotionUsageResponse,
 } from './interfaces/promotion-response.interface';
 import { PromotionsService } from './promotions.service';
 
@@ -37,8 +42,8 @@ export class PromotionsController {
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @Get('admin')
-  listAdmin(): Promise<PromotionResponse[]> {
-    return this.promotionsService.listAdmin();
+  listAdmin(@Query() query: PromotionQueryDto): Promise<PromotionResponse[]> {
+    return this.promotionsService.listAdmin(query);
   }
 
   @ApiBearerAuth()
@@ -63,23 +68,50 @@ export class PromotionsController {
       customerId: user.id,
       restaurantId: dto.restaurantId,
       subtotalCents: dto.subtotal ? toCents(dto.subtotal) : 0,
+      deliveryFeeCents: dto.deliveryFee ? toCents(dto.deliveryFee) : 0,
     });
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @Get(':id/usage')
+  usage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<PromotionUsageResponse> {
+    return this.promotionsService.getUsage(id, user);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/status')
+  setStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: PromotionStatusDto,
+  ): Promise<PromotionResponse> {
+    return this.promotionsService.setStatus(id, dto.active, user);
   }
 
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @Patch(':id')
   update(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdatePromotionDto,
   ): Promise<PromotionResponse> {
-    return this.promotionsService.update(id, dto);
+    return this.promotionsService.update(id, dto, user);
   }
 
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  deactivate(@Param('id') id: string): Promise<PromotionResponse> {
-    return this.promotionsService.deactivate(id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.promotionsService.remove(id, user);
   }
 }

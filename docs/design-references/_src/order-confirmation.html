@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Order confirmed</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div data-header="Restaurants" data-cart="0"></div>
+
+<main>
+  <section class="confirm-hero">
+    <span class="orb" style="width:340px;height:340px;left:-140px;top:-120px"></span>
+    <span class="orb" style="width:240px;height:240px;right:-90px;bottom:-140px"></span>
+    <span class="orb" style="width:120px;height:120px;right:160px;top:40px"></span>
+
+    <div class="shell relative">
+      <div class="confirm-medal"><i data-icon="check"></i></div>
+      <span class="eyebrow bare" style="justify-content:center">Step 3 of 3 · Order confirmed</span>
+      <h1 class="mt-10">Dinner is on its way.</h1>
+      <p>Three kitchens are preparing your order and one courier will bring it together. We'll text you at each stage — no refreshing required.</p>
+
+      <div class="confirm-meta">
+        <span>Order <strong>#SV-10482</strong></span>
+        <span class="dot-sep"></span>
+        <span>Placed at <strong>7:02 PM</strong></span>
+        <span class="dot-sep"></span>
+        <span><strong>3</strong> kitchens</span>
+      </div>
+
+      <div class="eta-card" style="max-width:760px;margin-inline:auto">
+        <div>
+          <div class="label">Estimated arrival</div>
+          <div class="time">7:40 – 7:50 PM</div>
+          <div class="sub">About 38 minutes · Standard delivery</div>
+        </div>
+        <div class="driver">
+          <img src="/public/assets/people/avatar-driver-600.webp" alt="Courier Andre" />
+          <div>
+            <div class="name">Andre is your courier</div>
+            <div class="meta">4.9 ★ · 1,204 deliveries</div>
+          </div>
+        </div>
+        <a class="btn btn-primary" href="order-confirmation.html">Track order <i data-icon="arrowRight"></i></a>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell section-pad">
+    <div class="two-col">
+      <div>
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>What happens next</h2>
+            <span class="badge badge-gold">Live demo timeline</span>
+          </div>
+
+          <div class="progress mb-20"><span style="width:22%"></span></div>
+
+          <div class="steps-mini">
+            <div class="step-mini">
+              <span class="bubble"><i data-icon="check"></i></span>
+              <div>
+                <div class="title">Order received</div>
+                <div class="desc">All three kitchens have accepted your order.</div>
+              </div>
+              <time>7:02 PM</time>
+            </div>
+            <div class="step-mini">
+              <span class="bubble"><i data-icon="check"></i></span>
+              <div>
+                <div class="title">In the kitchen</div>
+                <div class="desc">Saffron &amp; Oak is cooking your butter chicken.</div>
+              </div>
+              <time>7:06 PM</time>
+            </div>
+            <div class="step-mini">
+              <span class="bubble future"><i data-icon="clock"></i></span>
+              <div>
+                <div class="title">Courier collecting</div>
+                <div class="desc">Andre will collect from Nonna Lucia first, then Saffron &amp; Oak.</div>
+              </div>
+              <time>Est. 7:24 PM</time>
+            </div>
+            <div class="step-mini">
+              <span class="bubble future"><i data-icon="pin"></i></span>
+              <div>
+                <div class="title">At your door</div>
+                <div class="desc">Leave at the door, as requested in your delivery notes.</div>
+              </div>
+              <time>Est. 7:45 PM</time>
+            </div>
+          </div>
+
+          <div class="note-box mt-12">
+            <i data-icon="info"></i>
+            <p>The tracking screen is a demo. Map positions and courier movement are illustrative and come from local mock data, not a live GPS feed.</p>
+          </div>
+        </section>
+
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>Your receipt</h2>
+            <a class="edit" href="#">Email a copy</a>
+          </div>
+
+          <div class="receipt-row" style="color:var(--olive-400);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600">
+            <span>Saffron &amp; Oak</span><span>$51.50</span>
+          </div>
+          <div class="receipt-item"><span><span class="qty-num">2×</span>Butter chicken</span><span>$37.00</span></div>
+          <div class="receipt-item"><span><span class="qty-num">1×</span>Saffron chicken bowl</span><span>$15.00</span></div>
+
+          <div class="divider mt-10" style="margin-bottom:10px"></div>
+
+          <div class="receipt-row" style="color:var(--olive-400);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600">
+            <span>Nonna Lucia</span><span>$21.00</span>
+          </div>
+          <div class="receipt-item"><span><span class="qty-num">1×</span>Truffle mushroom pizza</span><span>$21.00</span></div>
+
+          <div class="divider mt-10"></div>
+
+          <div class="mt-16">
+            <div class="receipt-row"><span>Subtotal</span><span>$94.00</span></div>
+            <div class="receipt-row"><span>Delivery</span><span>$3.99</span></div>
+            <div class="receipt-row"><span>Service fee</span><span>$2.80</span></div>
+            <div class="receipt-row"><span>Taxes</span><span>$8.12</span></div>
+            <div class="receipt-row"><span>Courier tip</span><span>$6.00</span></div>
+            <div class="receipt-row" style="color:var(--success)"><span>WELCOME30</span><span>−$5.00</span></div>
+          </div>
+
+          <div class="summary-total">
+            <span class="label">Paid</span>
+            <span class="value">$109.91</span>
+          </div>
+
+          <p class="tiny mt-8">Visa ending 4242 · Demo transaction, not charged.</p>
+        </section>
+      </div>
+
+      <aside>
+        <div class="card summary-card">
+          <h2>Delivering to</h2>
+          <div class="address-card mt-16" style="border-color:var(--line)">
+            <span class="icon"><i data-icon="pin"></i></span>
+            <div>
+              <div class="title">Home</div>
+              <p>41 Greenpoint Avenue, Apt 3B<br />Brooklyn, NY 11222</p>
+            </div>
+          </div>
+
+          <div class="divider mt-20"></div>
+
+          <div class="mt-16" style="display:grid;gap:12px">
+            <div class="flex items-center gap-10" style="font-size:12px;color:var(--olive-600)">
+              <i data-icon="truck"></i> <span>Standard delivery</span>
+            </div>
+            <div class="flex items-center gap-10" style="font-size:12px;color:var(--olive-600)">
+              <i data-icon="clock"></i> <span>Arrives 7:40 – 7:50 PM</span>
+            </div>
+            <div class="flex items-center gap-10" style="font-size:12px;color:var(--olive-600)">
+              <i data-icon="leaf"></i> <span>No cutlery requested</span>
+            </div>
+          </div>
+
+          <div class="divider mt-20"></div>
+
+          <div class="mt-16">
+            <div class="eyebrow bare">Need to change something?</div>
+            <p class="mt-8" style="font-size:12px;line-height:1.6;color:var(--olive-500)">
+              You can edit your order for the next 4 minutes, before the kitchens start cooking.
+            </p>
+            <button class="btn btn-outline btn-sm btn-block mt-12" type="button">Edit order</button>
+          </div>
+        </div>
+
+        <div class="card card-pad mt-16">
+          <div class="eyebrow bare">A note from Savora</div>
+          <p class="mt-8" style="font-family:var(--display);font-size:19px;line-height:1.35;color:var(--olive)">
+            “Good food arrives the way it left the kitchen.”
+          </p>
+          <p class="mt-10" style="font-size:11.5px;line-height:1.6;color:var(--olive-500)">
+            Your courier keeps each restaurant's bag separate and checks the seals at the door. If anything is wrong, message us within 24 hours.
+          </p>
+          <a class="btn btn-soft btn-sm btn-block mt-16" href="order-history.html">View order history</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="mock.js"></script>
+</body>
+</html>

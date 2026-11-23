@@ -4,6 +4,8 @@ import {
   DefaultValuePipe,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -18,10 +20,14 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public, RequireApproved, Roles } from '../common/decorators/auth.decorators';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import type { PaginatedResult } from '../common/dto/pagination-query.dto';
-import { UserRole } from '../common/enums/user.enum';
+import { AccountStatus, RestaurantStatus, UserRole } from '../common/enums/user.enum';
 import { MAX_IMAGE_BYTES } from '../uploads/image-file.util';
 import type { UploadedImageFile } from '../uploads/image-file.util';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import {
+  CreateRestaurantCategoryDto,
+  UpdateRestaurantCategoryDto,
+} from './dto/restaurant-category.dto';
 import { RestaurantAnalyticsQueryDto } from './dto/restaurant-analytics-query.dto';
 import { RestaurantQueryDto } from './dto/restaurant-query.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
@@ -129,6 +135,19 @@ export class RestaurantsController {
     return this.restaurantsService.listMine(user.id);
   }
 
+  /**
+   * Owner-facing profile read that does not depend on the restaurant already
+   * being approved. Public discovery keeps using `GET /restaurants/:idOrSlug`.
+   */
+  @ApiBearerAuth()
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @Get('mine/profile')
+  getMineProfile(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<RestaurantResponse> {
+    return this.restaurantsService.getOwnedProfile(user.id, user.restaurantId);
+  }
+
   @ApiBearerAuth()
   @Roles(UserRole.RESTAURANT_OWNER)
   @RequireApproved()
@@ -166,7 +185,16 @@ export class RestaurantsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateRestaurantDto,
   ): Promise<RestaurantResponse> {
-    return this.restaurantsService.createForOwner(user.id, toCreateInput(dto));
+    /*
+     * Restaurant visibility mirrors the owner account lifecycle. Registration
+     * creates the restaurant as PENDING_APPROVAL; once an administrator
+     * approves the account, restaurants it adds are published immediately.
+     */
+    const status =
+      user.accountStatus === AccountStatus.APPROVED
+        ? RestaurantStatus.APPROVED
+        : RestaurantStatus.PENDING_APPROVAL;
+    return this.restaurantsService.createForOwner(user.id, toCreateInput(dto), status);
   }
 
   @ApiBearerAuth()
@@ -241,5 +269,30 @@ export class RestaurantCategoriesController {
   @Get()
   list() {
     return this.restaurantsService.listCategories();
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @RequireApproved()
+  @Post()
+  create(@Body() dto: CreateRestaurantCategoryDto) {
+    return this.restaurantsService.createCategory(dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @RequireApproved()
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateRestaurantCategoryDto) {
+    return this.restaurantsService.updateCategory(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @RequireApproved()
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.restaurantsService.deleteCategory(id);
   }
 }

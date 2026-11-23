@@ -16,8 +16,9 @@ import { useImagePicker } from '@/hooks/useImagePicker';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getErrorMessage } from '@/services/api/errors';
 import { useToast } from '@/stores/toast-store';
-import type { Coordinates, Restaurant } from '@/types';
+import type { Coordinates, Restaurant, RestaurantCategory } from '@/types';
 import {
+  useRestaurantCategories,
   useRestaurantImageMutations,
   useRestaurantProfile,
   useRestaurantProfileMutations,
@@ -26,6 +27,7 @@ import {
 export default function RestaurantSettingsPage() {
   useDocumentTitle('Restaurant profile');
   const restaurant = useRestaurantProfile();
+  const categories = useRestaurantCategories();
 
   if (restaurant.isLoading) return <PageLoader label="Loading restaurant settings…" />;
 
@@ -63,7 +65,11 @@ export default function RestaurantSettingsPage() {
         }
       />
 
-      <ProfilePanel restaurant={restaurant.data} />
+      <ProfilePanel
+        restaurant={restaurant.data}
+        categories={categories.data ?? []}
+        categoriesFailed={categories.isError}
+      />
       <BrandImages restaurant={restaurant.data} />
     </div>
   );
@@ -73,6 +79,7 @@ interface ProfileFormState {
   name: string;
   tagline: string;
   description: string;
+  categorySlugs: string[];
   deliveryFee: string;
   minOrder: string;
   isOpen: boolean;
@@ -89,6 +96,7 @@ function toFormState(restaurant: Restaurant): ProfileFormState {
     name: restaurant.name,
     tagline: restaurant.tagline,
     description: restaurant.description ?? '',
+    categorySlugs: restaurant.categorySlugs ?? [],
     deliveryFee: String(restaurant.deliveryFee),
     minOrder: String(restaurant.minOrder),
     isOpen: restaurant.isOpen,
@@ -101,7 +109,13 @@ function toFormState(restaurant: Restaurant): ProfileFormState {
   };
 }
 
-function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
+interface ProfilePanelProps {
+  restaurant: Restaurant;
+  categories: RestaurantCategory[];
+  categoriesFailed: boolean;
+}
+
+function ProfilePanel({ restaurant, categories, categoriesFailed }: ProfilePanelProps) {
   const mutations = useRestaurantProfileMutations();
   const notify = useToast();
 
@@ -113,6 +127,15 @@ function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
 
   const update = <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) =>
     setForm((previous) => ({ ...previous, [key]: value }));
+
+  const toggleCategory = (slug: string) => {
+    setForm((previous) => ({
+      ...previous,
+      categorySlugs: previous.categorySlugs.includes(slug)
+        ? previous.categorySlugs.filter((entry) => entry !== slug)
+        : [...previous.categorySlugs, slug],
+    }));
+  };
 
   const applyGeocodedPlace = (place: GeocodedPlace | null) => {
     if (!place?.address) return;
@@ -160,6 +183,7 @@ function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
           name: form.name.trim(),
           tagline: form.tagline.trim(),
           description: form.description.trim(),
+          categorySlugs: form.categorySlugs,
           isOpen: form.isOpen,
           deliveryFee,
           minOrder,
@@ -221,6 +245,53 @@ function ProfilePanel({ restaurant }: { restaurant: Restaurant }) {
             maxLength={1000}
             hint={`Optional. Shown on your restaurant page. ${1000 - form.description.length} characters remaining.`}
           />
+
+          <fieldset className="space-y-2">
+            <legend className="text-[0.8125rem] font-medium text-olive-800">
+              Restaurant categories
+            </legend>
+            <p className="text-[0.6875rem] leading-relaxed text-olive-500">
+              Choose the platform categories customers browse. The catalog is maintained by
+              Savora operations.
+            </p>
+            {categoriesFailed ? (
+              <p className="text-[0.75rem] text-danger">
+                Categories could not be loaded. Refresh the page to try again.
+              </p>
+            ) : categories.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-olive-900/15 bg-ivory-50 px-3.5 py-3 text-[0.75rem] text-olive-500">
+                No platform categories are published yet. Savora operations can add them from
+                the admin dashboard.
+              </p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {categories.map((category) => {
+                  const checked = form.categorySlugs.includes(category.slug);
+                  return (
+                    <label
+                      key={category.id}
+                      className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-[0.8125rem] transition ${
+                        checked
+                          ? 'border-olive-500/40 bg-olive-900/5 text-olive-900'
+                          : 'border-olive-900/12 bg-ivory text-olive-700 hover:border-olive-400/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCategory(category.slug)}
+                        className="h-3.5 w-3.5 rounded border-olive-300 text-olive-700 focus:ring-olive-500"
+                      />
+                      <span className="min-w-0 flex-1 font-medium">{category.name}</span>
+                      <span className="text-[0.625rem] text-olive-400">
+                        {category.itemCount} restaurant{category.itemCount === 1 ? '' : 's'}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input

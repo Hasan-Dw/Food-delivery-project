@@ -15,6 +15,10 @@ import { DriversService } from '../drivers/drivers.service';
 import type { DriverResponse } from '../drivers/interfaces/driver-response.interface';
 import { User, type UserDocument } from '../users/schemas/user.schema';
 import { DriverProfile, type DriverProfileDocument } from '../users/schemas/driver-profile.schema';
+import {
+  Restaurant,
+  type RestaurantDocument,
+} from '../restaurants/schemas';
 import { toUserResponse } from '../users/user.mapper';
 import type { UserResponse } from '../users/interfaces/user-response.interface';
 import type {
@@ -48,6 +52,8 @@ export class AdminService {
     private readonly userModel: Model<UserDocument>,
     @InjectModel(DriverProfile.name)
     private readonly driverModel: Model<DriverProfileDocument>,
+    @InjectModel(Restaurant.name)
+    private readonly restaurantModel: Model<RestaurantDocument>,
     private readonly driversService: DriversService,
     private readonly deliveriesService: DeliveriesService,
   ) {}
@@ -104,16 +110,27 @@ export class AdminService {
     }
 
     const current = user.accountStatus as AccountStatus;
-    if (current === dto.status) {
-      return toUserResponse(user);
-    }
-
+    const unchanged = current === dto.status;
     const allowed = ALLOWED_STATUS_TRANSITIONS[current] ?? [];
-    if (!allowed.includes(dto.status)) {
+    if (!unchanged && !allowed.includes(dto.status)) {
       throw new ConflictException({
         code: 'account_status_transition_not_allowed',
         message: `An account cannot move from ${current} to ${dto.status}.`,
       });
+    }
+
+    /*
+     * Restaurant discovery mirrors the owner account lifecycle: approving the
+     * account publishes the restaurant, while rejecting or suspending the
+     * account hides it from the public catalogue. Running this on a no-op
+     * transition also repairs restaurants left pending by earlier flows.
+     */
+    if (user.role === UserRole.RESTAURANT_OWNER) {
+      await this.syncOwnedRestaurantStatuses(user._id, dto.status);
+    }
+
+    if (unchanged) {
+      return toUserResponse(user);
     }
 
     const reason = dto.reason?.trim();
@@ -157,5 +174,18 @@ export class AdminService {
     );
 
     return toUserResponse(user);
+  }
+
+  /**
+   * `RestaurantStatus` intentionally shares the account lifecycle values, so
+   * the account status can be written through unchanged.
+   */
+  private async syncOwnedRestaurantStatuses(
+    ownerId: Types.ObjectId,
+    status: AccountStatus,
+  ): Promise<void> {
+    await this.restaurantModel
+      .updateMany({ ownerId }, { $set: { status } })
+      .exec();
   }
 }

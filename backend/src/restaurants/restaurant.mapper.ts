@@ -91,6 +91,7 @@ export function toRestaurantCategoryResponse(
     slug: category.slug,
     imageKey: category.imageKey,
     itemCount,
+    sortOrder: category.sortOrder ?? 0,
   };
 
   if (category.description) response.description = category.description;
@@ -102,6 +103,7 @@ export function toMenuCategoryResponse(category: MenuCategory): MenuCategoryResp
     id: idOf(category),
     restaurantId: category.restaurantId.toString(),
     name: category.name,
+    sortOrder: category.sortOrder ?? 0,
   };
 
   if (category.description) response.description = category.description;

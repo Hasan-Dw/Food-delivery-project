@@ -63,7 +63,7 @@ export function FinalCta() {
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-[0.75rem] text-cream/55">
               <span className="inline-flex items-center gap-2">
                 <MapPin aria-hidden="true" className="h-3.5 w-3.5 text-gold-300" />
-                Delivering to {area.region}, {area.city}
+                Delivering to {area.city}
               </span>
               <span className="inline-flex items-center gap-2">
                 <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-gold-300" />

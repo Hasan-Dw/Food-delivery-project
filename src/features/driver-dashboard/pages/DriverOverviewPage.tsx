@@ -94,9 +94,9 @@ export default function DriverOverviewPage() {
           icon={<Star aria-hidden="true" className="h-4 w-4" />}
         />
         <StatCard
-          label="Sample earnings"
+          label="Payout total"
           value={formatCurrency(driver.totalEarnings)}
-          hint="Illustrative payout total, not a real ledger"
+          hint="Recorded payout total"
           icon={<Wallet aria-hidden="true" className="h-4 w-4" />}
         />
       </div>
@@ -196,10 +196,6 @@ export default function DriverOverviewPage() {
         <DashboardPanel eyebrow="Your status" title="Availability">
           <DriverAvailabilityControl driver={driver} />
           <dl className="mt-5 space-y-2.5 border-t border-olive-900/10 pt-4 text-[0.75rem]">
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-olive-500">Service area</dt>
-              <dd className="text-right font-medium text-olive-800">{driver.serviceArea ?? 'Not set'}</dd>
-            </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-olive-500">Vehicle</dt>
               <dd className="text-right font-medium capitalize text-olive-800">{driver.vehicle}</dd>

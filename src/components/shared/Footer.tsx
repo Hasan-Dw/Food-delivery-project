@@ -114,7 +114,7 @@ export function Footer() {
                   </p>
                 ) : (
                   <p className="mt-2 pl-4 text-[0.6875rem] text-cream/35">
-                    Demo form — no emails are stored or sent.
+                    Newsletter signup is unavailable until email delivery is configured.
                   </p>
                 )}
               </form>
@@ -168,7 +168,7 @@ export function Footer() {
                   notify({
                     tone: 'info',
                     title: `${label} policy`,
-                    description: 'This legal page is part of the launch checklist and is not included in the prototype.',
+                    description: 'This policy page is not available yet.',
                   })
                 }
                 className="text-cream/40 underline-offset-4 transition hover:text-cream/80 hover:underline"

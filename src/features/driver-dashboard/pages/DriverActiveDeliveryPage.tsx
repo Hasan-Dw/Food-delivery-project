@@ -26,7 +26,7 @@ import { formatAddress } from '@/features/dashboard/lib/dashboard-utils';
 import { TrackingMap } from '@/features/tracking/components/TrackingMap';
 import { DriverReleaseDialog } from '../components/DriverReleaseDialog';
 import { useDriverActiveContext, useDriverDeliveryAction, useDriverDeliveryRelease } from '../hooks/useDriverDashboard';
-import { useDriverLocationPublisher } from '../hooks/useDriverLocationPublisher';
+import { useDriverLocationPublisherState } from '../hooks/useDriverLocationPublisher';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useToast } from '@/stores/toast-store';
 import { actorFromUser, canActOnDelivery } from '@/lib/permissions';
@@ -46,6 +46,13 @@ interface NextAction {
 
 const nextActionFor: Partial<Record<DeliveryStatus, NextAction>> = {
   ASSIGNED: {
+    action: 'ARRIVE_AT_RESTAURANT',
+    label: 'Arrived at restaurant',
+    description: 'Confirm that you have reached the restaurant before collecting the order.',
+    variant: 'secondary',
+    requiresReadyOrder: false,
+  },
+  ARRIVED_AT_RESTAURANT: {
     action: 'PICK_UP',
     label: 'Confirm pickup',
     description: 'Only collect the food once the restaurant has marked the order ready.',
@@ -70,6 +77,7 @@ const nextActionFor: Partial<Record<DeliveryStatus, NextAction>> = {
 
 const steps: Array<{ status: DeliveryStatus; label: string }> = [
   { status: 'ASSIGNED', label: 'Assigned' },
+  { status: 'ARRIVED_AT_RESTAURANT', label: 'At restaurant' },
   { status: 'PICKED_UP', label: 'Picked up' },
   { status: 'ON_THE_WAY', label: 'On the way' },
   { status: 'DELIVERED', label: 'Delivered' },
@@ -81,17 +89,10 @@ export default function DriverActiveDeliveryPage() {
   const { profile, activeDelivery, order, tracking } = useDriverActiveContext();
   const action = useDriverDeliveryAction();
   const release = useDriverDeliveryRelease();
+  const publisher = useDriverLocationPublisherState();
   const notify = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [releaseOpen, setReleaseOpen] = useState(false);
-
-  const activeStatus = activeDelivery.data?.status;
-  const publisher = useDriverLocationPublisher({
-    deliveryId: activeDelivery.data?.id,
-    enabled: Boolean(
-      activeStatus && ['ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'].includes(activeStatus),
-    ),
-  });
 
   if (profile.isLoading) return <PageLoader label="Opening your driver workspace…" />;
 
@@ -185,7 +186,7 @@ export default function DriverActiveDeliveryPage() {
   const blockedByKitchen = Boolean(next?.requiresReadyOrder && !orderIsReady);
   const stepIndex = steps.findIndex((step) => step.status === delivery.status);
   const canRelease =
-    ['ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'].includes(delivery.status) &&
+    ['ASSIGNED', 'ARRIVED_AT_RESTAURANT', 'PICKED_UP', 'ON_THE_WAY'].includes(delivery.status) &&
     Boolean(delivery.driverId) &&
     !action.isPending &&
     !release.isPending;
@@ -271,16 +272,14 @@ export default function DriverActiveDeliveryPage() {
           'flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-[0.8125rem] leading-relaxed',
           publisher.status === 'publishing'
             ? 'border-olive-300/50 bg-olive-50/60 text-olive-700'
-            : publisher.status === 'denied' || publisher.status === 'error' || publisher.status === 'unsupported'
+            : publisher.status === 'denied' ||
+                publisher.status === 'error' ||
+                publisher.status === 'unsupported'
               ? 'border-danger/25 bg-danger/5 text-danger'
               : 'border-gold-300/60 bg-gold-50/70 text-olive-700',
         )}
       >
-        {publisher.status === 'publishing' ? (
-          <Navigation aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-olive-700" />
-        ) : (
-          <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-        )}
+        <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
           <p className="font-medium">
             {publisher.status === 'publishing'

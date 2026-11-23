@@ -49,7 +49,7 @@
 | Frontend checkout | Done | Server quote, coupon apply/remove, server totals, minimum-order and invalid-promotion guards, cash-on-delivery fallback. |
 | Frontend orders | Done | Order confirmation, order history, protected order tracking. |
 | Frontend dashboards | Done | Owner order detail uses the tracking snapshot for assigned driver data; driver actions restricted to `PICK_UP`/`START_TRANSIT`/`DELIVER`. |
-| Frontend services | Done | HTTP adapters for orders, deliveries, drivers, promotions, checkout and tracking; mock adapters kept for preview mode. |
+| Frontend services | Done | HTTP adapters for every domain, including admin platform analytics and restaurant analytics. |
 | Documentation | Done | Contract, architecture, schema and this progress file updated for Phase 2. |
 
 ## Phase 3 delivered (backend)
