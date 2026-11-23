@@ -26,6 +26,17 @@ export class DriverLastLocation {
 }
 export const DriverLastLocationSchema = SchemaFactory.createForClass(DriverLastLocation);
 
+@Schema({ _id: false })
+export class DriverServiceAreaGeometry {
+  @Prop({ required: true, enum: ['Polygon', 'MultiPolygon'] })
+  type: 'Polygon' | 'MultiPolygon';
+
+  @Prop({ type: Array, required: true })
+  coordinates: number[][][] | number[][][][];
+}
+export const DriverServiceAreaGeometrySchema =
+  SchemaFactory.createForClass(DriverServiceAreaGeometry);
+
 /**
  * Platform-owned driver profile. Assignment, deliveries and GPS live in the
  * deliveries module; this record owns approval, availability and the at-most-one
@@ -39,8 +50,13 @@ export class DriverProfile {
   @Prop({ required: true, enum: VehicleType })
   vehicle: string;
 
-  @Prop({ required: true, trim: true, maxlength: 120 })
-  serviceArea: string;
+  /** Legacy field retained for compatibility; it has no assignment meaning. */
+  @Prop({ trim: true, maxlength: 120 })
+  serviceArea?: string;
+
+  /** Admin-defined GeoJSON coverage boundary. Legacy profiles may be unset until configured. */
+  @Prop({ type: DriverServiceAreaGeometrySchema })
+  serviceAreaGeometry?: DriverServiceAreaGeometry;
 
   @Prop({ trim: true, maxlength: 40, default: '' })
   phone: string;

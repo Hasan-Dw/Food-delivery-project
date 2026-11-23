@@ -84,12 +84,13 @@ export class DriverRegistrationDto {
   })
   phone: string;
 
-  @IsString()
-  @Length(2, 120)
-  serviceArea: string;
-
   @IsEnum(VehicleType)
   vehicle: VehicleType;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  serviceArea?: string;
 }
 
 export class RegisterDto {

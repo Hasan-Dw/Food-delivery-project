@@ -213,12 +213,11 @@ default because a predictable secret would make every token forgeable.
 
 ## Frontend integration
 
-The frontend keeps its existing service contracts. When
-`VITE_DATA_SOURCE=http` and `VITE_API_BASE_URL` point at this API, the
-composition root in `src/services/index.ts` swaps in the HTTP implementations for
-auth, users, restaurants, menu items, orders, deliveries, drivers, promotions,
-checkout, tracking and image management. Only restaurant analytics and the admin
-dashboard read models stay local.
+The frontend keeps its existing service contracts. `VITE_API_BASE_URL` points
+at this API, and the composition root in `src/services/index.ts` composes the
+HTTP implementations for auth, users, restaurants, menu items, orders,
+deliveries, drivers, promotions, checkout, tracking, image management,
+restaurant analytics and admin analytics. There is no mock data source.
 
 ## Testing strategy
 

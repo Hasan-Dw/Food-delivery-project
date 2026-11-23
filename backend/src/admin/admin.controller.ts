@@ -6,7 +6,10 @@ import { UserRole } from '../common/enums/user.enum';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import type { DriverResponse } from '../drivers/interfaces/driver-response.interface';
 import type { UserResponse } from '../users/interfaces/user-response.interface';
+import { AdminAnalyticsService } from './analytics/admin-analytics.service';
+import type { AdminAnalyticsResponse } from './analytics/admin-analytics.interface';
 import { AdminService } from './admin.service';
+import { AdminAnalyticsQueryDto } from './dto/admin-analytics-query.dto';
 import {
   AdminAccountQueryDto,
   AdminDriverQueryDto,
@@ -18,7 +21,21 @@ import {
 @Roles(UserRole.ADMIN)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly analyticsService: AdminAnalyticsService,
+  ) {}
+
+  /**
+   * Platform analytics are derived from the database on every request and are
+   * restricted to administrators by the controller-level role guard.
+   */
+  @Get('analytics')
+  getAnalytics(
+    @Query() query: AdminAnalyticsQueryDto,
+  ): Promise<AdminAnalyticsResponse> {
+    return this.analyticsService.getPlatformAnalytics(query.range);
+  }
 
   @Get('accounts')
   listAccounts(@Query() query: AdminAccountQueryDto): Promise<UserResponse[]> {

@@ -26,4 +26,11 @@ export class ValidatePromotionDto {
   @Min(0)
   @Max(100000)
   subtotal?: number;
+
+  /** Display-only delivery fee, used to preview free-delivery coupons. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(10000)
+  deliveryFee?: number;
 }

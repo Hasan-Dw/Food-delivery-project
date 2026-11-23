@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -16,6 +16,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { OrderAction, OrderStatus } from '../../common/enums/order.enum';
+import { roundNumericValue } from '../../common/utils/dto-number.util';
 
 export class OrderAddressDto {
   @IsOptional()
@@ -55,13 +56,15 @@ export class OrderAddressDto {
   instructions?: string;
 
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 6 })
+  @Transform(roundNumericValue(6))
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(-90)
   @Max(90)
   lat?: number;
 
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 6 })
+  @Transform(roundNumericValue(6))
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(-180)
   @Max(180)
   lng?: number;

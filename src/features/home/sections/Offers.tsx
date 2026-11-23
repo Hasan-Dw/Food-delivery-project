@@ -83,7 +83,7 @@ export function Offers() {
             <p className="flex items-start gap-2.5">
               <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-terracotta" />
               <span>
-                Demo offers only. Codes are stored locally in this prototype and never sent to a payment provider.
+                Codes are validated by the Savora API at checkout. Minimum order values apply.
               </span>
             </p>
             <span className="shrink-0 text-[0.6875rem] uppercase tracking-[0.12em] text-olive-500">

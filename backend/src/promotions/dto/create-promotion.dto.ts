@@ -13,8 +13,13 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
-import { PromotionAccent, PromotionDiscountType } from '../../common/enums/promotion.enum';
+import {
+  PromotionAccent,
+  PromotionDiscountType,
+  PromotionScope,
+} from '../../common/enums/promotion.enum';
 
 export class CreatePromotionDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
@@ -51,11 +56,12 @@ export class CreatePromotionDto {
   @IsEnum(PromotionDiscountType)
   discountType: PromotionDiscountType;
 
-  /** Percent for PERCENTAGE; decimal currency for FIXED. */
+  /** Percent for PERCENTAGE; decimal currency for FIXED; omitted for FREE_DELIVERY. */
+  @ValidateIf((dto: CreatePromotionDto) => dto.discountType !== PromotionDiscountType.FREE_DELIVERY)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   @Max(10000)
-  value: number;
+  value?: number;
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -63,12 +69,31 @@ export class CreatePromotionDto {
   @Max(10000)
   minOrder?: number;
 
+  /** Cap for percentage and free-delivery coupons. Omit for no cap. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(10000)
+  maxDiscount?: number;
+
+  @IsOptional()
+  @IsISO8601()
+  startsAt?: string;
+
   @IsISO8601()
   expiresAt: string;
 
   @IsOptional()
   @IsMongoId()
   restaurantId?: string;
+
+  /**
+   * Admins may state the scope explicitly. Owners never reach this field
+   * because the owner controller forces RESTAURANT scope from the token.
+   */
+  @IsOptional()
+  @IsEnum(PromotionScope)
+  scope?: PromotionScope;
 
   /** 0 means unlimited. */
   @IsOptional()
@@ -82,6 +107,10 @@ export class CreatePromotionDto {
   @Min(1)
   @Max(1000)
   perCustomerLimit?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  firstOrderOnly?: boolean;
 
   @IsOptional()
   @IsBoolean()

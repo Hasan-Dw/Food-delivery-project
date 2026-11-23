@@ -6,6 +6,7 @@ import type { Review, ReviewType } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { cn } from '@/lib/cn';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { StarInput } from './Stars';
 
 interface ReviewSubmitInput {
@@ -55,6 +56,8 @@ export function ReviewDialog({
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     setRating(initial?.rating ?? 0);
@@ -67,8 +70,6 @@ export function ReviewDialog({
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const timer = window.setTimeout(() => closeRef.current?.focus(), 30);
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -82,7 +83,6 @@ export function ReviewDialog({
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [open, isSubmitting, onClose]);

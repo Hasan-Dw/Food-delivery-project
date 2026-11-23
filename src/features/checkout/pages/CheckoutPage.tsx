@@ -125,6 +125,7 @@ export default function CheckoutPage() {
         code,
         restaurantId: restaurantId ?? undefined,
         subtotal: quote.data?.subtotal ?? localSubtotal,
+        deliveryFee: quote.data?.deliveryFee ?? restaurant.data?.deliveryFee,
       }),
     onSuccess: (result) => {
       if (result.valid) {

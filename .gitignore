@@ -26,6 +26,9 @@ coverage/
 
 # Documentation
 /docs/
+!/docs/
+/docs/*
+!/docs/NGROK_SETUP.md
 
 # Operating system
 .DS_Store

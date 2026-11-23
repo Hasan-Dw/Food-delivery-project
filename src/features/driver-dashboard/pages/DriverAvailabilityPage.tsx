@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Bike, Car, CheckCircle2, Clock3, MapPin, Star, Truck, Wallet } from 'lucide-react';
+import { Bike, Car, CheckCircle2, Clock3, Star, Truck, Wallet } from 'lucide-react';
 import { PageLoader } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/StatePanel';
 import { ButtonLink } from '@/components/ui/Button';
@@ -125,10 +125,6 @@ export default function DriverAvailabilityPage() {
             <div className="min-w-0">
               <p className="text-[0.9375rem] font-semibold text-olive-900">{driver.name}</p>
               <p className="mt-0.5 text-[0.75rem] text-olive-500">{driver.phone}</p>
-              <p className="mt-1 inline-flex items-center gap-1 text-[0.6875rem] text-olive-500">
-                <MapPin aria-hidden="true" className="h-3 w-3" />
-                {driver.serviceArea ?? 'Service area not set'}
-              </p>
             </div>
           </div>
 
@@ -154,7 +150,7 @@ export default function DriverAvailabilityPage() {
               }
             />
             <Row
-              label="Sample earnings"
+              label="Payout total"
               value={
                 <span className="inline-flex items-center gap-1">
                   <Wallet aria-hidden="true" className="h-3 w-3 text-olive-500" />

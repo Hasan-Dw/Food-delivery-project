@@ -30,6 +30,7 @@ const headlines: Record<TrackingPhase, { lead: string; accent: string }> = {
   CANCELLED: { lead: 'This order was', accent: 'cancelled.' },
   PENDING_ASSIGNMENT: { lead: 'Finding your', accent: 'delivery partner.' },
   ASSIGNED: { lead: 'Your driver is', accent: 'on the way.' },
+  ARRIVED_AT_RESTAURANT: { lead: 'Your driver is', accent: 'at the restaurant.' },
   PICKED_UP: { lead: 'Dinner has been', accent: 'picked up.' },
   ON_THE_WAY: { lead: 'Dinner is', accent: 'on the way.' },
   DELIVERED: { lead: 'Dinner has', accent: 'arrived.' },
@@ -102,7 +103,7 @@ export default function OrderTrackingPage() {
   const isCancelled = status === 'CANCELLED';
   const isInconsistent = status === 'INCONSISTENT';
   const isDone = isDelivered || isCancelled || isInconsistent;
-  const isDemo = !snapshot.live;
+  const isSnapshot = !snapshot.live;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -140,8 +141,8 @@ export default function OrderTrackingPage() {
               Back to the marketplace
             </Link>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-300/50 bg-gold-50 px-3 py-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-gold-700">
-              {isDemo ? <FlaskConical aria-hidden="true" className="h-3 w-3" /> : null}
-              {isDemo ? 'Snapshot tracking' : 'Live tracking'}
+              {isSnapshot ? <FlaskConical aria-hidden="true" className="h-3 w-3" /> : null}
+              {isSnapshot ? 'Saved snapshot' : 'Live tracking'}
             </span>
           </div>
 
@@ -195,7 +196,7 @@ export default function OrderTrackingPage() {
                   </p>
                   <p className="mt-2 text-[0.6875rem] leading-relaxed text-olive-500">
                     {isDelivered
-                      ? 'Enjoy your meal. This receipt stays available in this preview.'
+                      ? 'Enjoy your meal. This receipt stays available in your order history.'
                       : isCancelled
                         ? 'No delivery is in progress for this order.'
                         : isInconsistent
@@ -212,7 +213,7 @@ export default function OrderTrackingPage() {
 
               <div className="mt-4 flex items-center justify-between gap-3 border-t border-olive-900/8 pt-3">
                 <span className="text-[0.625rem] text-olive-500">
-                  {isDemo ? 'Illustrative snapshot' : 'Live connection'}
+                  {isSnapshot ? 'Saved snapshot' : 'Live connection'}
                 </span>
                 <Button
                   type="button"
@@ -264,8 +265,8 @@ export default function OrderTrackingPage() {
             <p className="flex items-start gap-2.5 text-[0.75rem] leading-relaxed text-olive-500">
               <FlaskConical aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-gold-600" />
               <span>
-                {isDemo
-                  ? 'Tracking is served from a saved snapshot. Refresh to fetch the latest order state.'
+                {isSnapshot
+                  ? 'Tracking is displayed from a saved snapshot. Refresh to fetch the latest order state.'
                   : 'This page receives live driver positions and status changes from the Savora tracking channel.'}
               </span>
             </p>

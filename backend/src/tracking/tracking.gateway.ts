@@ -27,7 +27,7 @@ type TrackingSocket = Socket & { data: TrackingSocketData };
 
 @WebSocketGateway({
   namespace: '/tracking',
-  cors: { origin: true, credentials: true },
+  cors: { origin: [], credentials: true },
 })
 export class TrackingGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -52,6 +52,11 @@ export class TrackingGateway
    */
   afterInit(server: Server): void {
     const namespace = server as unknown as Namespace;
+    const allowedOrigins = this.config.get<string[]>('corsOrigins') ?? [];
+    namespace.server.engine.opts.cors = {
+      origin: allowedOrigins,
+      credentials: true,
+    };
     namespace.use((socket, next) => {
       void this.authenticate(socket as TrackingSocket, next);
     });

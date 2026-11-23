@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Checkout</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div data-header="Restaurants" data-cart="3"></div>
+
+<main>
+  <div class="shell page-head" style="padding-bottom:18px">
+    <a class="back-link" href="cart.html">← Back to cart</a>
+    <div class="page-head-row">
+      <div>
+        <span class="eyebrow">Step 2 of 3</span>
+        <h1>Checkout</h1>
+      </div>
+      <div class="stepper" style="margin-top:0">
+        <span class="step done"><span class="num">1</span> Cart</span>
+        <span class="line"></span>
+        <span class="step active"><span class="num">2</span> Delivery &amp; payment</span>
+        <span class="line"></span>
+        <span class="step"><span class="num">3</span> Confirmation</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell section-pad" style="padding-top:10px">
+    <div class="two-col">
+      <div>
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>Delivery address</h2>
+            <a class="edit" href="#">Change</a>
+          </div>
+
+          <div class="address-card">
+            <span class="icon"><i data-icon="pin"></i></span>
+            <div>
+              <div class="title">Home <span class="badge badge-olive">Default</span></div>
+              <p>41 Greenpoint Avenue, Apt 3B<br />Brooklyn, NY 11222</p>
+              <p class="mt-6" style="font-size:10.5px;color:var(--olive-400)">Buzz 3B · Leave at the door</p>
+            </div>
+            <span class="selected"><i data-icon="check"></i></span>
+          </div>
+
+          <div class="note-box mt-16">
+            <i data-icon="info"></i>
+            <p>This address is inside all three kitchens' delivery zones. If you switch to a further address, some items may become unavailable.</p>
+          </div>
+        </section>
+
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>When should we deliver?</h2>
+          </div>
+          <div class="time-row">
+            <span class="time-chip on">As soon as possible · 35–45 min</span>
+            <span class="time-chip">Schedule for later</span>
+          </div>
+          <div class="radio-row mt-12">
+            <div class="radio-card on">
+              <span class="radio on"></span>
+              <div style="flex:1">
+                <strong style="color:var(--olive)">Standard delivery</strong>
+                <span class="dot-sep" style="display:inline-block;margin:0 7px"></span>
+                <span>Arrives 7:40 – 7:50 PM</span>
+              </div>
+              <span style="font-weight:600;color:var(--olive)">$3.99</span>
+            </div>
+            <div class="radio-card">
+              <span class="radio"></span>
+              <div style="flex:1">
+                <strong style="color:var(--olive)">Priority delivery</strong>
+                <span class="dot-sep" style="display:inline-block;margin:0 7px"></span>
+                <span>Arrives 7:25 – 7:35 PM</span>
+              </div>
+              <span style="font-weight:600;color:var(--olive)">$6.49</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>Payment</h2>
+            <a class="edit" href="#">Add card</a>
+          </div>
+
+          <div class="radio-row">
+            <div class="radio-card on">
+              <span class="radio on"></span>
+              <span class="card-brand">VISA</span>
+              <div style="flex:1">
+                <strong style="color:var(--olive)">Visa ending 4242</strong>
+                <div style="font-size:10.5px;color:var(--olive-400)">Expires 08 / 28 · Maya Bennett</div>
+              </div>
+              <span class="badge badge-gold">Demo card</span>
+            </div>
+            <div class="radio-card">
+              <span class="radio"></span>
+              <span class="card-brand" style="background:var(--gold)">MC</span>
+              <div style="flex:1">
+                <strong style="color:var(--olive)">Mastercard ending 1881</strong>
+                <div style="font-size:10.5px;color:var(--olive-400)">Expires 11 / 27 · Maya Bennett</div>
+              </div>
+            </div>
+            <div class="radio-card">
+              <span class="radio"></span>
+              <i data-icon="plus" style="color:var(--olive-500)"></i>
+              <span>Use a new card</span>
+            </div>
+          </div>
+
+          <div class="note-box mt-16">
+            <i data-icon="shield"></i>
+            <p><strong style="color:var(--olive-600)">Demo checkout.</strong> Savora is a frontend portfolio project. No card is charged, no card details are sent anywhere, and the payment step is a visual integration boundary for a real provider.</p>
+          </div>
+        </section>
+
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>Courier tip</h2>
+            <span class="tiny">100% goes to the courier</span>
+          </div>
+          <div class="time-row">
+            <span class="time-chip">$0</span>
+            <span class="time-chip">$2</span>
+            <span class="time-chip">$4</span>
+            <span class="time-chip on">$6</span>
+            <span class="time-chip">Custom</span>
+          </div>
+        </section>
+
+        <section class="card checkout-section">
+          <div class="checkout-head">
+            <h2>Delivery notes</h2>
+          </div>
+          <textarea class="textarea" placeholder="Anything the courier should know? Gate codes, allergies, where to leave the bag…">Leave at the door please — the buzzer is unreliable after 8pm.</textarea>
+        </section>
+      </div>
+
+      <aside>
+        <div class="card summary-card">
+          <div class="flex items-center justify-between">
+            <h2>Your order</h2>
+            <a class="tiny" href="cart.html" style="color:var(--terracotta-600)">Edit</a>
+          </div>
+
+          <div class="mt-16">
+            <div class="receipt-row" style="color:var(--olive-400);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600">
+              <span>Saffron &amp; Oak</span><span>$51.50</span>
+            </div>
+            <div class="receipt-item"><span><span class="qty-num">2×</span>Butter chicken</span><span>$37.00</span></div>
+            <div class="receipt-item"><span><span class="qty-num">1×</span>Saffron chicken bowl</span><span>$15.00</span></div>
+
+            <div class="divider mt-10" style="margin-bottom:10px"></div>
+
+            <div class="receipt-row" style="color:var(--olive-400);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600">
+              <span>Nonna Lucia</span><span>$21.00</span>
+            </div>
+            <div class="receipt-item"><span><span class="qty-num">1×</span>Truffle mushroom pizza</span><span>$21.00</span></div>
+          </div>
+
+          <div class="divider mt-10"></div>
+
+          <div class="mt-16">
+            <div class="summary-line"><span>Subtotal</span><span>$94.00</span></div>
+            <div class="summary-line"><span>Delivery</span><span>$3.99</span></div>
+            <div class="summary-line"><span>Service fee</span><span>$2.80</span></div>
+            <div class="summary-line"><span>Taxes</span><span>$8.12</span></div>
+            <div class="summary-line"><span>Courier tip</span><span>$6.00</span></div>
+            <div class="summary-line" style="color:var(--success)"><span>WELCOME30</span><span>−$5.00</span></div>
+          </div>
+
+          <div class="summary-total">
+            <span class="label">Total</span>
+            <span class="value">$109.91</span>
+          </div>
+
+          <a class="btn btn-primary btn-lg btn-block mt-20" href="order-confirmation.html">
+            Place order <i data-icon="arrowRight"></i>
+          </a>
+
+          <p class="tiny mt-12" style="text-align:center">Placing this order creates a demo order only.</p>
+
+          <div class="safe-note mt-16">
+            <i data-icon="shield"></i>
+            <p>By continuing you agree to Savora's demo terms. No payment method is charged and no real delivery is dispatched.</p>
+          </div>
+        </div>
+
+        <div class="card card-pad mt-16">
+          <div class="eyebrow bare">Arriving together</div>
+          <p class="mt-8" style="font-size:12px;line-height:1.6;color:var(--olive-500)">
+            Saffron &amp; Oak and Nonna Lucia are 400m apart, so one courier can collect both bags. If one kitchen runs late we will message you before the ETA changes.
+          </p>
+          <div class="flex items-center gap-8 mt-12" style="font-size:11px;color:var(--olive-500)">
+            <i data-icon="truck"></i> <span>One courier · two pickups</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="mock.js"></script>
+</body>
+</html>

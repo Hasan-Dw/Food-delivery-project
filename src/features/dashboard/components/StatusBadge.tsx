@@ -35,6 +35,7 @@ const statusClasses: Record<BadgeStatus, string> = {
   CANCELLED: 'bg-brown-50 text-brown-600 ring-brown-200',
   PENDING_ASSIGNMENT: 'bg-gold-100 text-gold-700 ring-gold-300/60',
   ASSIGNED: 'bg-terracotta-50 text-terracotta-700 ring-terracotta-200/60',
+  ARRIVED_AT_RESTAURANT: 'bg-gold-100 text-gold-700 ring-gold-300/60',
   PICKED_UP: 'bg-olive-50 text-olive-700 ring-olive-700/20',
   ON_THE_WAY: 'bg-terracotta-50 text-terracotta-700 ring-terracotta-200/60',
   DELIVERED: 'bg-success/10 text-success ring-success/25',

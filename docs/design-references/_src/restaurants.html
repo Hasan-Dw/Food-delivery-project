@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Restaurants</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div data-header="Restaurants" data-cart="3"></div>
+
+<main>
+  <section class="discovery-hero">
+    <div class="shell">
+      <span class="eyebrow">The directory</span>
+      <h1>Find the kitchen that fits tonight.</h1>
+      <p>Every independent restaurant on Savora, filtered by what you actually care about: time, price, dietary needs and how the food travels.</p>
+
+      <div class="search-bar">
+        <span class="control"><i data-icon="pin"></i> Brooklyn, NY</span>
+        <span class="control"><i data-icon="clock"></i> Deliver now</span>
+        <input class="query" value="Dinner for two" aria-label="Search restaurants" />
+        <button class="btn btn-primary" type="button"><i data-icon="search"></i> Search</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell discovery-layout">
+    <aside class="filters">
+      <div class="filter-head">
+        <h2>Filters</h2>
+        <a href="#">Clear all</a>
+      </div>
+
+      <div class="filter-group">
+        <h3>Sort by <span>−</span></h3>
+        <label class="filter-option"><span class="radio on" style="width:15px;height:15px"></span> Recommended</label>
+        <label class="filter-option"><span class="radio" style="width:15px;height:15px"></span> Fastest delivery</label>
+        <label class="filter-option"><span class="radio" style="width:15px;height:15px"></span> Highest rated</label>
+        <label class="filter-option"><span class="radio" style="width:15px;height:15px"></span> Price: low to high</label>
+      </div>
+
+      <div class="filter-group">
+        <h3>Cuisine <span>−</span></h3>
+        <label class="filter-option"><span class="check on"><i data-icon="check"></i></span> Italian <span class="count">14</span></label>
+        <label class="filter-option"><span class="check on"><i data-icon="check"></i></span> Indian <span class="count">8</span></label>
+        <label class="filter-option"><span class="check"></span> Japanese <span class="count">11</span></label>
+        <label class="filter-option"><span class="check"></span> Mexican <span class="count">9</span></label>
+        <label class="filter-option"><span class="check"></span> Burgers <span class="count">16</span></label>
+        <label class="filter-option"><span class="check"></span> Healthy <span class="count">12</span></label>
+        <a class="tiny mt-10" style="display:inline-block;color:var(--terracotta-600)" href="#">Show all 18 cuisines</a>
+      </div>
+
+      <div class="filter-group">
+        <h3>Delivery time <span>−</span></h3>
+        <label class="filter-option"><span class="radio on" style="width:15px;height:15px"></span> Under 30 min <span class="count">22</span></label>
+        <label class="filter-option"><span class="radio" style="width:15px;height:15px"></span> 30 – 45 min <span class="count">31</span></label>
+        <label class="filter-option"><span class="radio" style="width:15px;height:15px"></span> 45+ min <span class="count">7</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h3>Dietary <span>−</span></h3>
+        <label class="filter-option"><span class="check"></span> Vegetarian <span class="count">26</span></label>
+        <label class="filter-option"><span class="check"></span> Vegan <span class="count">13</span></label>
+        <label class="filter-option"><span class="check"></span> Gluten free <span class="count">18</span></label>
+        <label class="filter-option"><span class="check"></span> Halal <span class="count">6</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h3>Price <span>−</span></h3>
+        <label class="filter-option"><span class="check on"><i data-icon="check"></i></span> $ <span class="count">9</span></label>
+        <label class="filter-option"><span class="check on"><i data-icon="check"></i></span> $$ <span class="count">34</span></label>
+        <label class="filter-option"><span class="check"></span> $$$ <span class="count">17</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h3>Offers <span>−</span></h3>
+        <label class="filter-option"><span class="check on"><i data-icon="check"></i></span> Has an offer <span class="count">21</span></label>
+        <label class="filter-option"><span class="check"></span> Free delivery <span class="count">12</span></label>
+      </div>
+
+      <button class="btn btn-primary btn-sm btn-block mt-16" type="button">Show 43 restaurants</button>
+    </aside>
+
+    <div>
+      <div class="results-head">
+        <div>
+          <h2>43 kitchens deliver to Greenpoint</h2>
+          <div class="sub">Sorted by recommended · updated 2 minutes ago</div>
+        </div>
+        <div class="sort">
+          <span>View</span>
+          <div class="segmented"><span class="on">Grid</span><span>Map</span></div>
+        </div>
+      </div>
+
+      <div class="flex gap-6" style="flex-wrap:wrap;margin-bottom:16px">
+        <span class="chip active">Under 30 min <span style="opacity:.7">×</span></span>
+        <span class="chip active">Italian <span style="opacity:.7">×</span></span>
+        <span class="chip active">Indian <span style="opacity:.7">×</span></span>
+        <span class="chip">Open now</span>
+        <span class="chip">Free delivery</span>
+      </div>
+
+      <div class="restaurant-grid">
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-saffron-oak-900.webp" alt="Saffron &amp; Oak dining room" />
+            <div class="badges"><span class="badge badge-cream">Savora pick</span></div>
+            <span class="eta">25–35 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Saffron &amp; Oak</div>
+                <div class="cuisine">Indian · $$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.8</span>
+            </div>
+            <div class="meta"><span>1.2 km</span><span class="dot-sep"></span><span>$3.99 delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">20% off mains tonight</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-nonna-lucia-900.webp" alt="Nonna Lucia dining room" />
+            <div class="badges"><span class="badge badge-gold">Neighbourhood favourite</span></div>
+            <span class="eta">30–40 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Nonna Lucia</div>
+                <div class="cuisine">Italian · $$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.7</span>
+            </div>
+            <div class="meta"><span>1.8 km</span><span class="dot-sep"></span><span>$3.99 delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">Free garlic focaccia over $40</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-koji-sushi-900.webp" alt="Koji Sushi counter" />
+            <div class="badges"><span class="badge badge-cream">Savora pick</span></div>
+            <span class="eta">20–30 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Koji Sushi</div>
+                <div class="cuisine">Japanese · $$$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.9</span>
+            </div>
+            <div class="meta"><span>0.9 km</span><span class="dot-sep"></span><span>$4.99 delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">Chef's selection · 12 pieces</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-patty-club-900.webp" alt="Patty Club burger bar" />
+            <span class="eta">25–35 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Patty Club</div>
+                <div class="cuisine">Burgers · $</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.6</span>
+            </div>
+            <div class="meta"><span>1.5 km</span><span class="dot-sep"></span><span>$2.99 delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">Two burgers for $22</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-green-bowl-900.webp" alt="Green Bowl counter" />
+            <span class="eta">15–25 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Green Bowl</div>
+                <div class="cuisine">Healthy · $$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.7</span>
+            </div>
+            <div class="meta"><span>0.6 km</span><span class="dot-sep"></span><span>Free delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">Build-a-bowl · $2 off</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-smoke-honey-900.webp" alt="Smoke &amp; Honey dining room" />
+            <span class="eta">35–45 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Smoke &amp; Honey</div>
+                <div class="cuisine">Barbecue · $$$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.8</span>
+            </div>
+            <div class="meta"><span>2.4 km</span><span class="dot-sep"></span><span>$4.99 delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">Sunday brisket · pre-order</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-casa-veracruz-900.webp" alt="Casa Veracruz dining room" />
+            <span class="eta">30–40 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Casa Veracruz</div>
+                <div class="cuisine">Mexican · $$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.5</span>
+            </div>
+            <div class="meta"><span>2.1 km</span><span class="dot-sep"></span><span>$3.49 delivery</span><span class="right">Open</span></div>
+            <span class="offer-chip">Taco night · 3 for $12</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/restaurants/restaurant-creme-crust-900.webp" alt="Crème &amp; Crust bakery" />
+            <span class="eta">20–30 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">Crème &amp; Crust</div>
+                <div class="cuisine">Bakery · $</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.9</span>
+            </div>
+            <div class="meta"><span>1.1 km</span><span class="dot-sep"></span><span>$2.49 delivery</span><span class="right">Closing</span></div>
+            <span class="offer-chip">Pastry box · 6 for $18</span>
+          </div>
+        </a>
+
+        <a class="restaurant-tile" href="restaurant-details.html">
+          <div class="photo">
+            <img src="/public/assets/banners/offer-table-spread-1100.webp" alt="A shared table spread" />
+            <span class="eta">40–50 min</span>
+          </div>
+          <div class="body">
+            <div class="name-row">
+              <div>
+                <div class="name">The Long Table</div>
+                <div class="cuisine">Contemporary · $$$</div>
+              </div>
+              <span class="rating"><i data-icon="star"></i> 4.4</span>
+            </div>
+            <div class="meta"><span>3.0 km</span><span class="dot-sep"></span><span>$5.99 delivery</span><span class="right">Pre-order</span></div>
+            <span class="offer-chip">Chef's table · sharing menu</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="pagination">
+        <span class="page-dot"><i data-icon="arrowLeft"></i></span>
+        <span class="page-dot on">1</span>
+        <span class="page-dot">2</span>
+        <span class="page-dot">3</span>
+        <span class="page-dot">4</span>
+        <span class="page-dot">5</span>
+        <span class="page-dot"><i data-icon="arrowRight"></i></span>
+      </div>
+
+      <div class="note-box mt-24">
+        <i data-icon="info"></i>
+        <p>Restaurant discovery is a design reference for the directory module. The implemented build mounts only Home, auth, Profile and Order Tracking; this page is owned by Team Member 4.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="mock.js"></script>
+</body>
+</html>

@@ -1,14 +1,28 @@
-import type { AccountStatus, Driver, User } from '@/types';
+import type {
+  AccountStatus,
+  AdminAnalytics,
+  AdminAnalyticsQuery,
+  Driver,
+  User,
+} from '@/types';
 import type { ApiClient } from '@/services/api/client';
 import type {
   AdminAccountQuery,
   AdminDriverQuery,
-  AdminMutationOptions,
   AdminService,
 } from './AdminService';
 
 export class HttpAdminService implements AdminService {
   constructor(private readonly client: ApiClient) {}
+
+  async getAnalytics(
+    query: AdminAnalyticsQuery = { range: '30d' },
+  ): Promise<AdminAnalytics> {
+    const response = await this.client.get<AdminAnalytics>('/admin/analytics', {
+      query: { range: query.range },
+    });
+    return response.data;
+  }
 
   async listAccounts(query?: AdminAccountQuery): Promise<User[]> {
     const response = await this.client.get<User[]>('/admin/accounts', {
@@ -31,11 +45,10 @@ export class HttpAdminService implements AdminService {
     userId: string,
     status: AccountStatus,
     reason?: string,
-    options: AdminMutationOptions = {},
   ): Promise<User> {
     const response = await this.client.patch<User>(
       `/admin/accounts/${encodeURIComponent(userId)}/status`,
-      { status, reason, actorId: options.actorId ?? undefined },
+      { status, reason },
     );
     return response.data;
   }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
   ChevronDown,
@@ -17,6 +17,7 @@ import { Button, ButtonLink } from '@/components/ui/Button';
 import { Image } from '@/components/ui/Image';
 import { PageLoader } from '@/components/ui/Skeleton';
 import { OrderDetailsPanel } from '@/features/checkout/components/OrderDetailsPanel';
+import { ConfirmDialog } from '@/features/dashboard/components/ConfirmDialog';
 import { OrderReviewDialog } from '@/features/reviews/components/OrderReviewDialog';
 import { ROUTES } from '@/config/routes';
 import { queryKeys } from '@/lib/query-keys';
@@ -78,6 +79,9 @@ function OrderCard({
   const delivered = isDelivered(order);
   const navigate = useNavigate();
   const notify = useToast();
+  const queryClient = useQueryClient();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const canCancel = order.status === 'PENDING' || order.status === 'ACCEPTED';
 
   const reorder = useMutation({
     mutationFn: async (target: Order) => {
@@ -103,6 +107,7 @@ function OrderCard({
           quantity: item.quantity,
           selectedOptions: item.selectedOptions ?? [],
         });
+
         added += 1;
       }
 
@@ -131,6 +136,25 @@ function OrderCard({
         tone: 'error',
         title: 'Could not reorder',
         description: getErrorMessage(error, 'Please try again in a moment.'),
+      }),
+  });
+
+  const cancel = useMutation({
+    mutationFn: () => services.orders.transition(order.id, 'CANCEL'),
+    onSuccess: () => {
+      setCancelOpen(false);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orderList() });
+      notify({
+        tone: 'success',
+        title: 'Order cancelled',
+        description: 'The restaurant has been notified.',
+      });
+    },
+    onError: (error) =>
+      notify({
+        tone: 'error',
+        title: 'Could not cancel order',
+        description: getErrorMessage(error, 'The order may have started preparation.'),
       }),
   });
 
@@ -207,11 +231,32 @@ function OrderCard({
                 className={`h-3.5 w-3.5 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
               />
             </button>
+            {canCancel ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setCancelOpen(true)}
+                disabled={cancel.isPending}
+              >
+                Cancel order
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
 
       {expanded ? <OrderDetailsPanel order={order} /> : null}
+      <ConfirmDialog
+        open={cancelOpen}
+        title="Cancel this order?"
+        description="You can cancel before the restaurant starts preparing it. This action cannot be undone."
+        confirmLabel="Cancel order"
+        isLoading={cancel.isPending}
+        onConfirm={() => cancel.mutate()}
+        onCancel={() => {
+          if (!cancel.isPending) setCancelOpen(false);
+        }}
+      />
     </article>
   );
 }

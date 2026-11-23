@@ -10,7 +10,6 @@ import { useToast } from '@/stores/toast-store';
 import { services } from '@/services';
 import { queryKeys } from '@/lib/query-keys';
 import { getErrorMessage } from '@/services/api/errors';
-import { env } from '@/config/env';
 import { cn } from '@/lib/cn';
 
 const dietaryOptions: { value: DietaryPreference; label: string; description: string }[] = [
@@ -73,9 +72,7 @@ export function PreferencesPanel({ user }: { user: User }) {
       notify({
         tone: 'success',
         title: 'Preferences saved',
-        description: env.useMocks
-          ? 'We will use these for this preview session.'
-          : 'These preferences are saved to your Savora account.',
+        description: 'These preferences are saved to your Savora account.',
       });
       setFormError(null);
     },
@@ -172,9 +169,8 @@ export function PreferencesPanel({ user }: { user: User }) {
           </div>
 
           <p className="text-[0.6875rem] leading-relaxed text-olive-500">
-            {env.useMocks
-              ? 'Notification settings are stored in this preview session. No emails are sent from the prototype.'
-              : 'Notification settings are stored on your Savora account. Email delivery is not enabled in this environment yet.'}
+            Notification settings are stored on your Savora account. Email delivery is not enabled in
+            this environment yet.
           </p>
         </div>
       </SectionFrame>

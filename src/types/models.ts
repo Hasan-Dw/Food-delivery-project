@@ -106,6 +106,7 @@ export interface RestaurantCategory {
   slug: string;
   imageKey: string;
   itemCount: number;
+  sortOrder?: number;
   description?: string;
 }
 
@@ -157,6 +158,7 @@ export interface ProductCategory {
   id: ID;
   restaurantId: ID;
   name: string;
+  sortOrder?: number;
   description?: string;
 }
 
@@ -253,6 +255,7 @@ export type OrderStatus =
 export type DeliveryStatus =
   | 'PENDING_ASSIGNMENT'
   | 'ASSIGNED'
+  | 'ARRIVED_AT_RESTAURANT'
   | 'PICKED_UP'
   | 'ON_THE_WAY'
   | 'DELIVERED'
@@ -268,7 +271,13 @@ export type OrderAction =
   | 'CANCEL';
 
 /** Delivery actions available to drivers and the platform delivery system. */
-export type DeliveryAction = 'ASSIGN' | 'PICK_UP' | 'START_TRANSIT' | 'DELIVER' | 'CANCEL';
+export type DeliveryAction =
+  | 'ASSIGN'
+  | 'ARRIVE_AT_RESTAURANT'
+  | 'PICK_UP'
+  | 'START_TRANSIT'
+  | 'DELIVER'
+  | 'CANCEL';
 
 /**
  * Platform-only assignment operations. These are deliberately separate from
@@ -328,7 +337,7 @@ export interface Driver {
   /** Mock earnings figure. A backend should expose a payout ledger instead. */
   totalEarnings: number;
   phone: string;
-  /** Optional service area supplied during driver registration. */
+  /** Legacy field retained for API compatibility; never used for assignment. */
   serviceArea?: string;
   accountStatus: AccountStatus;
   availability: DriverAvailability;
@@ -492,7 +501,7 @@ export type OrderStatusEvent = TrackingEvent;
 export interface TrackingLocation {
   label: string;
   address: string;
-  coordinates: Coordinates;
+  coordinates: Coordinates | null;
 }
 
 /** GeoJSON LineString in `[longitude, latitude]` order, as OSRM returns it. */
@@ -531,6 +540,8 @@ export interface TrackingSnapshot {
   deliveredAt?: ISODateString;
   destination: TrackingLocation;
   restaurant: TrackingLocation;
+  navigationStage?: 'TO_RESTAURANT' | 'TO_CUSTOMER';
+  navigationDestination?: TrackingLocation | null;
   route: TrackingRoute;
   /** Remaining road distance still to travel, in kilometres. */
   remainingDistanceKm?: number | null;
@@ -631,6 +642,11 @@ export interface UpdateReviewInput {
 
 /* ── Promotions ─────────────────────────────────────────────────────────── */
 
+export type PromotionAccent = 'terracotta' | 'olive' | 'gold';
+export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED' | 'FREE_DELIVERY';
+export type PromotionScope = 'GLOBAL' | 'RESTAURANT';
+export type PromotionStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'SCHEDULED';
+
 export interface Promotion {
   id: ID;
   title: string;
@@ -639,9 +655,83 @@ export interface Promotion {
   code: string;
   imageKey: string;
   expiresAt: ISODateString;
-  accent: 'terracotta' | 'olive' | 'gold';
+  accent: PromotionAccent;
   minOrder?: number;
   restaurantId?: ID;
+  restaurantName?: string;
+  discountType?: PromotionDiscountType;
+  /** Percent for PERCENTAGE, decimal currency for FIXED, 0 for FREE_DELIVERY. */
+  discountValue?: number;
+  maxDiscount?: number;
+  freeDelivery?: boolean;
+  startsAt?: ISODateString;
+  scope?: PromotionScope;
+  status?: PromotionStatus;
+  firstOrderOnly?: boolean;
+  usageLimit?: number;
+  usageCount?: number;
+  perCustomerLimit?: number;
+  active?: boolean;
+  discountGranted?: number;
+  redemptionCount?: number;
+  createdBy?: ID;
+  createdAt?: ISODateString;
+  updatedAt?: ISODateString;
+}
+
+/** Create/update payload shared by the admin and owner coupon editors. */
+export interface PromotionInput {
+  code: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  imageKey?: string;
+  accent?: PromotionAccent;
+  discountType: PromotionDiscountType;
+  value?: number;
+  minOrder?: number;
+  maxDiscount?: number;
+  startsAt?: string;
+  expiresAt: string;
+  restaurantId?: string;
+  scope?: PromotionScope;
+  usageLimit?: number;
+  perCustomerLimit?: number;
+  firstOrderOnly?: boolean;
+  active?: boolean;
+}
+
+export interface PromotionQuery {
+  scope?: PromotionScope;
+  status?: PromotionStatus;
+  restaurantId?: string;
+  q?: string;
+}
+
+/** Platform limits applied to restaurant-owned coupons. */
+export interface PromotionPolicy {
+  maxPercentage: number;
+  maxFixedDiscount: number;
+  maxDiscountCap: number;
+  maxMinimumOrder: number;
+  maxTotalUses: number;
+  maxUsesPerCustomer: number;
+}
+
+export interface PromotionUsageRedemption {
+  id: ID;
+  orderId: ID;
+  code: string;
+  discount: number;
+  redeemedAt: ISODateString;
+}
+
+export interface PromotionUsage {
+  promotion: Promotion;
+  totalRedemptions: number;
+  totalDiscount: number;
+  lastRedeemedAt?: ISODateString;
+  recent: PromotionUsageRedemption[];
 }
 
 /** Server evaluation of a coupon code at checkout. */
@@ -651,6 +741,8 @@ export interface PromotionValidation {
   title?: string;
   description?: string;
   discount: number;
+  discountType?: PromotionDiscountType;
+  freeDelivery?: boolean;
   message?: string;
 }
 
@@ -713,7 +805,6 @@ export interface RestaurantRegistrationDetails {
 
 export interface DriverRegistrationDetails {
   phone: string;
-  serviceArea: string;
   vehicle: VehicleType;
 }
 
