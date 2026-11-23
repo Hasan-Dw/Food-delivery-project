@@ -25,6 +25,11 @@ export interface TrackingConfiguration {
   liveEnabled: boolean;
 }
 
+export interface AssignmentConfiguration {
+  /** Interval used to revisit READY deliveries without an eligible driver. */
+  retryIntervalMs: number;
+}
+
 export interface AppConfiguration {
   nodeEnv: string;
   port: number;
@@ -35,6 +40,7 @@ export interface AppConfiguration {
   cloudinary: CloudinaryConfiguration;
   routing: RoutingConfiguration;
   tracking: TrackingConfiguration;
+  assignment: AssignmentConfiguration;
 }
 
 function parseOrigins(value: string | undefined): string[] {
@@ -93,6 +99,12 @@ export default (): AppConfiguration => {
         10,
       ),
       liveEnabled: parseBoolean(process.env.LIVE_TRACKING_ENABLED, true),
+    },
+    assignment: {
+      retryIntervalMs: Math.min(
+        parseNumber(process.env.AUTO_ASSIGNMENT_RETRY_INTERVAL_MS, 30_000),
+        3_600_000,
+      ),
     },
   };
 };
