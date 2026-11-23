@@ -26,7 +26,7 @@ Reviews and ratings are owned by another teammate and are not part of this branc
 
 ### Data modes
 
-The app runs fully in browser-local preview mode by default. Set `VITE_DATA_SOURCE=http` and `VITE_API_BASE_URL` to use the NestJS API for auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions and tracking. The admin dashboard and restaurant analytics remain preview fixtures.
+The app is API-backed in every environment. Set `VITE_API_BASE_URL` to the NestJS API origin; auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions, tracking, admin analytics and restaurant analytics all use the API. There is no mock data source and no silent fallback: a missing base URL shows a visible configuration error.
 
 ---
 
@@ -39,7 +39,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173/>. The app runs entirely on local mock services by default; no backend or API key is required.
+Open <http://127.0.0.1:5173/>. The frontend talks to the NestJS API in `backend/`; start that API first (see [Backend](#backend) below).
 
 ### Scripts
 
@@ -59,9 +59,8 @@ Copy `.env.example` to `.env` only when you need to override defaults. All value
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | empty | Backend origin, no trailing slash. Empty keeps the app on mocks. |
+| `VITE_API_BASE_URL` | empty | Backend origin, no trailing slash. Empty surfaces a visible configuration error. |
 | `VITE_API_TIMEOUT_MS` | `15000` | Per-request timeout for the HTTP client |
-| `VITE_DATA_SOURCE` | `mock` | `mock` or `http`. If omitted, `http` is selected only when a base URL exists. |
 | `VITE_MAP_PROVIDER` | `preview` | Reserved map boundary: `preview`, `google` or `mapbox` |
 | `VITE_MAP_TOKEN` | empty | Reserved token for a future map provider |
 | `VITE_LIVE_TRACKING` | `false` | Enables the HTTP tracking adapter's SSE subscription |
@@ -81,7 +80,8 @@ Feature hook  ──►  TanStack Query cache
       ▼
 Service interface  (src/services/*/*Service.ts)
       │
-      ├── Mock implementation  (src/mocks/services/*)
+      ├── Service interface  (src/services/*/*Service.ts)
+      │
       └── HTTP implementation  (src/services/*/Http*Service.ts)
                     │
                     ▼
@@ -93,8 +93,8 @@ Service interface  (src/services/*/*Service.ts)
 
 - **Server state:** TanStack Query. Query keys live in `src/lib/query-keys.ts`.
 - **Client state:** Zustand for cart, selected delivery area, discovery filters and toasts.
-- **Auth:** `AuthProvider` owns session hydration, token attachment and 401 handling. In preview mode the session is browser-only; when the API is enabled, the token is issued and verified by the server.
-- **Composition root:** `src/services/index.ts` chooses preview or HTTP implementations once, per domain. Auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions and tracking use the API when configured; admin and analytics read models stay local.
+- **Auth:** `AuthProvider` owns session hydration, token attachment and 401 handling. The token is issued and verified by the server.
+- **Composition root:** `src/services/index.ts` composes the HTTP implementation for every domain, including admin and analytics.
 - **Code splitting:** every page is lazy-loaded; the shell paints immediately.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full map.
@@ -195,7 +195,6 @@ Point the frontend at it:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api/v1
-VITE_DATA_SOURCE=http
 ```
 
 Validation:
@@ -208,11 +207,10 @@ npm test
 npm run test:e2e
 ```
 
-**Security note:** preview mode keeps a browser-only session and must never be
-treated as authentication. With the API enabled, credentials are hashed with
-bcrypt, access tokens are signed with a server-side secret, and role/approval
-checks run on every request. A production deployment should still add
-rate-limiting, httpOnly refresh cookies, email delivery for password reset and
+**Security note:** credentials are hashed with bcrypt, access tokens are signed
+with a server-side secret, and role/approval checks run on every request. A
+production deployment should still add rate-limiting, httpOnly refresh cookies,
+email delivery for password reset and
 secret rotation.
 
 ---
@@ -287,9 +285,8 @@ development.
 
 ## Known limitations
 
-- Auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions and tracking are API-backed when `VITE_DATA_SOURCE=http`; in preview mode they use browser-local data.
-- The admin dashboard and restaurant analytics read models remain local preview fixtures.
-- Tracking is a polled snapshot; no live GPS, Socket.IO or map tiles are connected.
+- Auth, profiles, restaurants, menus, checkout, orders, deliveries, drivers, promotions, tracking, admin analytics and restaurant analytics are API-backed.
+- Tracking uses Socket.IO live updates with REST snapshots as a fallback.
 - Payments record a method snapshot but no gateway is integrated and no card is charged.
 - Reviews and ratings are owned by another teammate and are not part of this branch.
 - Owner and driver approval has no admin endpoint yet; only the seed script creates approved fixtures.

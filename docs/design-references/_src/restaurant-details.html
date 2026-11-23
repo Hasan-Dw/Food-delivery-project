@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Saffron &amp; Oak</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div data-header="Restaurants" data-cart="3"></div>
+
+<main>
+  <div class="shell" style="padding-top:22px">
+    <a class="back-link" href="restaurants.html">← All restaurants</a>
+  </div>
+
+  <section class="shell restaurant-hero">
+    <div class="restaurant-hero-grid">
+      <div>
+        <div class="flex items-center gap-8">
+          <span class="badge badge-gold">Savora pick</span>
+          <span class="badge badge-success">Open until 10:30 PM</span>
+        </div>
+        <h1 class="mt-12">Saffron &amp; Oak</h1>
+        <p class="lede">Seasonal Indian cooking with a wood-fired grill, a long bar and a menu built for sharing. Family-run on Franklin Street since 2018.</p>
+
+        <div class="fact-row">
+          <span class="fact"><i data-icon="star"></i> <strong style="color:var(--olive)">4.8</strong> (1,284 reviews)</span>
+          <span class="fact"><i data-icon="clock"></i> 25–35 min</span>
+          <span class="fact"><i data-icon="map"></i> 1.2 km</span>
+          <span class="fact"><i data-icon="truck"></i> $3.99 delivery</span>
+          <span class="fact"><i data-icon="leaf"></i> Vegetarian options</span>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" type="button"><i data-icon="bag"></i> Start an order</button>
+          <button class="btn btn-outline" type="button"><i data-icon="heart"></i> Save</button>
+          <button class="btn btn-ghost" type="button"><i data-icon="info"></i> Details</button>
+        </div>
+
+        <div class="promo-row mt-20" style="max-width:440px">
+          <i data-icon="sparkle"></i>
+          <span>20% off mains tonight · auto-applied at checkout</span>
+        </div>
+      </div>
+
+      <div class="hero-photo">
+        <img src="/public/assets/restaurants/restaurant-saffron-oak-1400.webp" alt="The Saffron &amp; Oak dining room at dusk" />
+        <span class="stamp"><i data-icon="pin"></i> 88 Franklin Street, Brooklyn</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="menu-tabs">
+    <div class="shell">
+      <a class="active" href="#menu">Menu</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#story">Our story</a>
+      <a href="#hours">Hours &amp; location</a>
+      <a href="#allergens">Allergens</a>
+    </div>
+  </div>
+
+  <div class="shell menu-layout">
+    <div>
+      <div class="menu-category">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+          <div>
+            <h2>Small plates</h2>
+            <div class="sub">For the table · 8 dishes</div>
+          </div>
+          <span class="tiny">Vegetarian options noted</span>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-burrata-900.webp" alt="Burrata with tomatoes" />
+          <div>
+            <div class="name">Burrata &amp; heirloom tomato</div>
+            <div class="desc">Creamy burrata, basil oil, toasted seeds and a little smoked salt.</div>
+            <div class="tags"><span>Vegetarian</span><span>Gluten free</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$12.00</div>
+            <button class="add" type="button" aria-label="Add burrata"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-birria-tacos-900.webp" alt="Birria tacos" />
+          <div>
+            <div class="name">Birria tacos</div>
+            <div class="desc">Three soft tacos, slow-braised beef, lime, coriander and salsa roja.</div>
+            <div class="tags"><span>Spicy</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$14.00</div>
+            <button class="add" type="button" aria-label="Add birria tacos"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-green-goddess-900.webp" alt="Green goddess bowl" />
+          <div>
+            <div class="name">Green goddess bowl</div>
+            <div class="desc">Avocado, grains, leafy greens, pickled cucumber and a herb dressing.</div>
+            <div class="tags"><span>Vegan</span><span>Gluten free</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$14.00</div>
+            <button class="add" type="button" aria-label="Add green goddess bowl"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-category">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+          <div>
+            <h2>Mains</h2>
+            <div class="sub">From the grill and the curry pot · 9 dishes</div>
+          </div>
+          <span class="badge badge-gold">20% off tonight</span>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-butter-chicken-900.webp" alt="Butter chicken" />
+          <div>
+            <div class="name">Butter chicken <span style="font-size:9px;color:var(--terracotta-600);font-weight:600;letter-spacing:.06em">· SIGNATURE</span></div>
+            <div class="desc">Slow-cooked chicken in tomato and fenugreek cream, basmati rice and pickled onion.</div>
+            <div class="tags"><span>Most ordered</span><span>Mild</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$18.50</div>
+            <button class="add" type="button" aria-label="Add butter chicken"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-saffron-bowl-900.webp" alt="Saffron chicken bowl" />
+          <div>
+            <div class="name">Saffron chicken bowl</div>
+            <div class="desc">Saffron rice, charred greens, soft egg, pickled onion and yoghurt drizzle.</div>
+            <div class="tags"><span>High protein</span><span>Gluten free</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$15.00</div>
+            <button class="add" type="button" aria-label="Add saffron bowl"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-chipotle-salmon-900.webp" alt="Chipotle salmon" />
+          <div>
+            <div class="name">Chipotle salmon</div>
+            <div class="desc">Seared salmon, smoky glaze, charred greens and a spoon of yoghurt.</div>
+            <div class="tags"><span>Gluten free</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$24.00</div>
+            <button class="add" type="button" aria-label="Add chipotle salmon"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-category">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+          <div>
+            <h2>Desserts</h2>
+            <div class="sub">Made in house · 6 dishes</div>
+          </div>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-chocolate-torte-900.webp" alt="Dark chocolate torte" />
+          <div>
+            <div class="name">Dark chocolate torte</div>
+            <div class="desc">Bitter chocolate, cocoa dust and a spoon of cardamom cream.</div>
+            <div class="tags"><span>Vegetarian</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$9.50</div>
+            <button class="add" type="button" aria-label="Add chocolate torte"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+
+        <div class="dish-row">
+          <img src="/public/assets/products/dish-cookies-900.webp" alt="Chocolate chip cookies" />
+          <div>
+            <div class="name">Chocolate chip cookies</div>
+            <div class="desc">Four warm cookies, sea salt and a glass of cold milk on the side.</div>
+            <div class="tags"><span>Shareable</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">$7.00</div>
+            <button class="add" type="button" aria-label="Add cookies"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <section id="reviews" class="mt-24">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">What people say</h2>
+            <p>1,284 reviews · 4.8 average</p>
+          </div>
+          <a class="tiny" href="#" style="color:var(--terracotta-600)">Read all reviews</a>
+        </div>
+
+        <div class="two-col-even" style="gap:14px">
+          <div class="review-card">
+            <div class="who">
+              <img src="/public/assets/people/avatar-diner-1-320.webp" alt="" />
+              <div>
+                <div class="name">Jonah Ellis</div>
+                <div class="meta">Ordered 3 days ago · 5 orders</div>
+              </div>
+              <span class="stars" style="margin-left:auto"><i data-icon="star"></i><i data-icon="star"></i><i data-icon="star"></i><i data-icon="star"></i><i data-icon="star"></i></span>
+            </div>
+            <p>The butter chicken travels better than any delivery I've had in Brooklyn. Rice was still hot, the naan was wrapped separately and nothing leaked.</p>
+          </div>
+
+          <div class="review-card">
+            <div class="who">
+              <img src="/public/assets/people/avatar-diner-2-320.webp" alt="" />
+              <div>
+                <div class="name">Priya Raman</div>
+                <div class="meta">Ordered last week · 22 orders</div>
+              </div>
+              <span class="stars" style="margin-left:auto"><i data-icon="star"></i><i data-icon="star"></i><i data-icon="star"></i><i data-icon="star"></i><i data-icon="star"></i></span>
+            </div>
+            <p>The saffron bowl is my Friday ritual. Generous greens, real saffron and the egg is always cooked properly. Portion size is honest.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside>
+      <div class="card summary-card">
+        <div class="flex items-center justify-between">
+          <h2>Your order</h2>
+          <span class="badge badge-outline">3 items</span>
+        </div>
+
+        <div class="mt-16">
+          <div class="cart-mini-item"><span class="qty-num">2×</span><span>Butter chicken</span><span class="price">$37.00</span></div>
+          <div class="cart-mini-item"><span class="qty-num">1×</span><span>Saffron chicken bowl</span><span class="price">$15.00</span></div>
+        </div>
+
+        <div class="divider mt-16"></div>
+
+        <div class="mt-16">
+          <div class="summary-line"><span>Subtotal</span><span>$52.00</span></div>
+          <div class="summary-line"><span>Delivery</span><span>$3.99</span></div>
+          <div class="summary-line" style="color:var(--success)"><span>20% off mains</span><span>−$10.40</span></div>
+        </div>
+
+        <div class="summary-total">
+          <span class="label">Total</span>
+          <span class="value">$45.59</span>
+        </div>
+
+        <a class="btn btn-primary btn-block mt-16" href="cart.html">Go to cart <i data-icon="arrowRight"></i></a>
+        <p class="tiny mt-10" style="text-align:center">Arrives in 25–35 min · $3.99 delivery</p>
+
+        <div class="divider mt-16"></div>
+
+        <div class="mt-16" style="display:grid;gap:10px">
+          <div class="flex items-center gap-8" style="font-size:11px;color:var(--olive-500)"><i data-icon="shield"></i> Contactless delivery available</div>
+          <div class="flex items-center gap-8" style="font-size:11px;color:var(--olive-500)"><i data-icon="clock"></i> Open until 10:30 PM</div>
+          <div class="flex items-center gap-8" style="font-size:11px;color:var(--olive-500)"><i data-icon="map"></i> 1.2 km from you</div>
+        </div>
+      </div>
+
+      <div class="card card-pad mt-16">
+        <div class="eyebrow bare">About this kitchen</div>
+        <p class="mt-8" style="font-size:11.5px;line-height:1.65;color:var(--olive-500)">
+          Saffron &amp; Oak is run by Maya and Arjun Bennett, with a kitchen team of nine. The grill is wood-fired, the spices are ground in-house and the menu changes with the market.
+        </p>
+        <div class="divider mt-14"></div>
+        <div class="mt-12" style="display:grid;gap:8px">
+          <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-500)"><span>Price range</span><span style="color:var(--olive);font-weight:600">$$ · Moderate</span></div>
+          <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-500)"><span>Dietary</span><span style="color:var(--olive);font-weight:600">Veg · Vegan · GF</span></div>
+          <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-500)"><span>Owner</span><span style="color:var(--olive);font-weight:600">Maya Bennett</span></div>
+        </div>
+      </div>
+
+      <div class="note-box mt-16">
+        <i data-icon="info"></i>
+        <p>Restaurant details is a design reference for Team Member 4's discovery module. It is not mounted in this build.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="mock.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Partner orders</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div class="dash">
+  <div data-sidebar="Orders"></div>
+
+  <div class="dash-main">
+    <div data-dash-top="Orders"></div>
+
+    <div class="dash-body">
+      <div class="dash-head">
+        <div>
+          <span class="eyebrow">Live service</span>
+          <h1 class="mt-8">Order board</h1>
+          <p>Six orders in play. Drag a card to move it through the kitchen.</p>
+        </div>
+        <div class="dash-actions">
+          <span class="badge badge-success"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span> Auto-accept on</span>
+          <div class="segmented"><span class="on">Board</span><span>List</span></div>
+          <button class="btn btn-primary btn-sm" type="button"><i data-icon="plus"></i> Manual order</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi">
+          <div class="label"><span>Open orders</span></div>
+          <div class="value">6</div>
+          <div class="delta">All acknowledged</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Longest wait</span></div>
+          <div class="value">22<span style="font-size:14px;font-family:var(--sans);color:var(--olive-400)"> min</span></div>
+          <div class="delta down">Order #478</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Completed today</span></div>
+          <div class="value">58</div>
+          <div class="delta">+8 vs last Thursday</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Avg. prep</span></div>
+          <div class="value">18<span style="font-size:14px;font-family:var(--sans);color:var(--olive-400)"> min</span></div>
+          <div class="delta down">Target 16 min</div>
+        </div>
+      </div>
+
+      <div class="toolbar mt-20">
+        <div class="input-icon" style="width:260px">
+          <i data-icon="search"></i>
+          <input class="input" placeholder="Search by order or customer" style="height:36px;font-size:11px" />
+        </div>
+        <span class="chip active">All orders</span>
+        <span class="chip">Delivery</span>
+        <span class="chip">Pickup</span>
+        <span class="chip">Scheduled</span>
+        <div class="grow"></div>
+        <span class="availability"><span class="mini-switch"></span> Sound on new order</span>
+      </div>
+
+      <div class="board">
+        <div class="board-col">
+          <div class="board-col-head"><span>New</span><span class="count">1</span></div>
+
+          <div class="board-card">
+            <div class="top"><span class="code">#480</span><span class="time">just now</span></div>
+            <div class="customer">Priya Raman</div>
+            <div class="items">3× Chicken sandwich<br />1× Cookies</div>
+            <div class="foot"><span class="total">$38.50</span><span class="tag hot">Delivery</span></div>
+          </div>
+        </div>
+
+        <div class="board-col">
+          <div class="board-col-head"><span>Accepted</span><span class="count">1</span></div>
+
+          <div class="board-card">
+            <div class="top"><span class="code">#481</span><span class="time">4 min</span></div>
+            <div class="customer">Jonah Ellis</div>
+            <div class="items">1× Truffle pizza<br />1× Burrata</div>
+            <div class="foot"><span class="total">$33.00</span><span class="tag">Delivery</span></div>
+          </div>
+        </div>
+
+        <div class="board-col">
+          <div class="board-col-head"><span>Cooking</span><span class="count">2</span></div>
+
+          <div class="board-card">
+            <div class="top"><span class="code">#482</span><span class="time">8 min</span></div>
+            <div class="customer">Maya Bennett</div>
+            <div class="items">2× Butter chicken<br />1× Saffron chicken bowl</div>
+            <div class="foot"><span class="total">$51.50</span><span class="tag hot">Delivery</span></div>
+          </div>
+
+          <div class="board-card">
+            <div class="top"><span class="code">#478</span><span class="time">22 min</span></div>
+            <div class="customer">Amina Okafor</div>
+            <div class="items">2× Green goddess bowl</div>
+            <div class="foot"><span class="total">$26.00</span><span class="tag">Pickup</span></div>
+          </div>
+        </div>
+
+        <div class="board-col">
+          <div class="board-col-head"><span>Ready</span><span class="count">1</span></div>
+
+          <div class="board-card">
+            <div class="top"><span class="code">#479</span><span class="time">12 min</span></div>
+            <div class="customer">Tomas Berg</div>
+            <div class="items">1× Pesto rigatoni<br />1× Chocolate cookies</div>
+            <div class="foot"><span class="total">$23.00</span><span class="tag">Delivery</span></div>
+          </div>
+        </div>
+
+        <div class="board-col">
+          <div class="board-col-head"><span>Out for delivery</span><span class="count">1</span></div>
+
+          <div class="board-card">
+            <div class="top"><span class="code">#477</span><span class="time">18 min</span></div>
+            <div class="customer">Elena Rossi</div>
+            <div class="items">1× Truffle mushroom pizza<br />1× Pesto rigatoni</div>
+            <div class="foot"><span class="total">$37.00</span><span class="tag">Andre</span></div>
+          </div>
+
+          <div class="board-card" style="background:var(--ivory)">
+            <div class="top"><span class="code">#476</span><span class="time">24 min</span></div>
+            <div class="customer">Sam Whitaker</div>
+            <div class="items">2× Saffron chicken bowl</div>
+            <div class="foot"><span class="total">$30.00</span><span class="tag">Delivered</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid" style="grid-template-columns:1.55fr .95fr;margin-top:16px">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Recent activity</h2>
+              <p>Audit trail for today's service</p>
+            </div>
+            <a href="#">Export</a>
+          </div>
+
+          <table class="table">
+            <thead><tr><th>Time</th><th>Order</th><th>Event</th><th>By</th></tr></thead>
+            <tbody>
+              <tr><td>7:18 PM</td><td class="strong">#482</td><td>Moved to cooking</td><td>Maya B.</td></tr>
+              <tr><td>7:16 PM</td><td class="strong">#481</td><td>Order accepted</td><td>Auto-accept</td></tr>
+              <tr><td>7:14 PM</td><td class="strong">#480</td><td>New order received</td><td>System</td></tr>
+              <tr><td>7:09 PM</td><td class="strong">#479</td><td>Marked ready for pickup</td><td>Luca M.</td></tr>
+              <tr><td>7:02 PM</td><td class="strong">#478</td><td>Customer note added</td><td>Amina O.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Kitchen load</h2>
+              <p>Ticket pressure by station</p>
+            </div>
+          </div>
+
+          <div style="display:grid;gap:14px">
+            <div>
+              <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-600)"><span>Grill</span><span>3 tickets · 14 min</span></div>
+              <div class="progress mt-6" style="background:var(--ivory)"><span style="width:64%;background:var(--terracotta)"></span></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-600)"><span>Curry station</span><span>2 tickets · 9 min</span></div>
+              <div class="progress mt-6" style="background:var(--ivory)"><span style="width:38%;background:var(--gold)"></span></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-600)"><span>Cold section</span><span>1 ticket · 4 min</span></div>
+              <div class="progress mt-6" style="background:var(--ivory)"><span style="width:18%;background:var(--olive-500)"></span></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between" style="font-size:10.5px;color:var(--olive-600)"><span>Packaging</span><span>4 tickets · 6 min</span></div>
+              <div class="progress mt-6" style="background:var(--ivory)"><span style="width:52%;background:var(--gold)"></span></div>
+            </div>
+          </div>
+
+          <div class="note-box mt-16">
+            <i data-icon="info"></i>
+            <p>Grill is the bottleneck. Consider pausing new grill items for 10 minutes.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="tiny mt-16" style="text-align:center">Demo order board · drag-and-drop is a visual affordance in this reference only.</p>
+    </div>
+  </div>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>
