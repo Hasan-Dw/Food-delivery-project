@@ -1,4 +1,4 @@
-import type { ISODateString, OrderStatus } from './models';
+import type { DeliveryStatus, ISODateString, OrderStatus } from './models';
 
 /**
  * Restaurant analytics contracts.
@@ -124,5 +124,70 @@ export interface RestaurantAnalytics {
 }
 
 export interface RestaurantAnalyticsQuery {
+  range: AnalyticsRange;
+}
+
+/* ── Platform administration ─────────────────────────────────────────────── */
+
+/**
+ * Admin control-room analytics. Entity and status totals are current database
+ * snapshots; revenue, average order value and the time series are scoped to
+ * the selected window and recognise revenue on order completion only.
+ *
+ * No profit metric exists because the platform has no reliable cost feed.
+ */
+export interface AdminAnalyticsSummary {
+  totalCustomers: number;
+  totalOwners: number;
+  totalDrivers: number;
+  totalRestaurants: number;
+  totalOrders: number;
+  pendingOrders: number;
+  activeOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  rejectedOrders: number;
+  totalDeliveries: number;
+  activeDeliveries: number;
+  unassignedDeliveries: number;
+  completedDeliveries: number;
+  availableDrivers: number;
+  pendingApprovals: number;
+  /** Completed-order value recognised inside the selected window. */
+  revenue: number;
+  averageOrderValue: number;
+  previousRevenue: number;
+  /** `null` when the previous window had no completed revenue. */
+  revenueGrowthPercent: number | null;
+}
+
+export interface AdminAnalyticsSeriesPoint {
+  key: string;
+  label: string;
+  bucketStart: ISODateString;
+  bucketEnd: ISODateString;
+  totalOrders: number;
+  completedOrders: number;
+  revenue: number;
+}
+
+export interface DeliveryStatusSlice {
+  status: DeliveryStatus;
+  count: number;
+}
+
+export interface AdminAnalytics {
+  range: AnalyticsRange;
+  granularity: AnalyticsGranularity;
+  period: AnalyticsPeriod;
+  previousPeriod: AnalyticsPeriod;
+  summary: AdminAnalyticsSummary;
+  series: AdminAnalyticsSeriesPoint[];
+  orderDistribution: OrderStatusSlice[];
+  deliveryDistribution: DeliveryStatusSlice[];
+  generatedAt: ISODateString;
+}
+
+export interface AdminAnalyticsQuery {
   range: AnalyticsRange;
 }

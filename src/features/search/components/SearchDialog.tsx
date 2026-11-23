@@ -7,6 +7,7 @@ import { useSearchDialogStore } from '@/stores/search-dialog-store';
 import { scrollToSection } from '@/lib/scroll';
 import { formatCurrency, formatDeliveryWindow } from '@/lib/format';
 import { useSearchResults, type DishResult } from '../hooks/useSearchResults';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const focusableSelector =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -30,20 +31,14 @@ export function SearchDialog() {
 
   const results = useSearchResults(query);
 
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     if (isOpen) setQuery('');
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
-
-    const body = document.body;
-    const previousOverflow = body.style.overflow;
-    const previousPaddingRight = body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-
-    body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
 
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 30);
@@ -80,8 +75,6 @@ export function SearchDialog() {
     return () => {
       window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleKeyDown);
-      body.style.overflow = previousOverflow;
-      body.style.paddingRight = previousPaddingRight;
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [isOpen, close]);

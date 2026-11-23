@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { queryKeys } from '@/lib/query-keys';
@@ -21,10 +21,12 @@ export function useDriverProfile() {
     queryKey: queryKeys.driverByUser(user?.id ?? 'anonymous'),
     queryFn: () => services.drivers.getByUserId(user?.id ?? ''),
     enabled: Boolean(user?.id),
+    refetchInterval: 15_000,
   });
 }
 
 export function useDriverActiveContext() {
+  const queryClient = useQueryClient();
   const profile = useDriverProfile();
   const driverId = profile.data?.id;
 
@@ -34,6 +36,7 @@ export function useDriverActiveContext() {
       : (['deliveries', 'active', 'none'] as const),
     queryFn: () => services.deliveries.getActiveForDriver(driverId ?? ''),
     enabled: Boolean(driverId),
+    refetchInterval: 10_000,
   });
 
   const orderId = activeDelivery.data?.orderId;
@@ -48,7 +51,30 @@ export function useDriverActiveContext() {
     queryKey: queryKeys.tracking(orderId ?? 'none'),
     queryFn: () => services.tracking.getSnapshot(orderId ?? ''),
     enabled: Boolean(orderId),
+    // Socket pushes drive the map; this poll only covers a dropped connection
+    // so the driver never has to reload the page to see a stale route.
+    refetchInterval: 10_000,
   });
+
+  useEffect(() => {
+    if (!orderId) return;
+
+    const subscription = services.tracking.subscribe(
+      orderId,
+      (snapshot) => {
+        queryClient.setQueryData(queryKeys.tracking(orderId), snapshot);
+        // Pickup switches navigation from the restaurant to the customer, and
+        // delivery status drives the driver's action buttons.
+        queryClient.invalidateQueries({ queryKey: queryKeys.order(orderId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.deliveries });
+      },
+      () => {
+        // Non-fatal: the polling fallback keeps the snapshot current.
+      },
+    );
+
+    return () => subscription.unsubscribe();
+  }, [orderId, queryClient]);
 
   return { profile, activeDelivery, order, tracking };
 }

@@ -1,16 +1,17 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, LayoutDashboard, LogOut, Search, X } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, LogOut, MapPin, Search, X } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { primaryNav } from '@/config/navigation';
 import { ROUTES } from '@/config/routes';
 import { roleLabels, roleLandingPath } from '@/lib/permissions';
 import { site } from '@/config/site';
-import { useLocationStore, serviceAreas } from '@/stores/location-store';
+import { useSelectedArea } from '@/stores/location-store';
 import { useSearchDialogStore } from '@/stores/search-dialog-store';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface MobileMenuProps {
   open: boolean;
@@ -20,15 +21,14 @@ interface MobileMenuProps {
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const { user, signOut } = useAuth();
-  const areaId = useLocationStore((state) => state.areaId);
-  const setArea = useLocationStore((state) => state.setArea);
+  const area = useSelectedArea();
   const openSearch = useSearchDialogStore((state) => state.open);
+
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (!open) return;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     closeRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -37,7 +37,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [open, onClose]);
@@ -86,27 +85,11 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           </button>
 
           <p className="eyebrow mb-1.5 text-terracotta-600">Deliver to</p>
-          <p className="mb-3 text-[0.6875rem] text-olive-500">Savora currently delivers across Latakia only.</p>
-          <div className="grid grid-cols-2 gap-2">
-            {serviceAreas.map((area) => (
-              <button
-                key={area.id}
-                type="button"
-                onClick={() => setArea(area.id)}
-                className={cn(
-                  'rounded-xl border px-3 py-2.5 text-left transition',
-                  area.id === areaId
-                    ? 'border-olive-700 bg-olive-700 text-cream'
-                    : 'border-olive-900/12 bg-cream/70 text-olive-700',
-                )}
-              >
-                <span className="block text-[0.8125rem] font-medium">{area.region}</span>
-                <span className={cn('block text-[0.6875rem]', area.id === areaId ? 'text-cream/60' : 'text-olive-500')}>
-                  {area.city} · {area.eta}
-                </span>
-              </button>
-            ))}
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-olive-900/12 bg-cream/70 px-3.5 py-3 text-olive-700">
+            <MapPin aria-hidden="true" className="h-4 w-4 shrink-0 text-terracotta-600" />
+            <span className="text-[0.8125rem] font-medium">{area.city}</span>
           </div>
+          <p className="mb-3 text-[0.6875rem] text-olive-500">Savora currently delivers across Latakia only.</p>
 
           <nav aria-label="Primary" className="mt-8 border-t border-olive-900/10 pt-2">
             {primaryNav.map((item, index) => (

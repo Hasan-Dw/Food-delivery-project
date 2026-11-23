@@ -81,9 +81,13 @@ export function LiveDeliveryMap({ snapshot }: LiveDeliveryMapProps) {
   const driverPoint = snapshot.driverLocation
     ? toLatLng(snapshot.driverLocation)
     : null;
-  const restaurantPoint = toLatLng(snapshot.restaurant.coordinates);
-  const destinationPoint = toLatLng(snapshot.destination.coordinates);
-  const center = driverPoint ?? restaurantPoint ?? destinationPoint;
+  const restaurantPoint = snapshot.restaurant.coordinates
+    ? toLatLng(snapshot.restaurant.coordinates)
+    : null;
+  const destinationPoint = snapshot.destination.coordinates
+    ? toLatLng(snapshot.destination.coordinates)
+    : null;
+  const center = driverPoint ?? restaurantPoint ?? destinationPoint ?? [0, 0];
   const source = snapshot.etaSource ?? snapshot.route.source;
   const distance = snapshot.remainingDistanceKm ?? snapshot.route.distanceKm;
   const isRoadRoute = Boolean(roadGeometry) && source === 'osrm';
@@ -97,7 +101,13 @@ export function LiveDeliveryMap({ snapshot }: LiveDeliveryMapProps) {
         <div className="flex flex-wrap items-center gap-2.5">
           <Badge tone="gold">Live map</Badge>
           <span id="live-map-heading" className="text-[0.75rem] font-medium text-olive-600">
-            {isRoadRoute ? 'Road route' : 'Estimated straight-line route'}
+            {snapshot.navigationStage === 'TO_RESTAURANT'
+              ? 'Heading to restaurant'
+              : 'Heading to customer'}{' '}
+            ·{' '}
+            <span>
+              {isRoadRoute ? 'Road route' : 'Estimated straight-line route'}
+            </span>
           </span>
         </div>
         <div className="flex items-center gap-4 text-[0.6875rem] text-olive-500">
@@ -140,12 +150,16 @@ export function LiveDeliveryMap({ snapshot }: LiveDeliveryMapProps) {
             </>
           ) : null}
 
-          <Marker position={restaurantPoint} icon={icons.restaurant}>
-            <Popup>{snapshot.restaurant.label}</Popup>
-          </Marker>
-          <Marker position={destinationPoint} icon={icons.destination}>
-            <Popup>{snapshot.destination.address || snapshot.destination.label}</Popup>
-          </Marker>
+          {restaurantPoint ? (
+            <Marker position={restaurantPoint} icon={icons.restaurant}>
+              <Popup>{snapshot.restaurant.label}</Popup>
+            </Marker>
+          ) : null}
+          {destinationPoint ? (
+            <Marker position={destinationPoint} icon={icons.destination}>
+              <Popup>{snapshot.destination.address || snapshot.destination.label}</Popup>
+            </Marker>
+          ) : null}
           {driverPoint ? (
             <Marker position={driverPoint} icon={icons.driver}>
               <Popup>

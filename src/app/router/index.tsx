@@ -43,6 +43,9 @@ const RestaurantMenuPage = lazy(
 const RestaurantSettingsPage = lazy(
   () => import('@/features/restaurant-dashboard/pages/RestaurantSettingsPage'),
 );
+const RestaurantPromotionsPage = lazy(
+  () => import('@/features/restaurant-dashboard/pages/RestaurantPromotionsPage'),
+);
 const DriverOverviewPage = lazy(() => import('@/features/driver-dashboard/pages/DriverOverviewPage'));
 const DriverActiveDeliveryPage = lazy(
   () => import('@/features/driver-dashboard/pages/DriverActiveDeliveryPage'),
@@ -59,6 +62,12 @@ const AdminDeliveriesPage = lazy(
 );
 const AdminOrdersPage = lazy(() => import('@/features/admin-dashboard/pages/AdminOrdersPage'));
 const AdminReviewsPage = lazy(() => import('@/features/admin-dashboard/pages/AdminReviewsPage'));
+const AdminCategoriesPage = lazy(
+  () => import('@/features/admin-dashboard/pages/AdminCategoriesPage'),
+);
+const AdminPromotionsPage = lazy(
+  () => import('@/features/admin-dashboard/pages/AdminPromotionsPage'),
+);
 
 /**
  * Route map for this build.
@@ -109,6 +118,7 @@ export function AppRouter() {
             <Route path={ROUTES.dashboardOrders} element={<RestaurantOrdersPage />} />
             <Route path={ROUTES.dashboardMenu} element={<RestaurantMenuPage />} />
             <Route path={ROUTES.dashboardSettings} element={<RestaurantSettingsPage />} />
+            <Route path={ROUTES.dashboardPromotions} element={<RestaurantPromotionsPage />} />
             <Route path={ROUTES.dashboardAnalytics} element={<RestaurantAnalyticsPage />} />
             <Route path={ROUTES.dashboardOrder()} element={<RestaurantOrderDetailPage />} />
           </Route>
@@ -133,6 +143,8 @@ export function AppRouter() {
             <Route path={ROUTES.adminDrivers} element={<AdminDriversPage />} />
             <Route path={ROUTES.adminDeliveries} element={<AdminDeliveriesPage />} />
             <Route path={ROUTES.adminOrders} element={<AdminOrdersPage />} />
+            <Route path={ROUTES.adminCategories} element={<AdminCategoriesPage />} />
+            <Route path={ROUTES.adminPromotions} element={<AdminPromotionsPage />} />
             <Route path={ROUTES.adminReviews} element={<AdminReviewsPage />} />
           </Route>
         </Route>

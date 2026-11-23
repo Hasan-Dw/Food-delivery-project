@@ -19,7 +19,6 @@ import { services } from '@/services';
 import { queryKeys } from '@/lib/query-keys';
 import { getErrorMessage } from '@/services/api/errors';
 import { addressSchema, type AddressValues } from '@/lib/validation';
-import { env } from '@/config/env';
 import { cn } from '@/lib/cn';
 
 interface AddressBookProps {
@@ -108,9 +107,7 @@ export function AddressBook({ addresses, isLoading, isError, onRetry }: AddressB
               <div>
                 <h3 className="text-[1.1rem] text-olive-900">{editing === 'new' ? 'New address' : 'Edit address'}</h3>
                 <p className="mt-1 text-[0.8125rem] text-olive-500">
-                  {env.useMocks
-                    ? 'Used only for delivery in this preview. Nothing is sent to a map provider.'
-                    : 'The pin is saved with this address and used for routing and ETA calculations.'}
+                  The pin is saved with this address and used for routing and ETA calculations.
                 </p>
               </div>
               <button

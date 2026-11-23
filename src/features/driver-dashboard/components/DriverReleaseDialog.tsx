@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface DriverReleaseDialogProps {
   open: boolean;
@@ -28,12 +29,12 @@ export function DriverReleaseDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     setReason('');
     setTouched(false);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     textareaRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -41,7 +42,6 @@ export function DriverReleaseDialog({
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = previous;
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [open, isLoading, onCancel]);

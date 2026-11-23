@@ -20,10 +20,6 @@ export const site = {
     diners: '48k',
     averageRating: '4.8',
   },
-  previewAccount: {
-    email: 'maya@example.com',
-    password: 'Savora123!',
-  },
 } as const;
 
 interface StatusMeta {
@@ -82,6 +78,11 @@ export const deliveryStatusMeta: Record<DeliveryStatus, StatusMeta> = {
     label: 'Driver assigned',
     short: 'Assigned',
     description: 'A delivery partner is heading to the restaurant.',
+  },
+  ARRIVED_AT_RESTAURANT: {
+    label: 'At restaurant',
+    short: 'At restaurant',
+    description: 'Your driver has arrived and is collecting the order.',
   },
   PICKED_UP: {
     label: 'Picked up',

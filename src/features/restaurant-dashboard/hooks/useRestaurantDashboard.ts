@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { queryKeys } from '@/lib/query-keys';
 import { services } from '@/services';
-import type { ProductInput } from '@/services/products/ProductService';
+import type { MenuCategoryInput, ProductInput } from '@/services/products/ProductService';
 import type { RestaurantUpdateInput } from '@/services/restaurants/RestaurantService';
 import type { OrderAction } from '@/types';
 
@@ -66,12 +66,19 @@ export function useRestaurantOrderAction() {
 
 export function useRestaurantProfile() {
   const { user } = useAuth();
-  const restaurantId = user?.restaurantId;
 
   return useQuery({
-    queryKey: restaurantId ? queryKeys.restaurant(restaurantId) : ['restaurants', 'none'],
-    queryFn: () => services.restaurants.getById(restaurantId ?? ''),
-    enabled: Boolean(restaurantId),
+    queryKey: queryKeys.restaurantMine(user?.id ?? 'none'),
+    queryFn: () => services.restaurants.getMine(),
+    enabled: Boolean(user?.id),
+  });
+}
+
+/** Platform category catalog that owners may assign to their restaurant. */
+export function useRestaurantCategories() {
+  return useQuery({
+    queryKey: queryKeys.restaurantCategories,
+    queryFn: () => services.restaurants.listCategories(),
   });
 }
 
@@ -80,7 +87,7 @@ export function useRestaurantMenu(restaurantId: string | undefined) {
     queryKey: restaurantId
       ? queryKeys.restaurantProducts(restaurantId)
       : ['products', 'restaurant', 'none'],
-    queryFn: () => services.products.listByRestaurant(restaurantId ?? ''),
+    queryFn: () => services.products.listMine(),
     enabled: Boolean(restaurantId),
   });
 }
@@ -90,7 +97,7 @@ export function useMenuCategories(restaurantId: string | undefined) {
     queryKey: restaurantId
       ? queryKeys.productCategories(restaurantId)
       : ['product-categories', 'none'],
-    queryFn: () => services.products.listCategories(restaurantId ?? ''),
+    queryFn: () => services.products.listMineCategories(),
     enabled: Boolean(restaurantId),
   });
 }
@@ -102,9 +109,37 @@ function useMenuInvalidation(restaurantId: string | undefined) {
   return () => {
     if (restaurantId) {
       queryClient.invalidateQueries({ queryKey: queryKeys.restaurantProducts(restaurantId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productCategories(restaurantId) });
     }
     queryClient.invalidateQueries({ queryKey: queryKeys.popularProducts });
   };
+}
+
+export function useMenuCategoryMutations(restaurantId: string | undefined) {
+  const invalidate = useMenuInvalidation(restaurantId);
+
+  const create = useMutation({
+    mutationFn: (input: MenuCategoryInput) => services.products.createCategory(input),
+    onSuccess: invalidate,
+  });
+
+  const update = useMutation({
+    mutationFn: ({
+      categoryId,
+      input,
+    }: {
+      categoryId: string;
+      input: Partial<MenuCategoryInput>;
+    }) => services.products.updateCategory(categoryId, input),
+    onSuccess: invalidate,
+  });
+
+  const remove = useMutation({
+    mutationFn: (categoryId: string) => services.products.deleteCategory(categoryId),
+    onSuccess: invalidate,
+  });
+
+  return { create, update, remove };
 }
 
 export function useMenuItemMutations(restaurantId: string | undefined) {
@@ -156,8 +191,11 @@ export function useRestaurantInvalidation() {
   return () => {
     if (restaurantId) {
       queryClient.invalidateQueries({ queryKey: queryKeys.restaurant(restaurantId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.restaurants });
     }
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.restaurantMine(user?.id ?? 'none'),
+    });
+    queryClient.invalidateQueries({ queryKey: queryKeys.restaurants });
   };
 }
 

@@ -10,7 +10,6 @@ import { AuthModeNotice } from '@/features/auth/components/AuthModeNotice';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { forgotPasswordSchema, type ForgotPasswordValues } from '@/lib/validation';
 import { getErrorMessage } from '@/services/api/errors';
-import { env } from '@/config/env';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
@@ -74,14 +73,10 @@ export default function ForgotPasswordPage() {
         </p>
 
         <div className="mt-6 rounded-2xl border border-gold-300/50 bg-gold-50/80 p-4">
-          <p className="text-[0.8125rem] font-semibold text-olive-800">
-            {env.useMocks ? 'Preview mode — no email was sent.' : 'Request received.'}
-          </p>
+          <p className="text-[0.8125rem] font-semibold text-olive-800">Request received.</p>
           <p className="mt-1.5 text-[0.75rem] leading-relaxed text-olive-600">
             {message ??
-              (env.useMocks
-                ? 'Preview mode creates the interface only. No password changes.'
-                : 'If the address is registered, a time-limited reset token has been created. Email delivery is not enabled in this environment yet.')}
+              'If the address is registered, a time-limited reset token has been created. Email delivery is not enabled in this environment yet.'}
           </p>
         </div>
 
@@ -159,10 +154,8 @@ export default function ForgotPasswordPage() {
       </Link>
 
       <p className="mt-6 border-t border-olive-900/10 pt-5 text-[0.6875rem] leading-relaxed text-olive-500">
-        For your protection, the response is always generic.{' '}
-        {env.useMocks
-          ? 'Preview mode sends no email and changes no password.'
-          : 'Email delivery is not enabled yet; an operator can read the development token from the API log.'}
+        For your protection, the response is always generic. Email delivery is not enabled yet; an
+        operator can read the development token from the API log.
       </p>
     </div>
   );

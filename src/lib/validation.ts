@@ -41,7 +41,6 @@ export const registerSchema = z
       .max(320, 'Keep the description under 320 characters.')
       .optional(),
     driverPhone: z.string().trim().max(40, 'That contact number looks too long.').optional(),
-    driverServiceArea: z.string().trim().max(120, 'Keep the service area under 120 characters.').optional(),
     driverVehicle: z.enum(['bike', 'scooter', 'car']).optional(),
     restaurantCity: z.string().trim().max(80).optional(),
     restaurantState: z.string().trim().max(80).optional(),
@@ -91,7 +90,6 @@ export const registerSchema = z
 
     if (values.role === 'DRIVER') {
       required(values.driverPhone, 'driverPhone', 'Enter a contact number.');
-      required(values.driverServiceArea, 'driverServiceArea', 'Tell us where you can deliver.');
       if (values.driverPhone && !phonePattern.test(values.driverPhone)) {
         ctx.addIssue({
           code: 'custom',

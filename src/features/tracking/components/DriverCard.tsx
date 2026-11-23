@@ -25,7 +25,7 @@ export function DriverCard({ snapshot }: { snapshot: TrackingSnapshot }) {
         <h2 id="driver-heading" className="font-display text-[1.25rem] text-olive-900">
           {deliveryStatus === 'DELIVERED' ? 'Delivered by' : 'Your delivery partner'}
         </h2>
-        <Badge tone={snapshot.live ? 'success' : 'gold'}>{snapshot.live ? 'Live' : 'Sample'}</Badge>
+        <Badge tone={snapshot.live ? 'success' : 'gold'}>{snapshot.live ? 'Live' : 'Saved'}</Badge>
       </div>
 
       <div className="px-5 py-5">
@@ -64,7 +64,7 @@ export function DriverCard({ snapshot }: { snapshot: TrackingSnapshot }) {
                 Call
               </ButtonLink>
               <ButtonLink
-                href={`mailto:${site.email}?subject=${encodeURIComponent('Sample delivery question')}`}
+                href={`mailto:${site.email}?subject=${encodeURIComponent('Delivery question')}`}
                 variant="ghost"
                 size="sm"
                 fullWidth
@@ -75,7 +75,7 @@ export function DriverCard({ snapshot }: { snapshot: TrackingSnapshot }) {
             </div>
 
             <p className="mt-3 text-[0.625rem] leading-relaxed text-olive-500">
-              Demo contact details. Calls and messages are not routed to a real driver.
+              Contact availability depends on the current delivery.
             </p>
           </>
         ) : (

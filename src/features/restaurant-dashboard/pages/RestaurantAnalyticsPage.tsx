@@ -58,7 +58,7 @@ export default function RestaurantAnalyticsPage() {
       <DashboardPageHeader
         eyebrow="Business analytics"
         title="Understand what your kitchen earns"
-        description="Revenue comes from your completed orders only. Operating costs are illustrative mock assumptions, clearly separated from real order data."
+        description="Revenue comes from your completed orders. Only recorded order and delivery data is included."
         actions={
           <>
             <AnalyticsDateFilter value={range} onChange={setRange} disabled={analytics.isFetching} />
@@ -160,7 +160,7 @@ export default function RestaurantAnalyticsPage() {
                     <p>
                       <span className="font-medium text-olive-900">Estimated operating cost</span> is{' '}
                       <span className="rounded-full bg-gold-100 px-2 py-0.5 font-semibold uppercase tracking-[0.08em] text-gold-700">
-                        Illustrative mock data
+                        Model estimate
                       </span>{' '}
                       — {Math.round(data.costModel.ingredientRateOfSubtotal * 100)}% of item subtotal for
                       ingredients, {data.costModel.currency === 'USD' ? '$' : ''}

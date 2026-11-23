@@ -21,10 +21,25 @@ export interface ProductInput {
   available?: boolean;
 }
 
+export interface MenuCategoryInput {
+  name: string;
+  description?: string;
+  sortOrder?: number;
+}
+
 export interface ProductService {
   listPopular(limit?: number): Promise<Product[]>;
   listByRestaurant(restaurantId: string): Promise<Product[]>;
   listCategories(restaurantId: string): Promise<ProductCategory[]>;
+  /** Owner: menu for the signed-in account, including pending restaurants. */
+  listMine(): Promise<Product[]>;
+  listMineCategories(): Promise<ProductCategory[]>;
+  createCategory(input: MenuCategoryInput): Promise<ProductCategory>;
+  updateCategory(
+    categoryId: string,
+    input: Partial<MenuCategoryInput>,
+  ): Promise<ProductCategory>;
+  deleteCategory(categoryId: string): Promise<void>;
   list(query?: ProductQuery): Promise<Paginated<Product>>;
   getById(id: string): Promise<Product>;
   /** Owner-only: upload/replace the menu item image. */

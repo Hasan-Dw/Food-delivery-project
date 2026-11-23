@@ -23,7 +23,6 @@ import { useToast } from '@/stores/toast-store';
 import { formatMemberSince } from '@/lib/format';
 import { roleLabels } from '@/lib/permissions';
 import { scrollToSection } from '@/lib/scroll';
-import { env } from '@/config/env';
 import { ROUTES } from '@/config/routes';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { cn } from '@/lib/cn';
@@ -206,13 +205,10 @@ export default function ProfilePage() {
                 <ShieldCheck aria-hidden="true" className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="text-[1.2rem] text-olive-900">
-                  {env.useMocks ? 'Preview account' : 'Account & session'}
-                </h2>
+                <h2 className="text-[1.2rem] text-olive-900">Account &amp; session</h2>
                 <p className="mt-1.5 max-w-2xl text-[0.8125rem] leading-relaxed text-olive-600">
-                  {env.useMocks
-                    ? 'Your session is stored in this browser and is not verified by a server. Changes persist for this tab only, and no real orders or charges are created.'
-                    : 'Your profile changes are saved through the Savora API. Your role, approval status and restaurant ownership are set by the platform and cannot be changed from this page.'}
+                  Your profile changes are saved through the Savora API. Your role, approval status and
+                  restaurant ownership are set by the platform and cannot be changed from this page.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <Button type="button" variant="outline" size="sm" onClick={handleSignOut} isLoading={signingOut}>

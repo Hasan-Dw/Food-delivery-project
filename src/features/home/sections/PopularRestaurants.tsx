@@ -62,7 +62,7 @@ export function PopularRestaurants() {
                 The kitchens your neighbours <em className="italic text-terracotta">keep returning to.</em>
               </>
             }
-            description={`Independent places delivering to ${area.region}, ${area.city} right now. Search or pick a cuisine to narrow the list.`}
+            description={`Independent places delivering to ${area.city} right now. Search or pick a cuisine to narrow the list.`}
             action={
               filtered.length > 6 ? (
                 <button

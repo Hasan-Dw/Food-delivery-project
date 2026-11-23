@@ -38,7 +38,7 @@ const orderActionsByRole: Record<UserRole, readonly OrderAction[]> = {
 const deliveryActionsByRole: Record<UserRole, readonly DeliveryAction[]> = {
   CUSTOMER: [],
   RESTAURANT_OWNER: [],
-  DRIVER: ['PICK_UP', 'START_TRANSIT', 'DELIVER'],
+  DRIVER: ['ARRIVE_AT_RESTAURANT', 'PICK_UP', 'START_TRANSIT', 'DELIVER'],
   ADMIN: ['ASSIGN', 'CANCEL'],
 };
 

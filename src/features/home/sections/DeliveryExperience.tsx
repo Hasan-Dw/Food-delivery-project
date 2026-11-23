@@ -72,7 +72,7 @@ export function DeliveryExperience() {
             <div className="absolute -bottom-7 left-0 w-[17.5rem] rounded-2xl border border-olive-900/10 bg-cream/95 p-4 shadow-lift backdrop-blur lg:-left-8">
               <div className="flex items-center justify-between gap-2">
                 <Badge tone="gold" size="sm">
-                  Sample route
+                  Delivery route
                 </Badge>
                 <span className="text-[0.625rem] text-olive-500">Illustrative</span>
               </div>

@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Images, LayoutDashboard, UtensilsCrossed } from 'lucide-react';
+import { BarChart3, ClipboardList, Images, LayoutDashboard, TicketPercent, UtensilsCrossed } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { DashboardShell, type DashboardNavItem } from '@/features/dashboard/components/DashboardShell';
 import { useRestaurantProfile } from '../hooks/useRestaurantDashboard';
@@ -9,6 +9,7 @@ const nav: DashboardNavItem[] = [
   { to: ROUTES.dashboardOrders, label: 'Order management', icon: ClipboardList },
   { to: ROUTES.dashboardMenu, label: 'Menu management', icon: UtensilsCrossed },
   { to: ROUTES.dashboardSettings, label: 'Profile & brand', icon: Images },
+  { to: ROUTES.dashboardPromotions, label: 'Coupons', icon: TicketPercent },
   { to: ROUTES.dashboardAnalytics, label: 'Business analytics', icon: BarChart3 },
 ];
 
