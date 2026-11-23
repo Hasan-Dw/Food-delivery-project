@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Your cart</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div data-header="Restaurants" data-cart="3"></div>
+
+<main>
+  <div class="shell page-head">
+    <a class="back-link" href="restaurants.html">← Continue browsing</a>
+    <div class="page-head-row">
+      <div>
+        <span class="eyebrow">Step 1 of 3</span>
+        <h1>Your cart</h1>
+        <p class="lede">Three kitchens, one delivery. We keep each restaurant's food separate so everything arrives the way it should.</p>
+      </div>
+      <a class="btn btn-outline btn-sm" href="restaurants.html">+ Add another kitchen</a>
+    </div>
+  </div>
+
+  <div class="shell section-pad" style="padding-top:8px">
+    <div class="two-col">
+      <div>
+        <div class="card cart-group">
+          <div class="restaurant-strip">
+            <img src="/public/assets/restaurants/restaurant-saffron-oak-480.webp" alt="" />
+            <div>
+              <div class="name">Saffron &amp; Oak</div>
+              <div class="meta">Indian · 1.2 km · 25–35 min</div>
+            </div>
+            <a class="link" href="restaurant-details.html">View menu</a>
+          </div>
+
+          <div class="cart-item">
+            <img src="/public/assets/products/dish-butter-chicken-900.webp" alt="Butter chicken with rice" />
+            <div>
+              <div class="title">Butter chicken</div>
+              <div class="desc">Slow-cooked chicken in a tomato and fenugreek cream, served with basmati rice.</div>
+              <div class="extras">+ Extra naan · + Raita</div>
+              <div class="price">$18.50</div>
+            </div>
+            <div class="actions">
+              <button class="remove" type="button">Remove</button>
+              <span class="qty">
+                <button type="button" aria-label="Decrease">−</button>
+                <span>2</span>
+                <button class="plus" type="button" aria-label="Increase">+</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="cart-item">
+            <img src="/public/assets/products/dish-saffron-bowl-900.webp" alt="Saffron chicken bowl" />
+            <div>
+              <div class="title">Saffron chicken bowl</div>
+              <div class="desc">Saffron rice, charred greens, soft egg, pickled onion and a yoghurt drizzle.</div>
+              <div class="price">$15.00</div>
+            </div>
+            <div class="actions">
+              <button class="remove" type="button">Remove</button>
+              <span class="qty">
+                <button type="button" aria-label="Decrease">−</button>
+                <span>1</span>
+                <button class="plus" type="button" aria-label="Increase">+</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="add-more">
+            <div class="label">Often added with this order</div>
+            <div class="add-more-row">
+              <div class="mini-add">
+                <img src="/public/assets/products/dish-burrata-900.webp" alt="" />
+                <div><div class="name">Burrata</div><div class="price">$12.00</div></div>
+                <span class="plus">+</span>
+              </div>
+              <div class="mini-add">
+                <img src="/public/assets/products/dish-cookies-900.webp" alt="" />
+                <div><div class="name">Chocolate cookies</div><div class="price">$7.00</div></div>
+                <span class="plus">+</span>
+              </div>
+              <div class="mini-add">
+                <img src="/public/assets/products/dish-pesto-rigatoni-900.webp" alt="" />
+                <div><div class="name">Pesto rigatoni</div><div class="price">$16.00</div></div>
+                <span class="plus">+</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card cart-group mt-16">
+          <div class="restaurant-strip">
+            <img src="/public/assets/restaurants/restaurant-nonna-lucia-480.webp" alt="" />
+            <div>
+              <div class="name">Nonna Lucia</div>
+              <div class="meta">Italian · 1.8 km · 30–40 min</div>
+            </div>
+            <a class="link" href="restaurant-details.html">View menu</a>
+          </div>
+
+          <div class="cart-item">
+            <img src="/public/assets/products/dish-truffle-pizza-900.webp" alt="Truffle mushroom pizza" />
+            <div>
+              <div class="title">Truffle mushroom pizza</div>
+              <div class="desc">Wood-fired base, taleggio, wild mushrooms, thyme and a finish of truffle oil.</div>
+              <div class="extras">+ Chilli oil · + Parmesan</div>
+              <div class="price">$21.00</div>
+            </div>
+            <div class="actions">
+              <button class="remove" type="button">Remove</button>
+              <span class="qty">
+                <button type="button" aria-label="Decrease">−</button>
+                <span>1</span>
+                <button class="plus" type="button" aria-label="Increase">+</button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="note-box mt-16">
+          <i data-icon="info"></i>
+          <p>Delivery times are estimates from each kitchen. If one kitchen is slower, we wait for the whole order rather than send it in pieces.</p>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card summary-card">
+          <h2>Order summary</h2>
+          <div class="mt-16">
+            <div class="summary-line"><span>Subtotal</span><span>$94.00</span></div>
+            <div class="summary-line"><span>Delivery fee</span><span>$3.99</span></div>
+            <div class="summary-line"><span>Service fee</span><span>$2.80</span></div>
+            <div class="summary-line"><span>Taxes</span><span>$8.12</span></div>
+          </div>
+
+          <div class="promo-row mt-16">
+            <i data-icon="check"></i>
+            <span>WELCOME30 applied</span>
+            <span class="code">−$5.00</span>
+          </div>
+
+          <div class="summary-total">
+            <span class="label">Total</span>
+            <span class="value">$103.91</span>
+          </div>
+
+          <a class="btn btn-primary btn-lg btn-block mt-20" href="checkout.html">
+            Go to checkout <i data-icon="arrowRight"></i>
+          </a>
+
+          <div class="mt-12 flex items-center gap-8" style="justify-content:center">
+            <i data-icon="shield" class="tiny"></i>
+            <span class="tiny">Demo cart — no payment is taken.</span>
+          </div>
+
+          <div class="divider mt-20"></div>
+
+          <div class="mt-16" style="display:grid;gap:11px">
+            <div class="flex items-center gap-8" style="font-size:11.5px;color:var(--olive-500)">
+              <i data-icon="clock"></i> <span>Arriving in 35–45 min</span>
+            </div>
+            <div class="flex items-center gap-8" style="font-size:11.5px;color:var(--olive-500)">
+              <i data-icon="map"></i> <span>Deliver to 41 Greenpoint Ave</span>
+            </div>
+            <div class="flex items-center gap-8" style="font-size:11.5px;color:var(--olive-500)">
+              <i data-icon="leaf"></i> <span>Cutlery not included by default</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-pad mt-16">
+          <div class="eyebrow bare">Have a code?</div>
+          <div class="flex gap-8 mt-12">
+            <input class="input" placeholder="Promo code" aria-label="Promo code" />
+            <button class="btn btn-soft" type="button">Apply</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="mock.js"></script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Savora — Partner settings</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div class="dash">
+  <div data-sidebar="Settings"></div>
+
+  <div class="dash-main">
+    <div data-dash-top="Settings"></div>
+
+    <div class="dash-body">
+      <div class="dash-head">
+        <div>
+          <span class="eyebrow">Saffron &amp; Oak</span>
+          <h1 class="mt-8">Settings</h1>
+          <p>Your public profile, service hours and the way orders reach the kitchen.</p>
+        </div>
+        <div class="dash-actions">
+          <button class="btn btn-ghost btn-sm" type="button">Discard</button>
+          <button class="btn btn-primary btn-sm" type="button"><i data-icon="check"></i> Save changes</button>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+        <div>
+          <div class="card card-pad">
+            <div class="checkout-head">
+              <h2>Restaurant profile</h2>
+              <span class="badge badge-success">Published</span>
+            </div>
+
+            <div class="cover-edit">
+              <img src="/public/assets/restaurants/restaurant-saffron-oak-1400.webp" alt="" />
+              <button class="btn btn-soft btn-sm" type="button"><i data-icon="edit"></i> Change cover</button>
+            </div>
+
+            <div class="two-col-even" style="gap:16px">
+              <div class="field">
+                <label>Restaurant name</label>
+                <input class="input" value="Saffron &amp; Oak" />
+              </div>
+              <div class="field">
+                <label>Cuisine</label>
+                <select class="select"><option>Indian</option><option>Contemporary</option><option>Middle Eastern</option></select>
+              </div>
+            </div>
+
+            <div class="field mt-16">
+              <label>Short description</label>
+              <textarea class="textarea">Seasonal Indian cooking with a wood-fired grill, a long bar and a menu built for sharing. Family-run since 2018.</textarea>
+              <span class="tiny">142 / 180 characters</span>
+            </div>
+
+            <div class="two-col-even mt-16" style="gap:16px">
+              <div class="field">
+                <label>Phone</label>
+                <input class="input" value="+1 (718) 555-0142" />
+              </div>
+              <div class="field">
+                <label>Email</label>
+                <input class="input" value="hello@saffronandoak.example" />
+              </div>
+            </div>
+
+            <div class="field mt-16">
+              <label>Address</label>
+              <input class="input" value="88 Franklin Street, Brooklyn, NY 11222" />
+            </div>
+
+            <div class="two-col-even mt-16" style="gap:16px">
+              <div class="field">
+                <label>Price range</label>
+                <select class="select"><option>$$ · Moderate</option><option>$ · Budget</option><option>$$$ · Premium</option></select>
+              </div>
+              <div class="field">
+                <label>Preparation time</label>
+                <input class="input" value="18 – 25 min" />
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad mt-16">
+            <div class="checkout-head">
+              <h2>Order handling</h2>
+              <span class="tiny">Applies to marketplace orders</span>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="label">Auto-accept orders</div>
+                <div class="hint">New orders are accepted without a manual tap.</div>
+              </div>
+              <div class="flex items-center gap-10">
+                <span class="mini-switch"></span>
+                <span style="font-size:10.5px;color:var(--olive-500)">On</span>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="label">Busy mode</div>
+                <div class="hint">Adds 10 minutes to quoted prep times during peak service.</div>
+              </div>
+              <div class="flex items-center gap-10">
+                <span class="mini-switch off"></span>
+                <span style="font-size:10.5px;color:var(--olive-500)">Off</span>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="label">Cutlery</div>
+                <div class="hint">Default for new orders. Customers can still change it.</div>
+              </div>
+              <select class="select" style="width:190px;height:36px;font-size:11px"><option>Only when requested</option><option>Always include</option></select>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="label">Order sound</div>
+                <div class="hint">Plays in the dashboard when a new order arrives.</div>
+              </div>
+              <div class="flex items-center gap-10">
+                <span class="mini-switch"></span>
+                <span style="font-size:10.5px;color:var(--olive-500)">On</span>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <div class="label">Cancellation window</div>
+                <div class="hint">How long customers can cancel after ordering.</div>
+              </div>
+              <select class="select" style="width:190px;height:36px;font-size:11px"><option>4 minutes</option><option>2 minutes</option><option>No cancellations</option></select>
+            </div>
+          </div>
+
+          <div class="card card-pad mt-16">
+            <div class="checkout-head">
+              <h2>Delivery &amp; pickup</h2>
+              <span class="tiny">Managed with Savora couriers</span>
+            </div>
+
+            <div class="radio-row">
+              <div class="radio-card on">
+                <span class="radio on"></span>
+                <div style="flex:1">
+                  <strong style="color:var(--olive)">Savora couriers</strong>
+                  <div style="font-size:10.5px;color:var(--olive-400)">Pickup within 4.5 km · $3.99 standard fee</div>
+                </div>
+                <span class="badge badge-gold">Recommended</span>
+              </div>
+              <div class="radio-card">
+                <span class="radio"></span>
+                <div style="flex:1">
+                  <strong style="color:var(--olive)">Own couriers</strong>
+                  <div style="font-size:10.5px;color:var(--olive-400)">You dispatch and manage delivery status</div>
+                </div>
+              </div>
+              <div class="radio-card">
+                <span class="radio"></span>
+                <div style="flex:1">
+                  <strong style="color:var(--olive)">Pickup only</strong>
+                  <div style="font-size:10.5px;color:var(--olive-400)">Customers collect from the counter</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="two-col-even mt-16" style="gap:16px">
+              <div class="field">
+                <label>Delivery radius</label>
+                <input class="input" value="4.5 km" />
+              </div>
+              <div class="field">
+                <label>Minimum order</label>
+                <input class="input" value="$12.00" />
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad mt-16" style="border-color:rgba(166,64,47,.25)">
+            <div class="checkout-head">
+              <h2 style="color:var(--danger)">Pause the kitchen</h2>
+              <span class="badge badge-outline" style="border-color:rgba(166,64,47,.3);color:var(--danger)">Careful</span>
+            </div>
+            <p style="font-size:11.5px;line-height:1.6;color:var(--olive-500);max-width:560px">
+              Pausing hides the restaurant from the marketplace and stops new orders. Existing orders continue as normal. You can resume at any time.
+            </p>
+            <div class="flex gap-8 mt-16">
+              <button class="btn btn-outline btn-sm" type="button" style="color:var(--danger);border-color:rgba(166,64,47,.35)">Pause for today</button>
+              <button class="btn btn-ghost btn-sm" type="button">Pause until further notice</button>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Service hours</h2>
+                <p>Eastern time · Brooklyn</p>
+              </div>
+              <a href="#">Edit</a>
+            </div>
+
+            <div>
+              <div class="hours-row"><span class="day">Monday</span><span class="time">11:00 – 22:30</span><span class="status badge badge-success">Open</span></div>
+              <div class="hours-row"><span class="day">Tuesday</span><span class="time">11:00 – 22:30</span><span class="status badge badge-success">Open</span></div>
+              <div class="hours-row"><span class="day">Wednesday</span><span class="time">11:00 – 22:30</span><span class="status badge badge-success">Open</span></div>
+              <div class="hours-row"><span class="day">Thursday</span><span class="time">11:00 – 23:00</span><span class="status badge badge-success">Open</span></div>
+              <div class="hours-row"><span class="day">Friday</span><span class="time">11:00 – 23:30</span><span class="status badge badge-success">Open</span></div>
+              <div class="hours-row"><span class="day">Saturday</span><span class="time">10:00 – 23:30</span><span class="status badge badge-gold">Busy</span></div>
+              <div class="hours-row"><span class="day">Sunday</span><span class="time">10:00 – 21:30</span><span class="status badge badge-outline">Closing</span></div>
+            </div>
+
+            <div class="note-box mt-12">
+              <i data-icon="clock"></i>
+              <p>Next change: Friday, 30 Oct · 11:00 PM close.</p>
+            </div>
+          </div>
+
+          <div class="panel mt-16">
+            <div class="panel-head">
+              <div>
+                <h2>Public profile</h2>
+                <p>What customers see</p>
+              </div>
+            </div>
+
+            <div class="card" style="overflow:hidden">
+              <div class="media" style="height:110px">
+                <img src="/public/assets/restaurants/restaurant-saffron-oak-900.webp" alt="" />
+              </div>
+              <div style="padding:14px">
+                <div class="flex items-start justify-between gap-8">
+                  <div>
+                    <div style="font-family:var(--display);font-size:22px;color:var(--olive)">Saffron &amp; Oak</div>
+                    <div style="font-size:10px;color:var(--olive-400)">Indian · $$ · 1.2 km</div>
+                  </div>
+                  <span class="rating"><i data-icon="star"></i> 4.8</span>
+                </div>
+                <p style="margin-top:8px;font-size:10.5px;line-height:1.55;color:var(--olive-500)">Seasonal Indian cooking with a wood-fired grill, a long bar and a menu built for sharing.</p>
+                <div class="flex items-center gap-8 mt-10" style="font-size:9.5px;color:var(--olive-400)">
+                  <i data-icon="clock"></i> 25–35 min <span class="dot-sep"></span> $3.99 delivery
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel mt-16">
+            <div class="panel-head">
+              <div>
+                <h2>Team</h2>
+                <p>3 people with access</p>
+              </div>
+              <a href="#">Invite</a>
+            </div>
+
+            <div style="display:grid;gap:10px">
+              <div class="flex items-center gap-10">
+                <img class="avatar" src="/public/assets/people/avatar-maya-320.webp" alt="" />
+                <div style="flex:1"><div style="font-size:11px;font-weight:600;color:var(--olive)">Maya Bennett</div><div style="font-size:9px;color:var(--olive-400)">Owner · full access</div></div>
+                <span class="badge badge-olive">You</span>
+              </div>
+              <div class="flex items-center gap-10">
+                <img class="avatar" src="/public/assets/people/avatar-diner-2-320.webp" alt="" />
+                <div style="flex:1"><div style="font-size:11px;font-weight:600;color:var(--olive)">Luca Moretti</div><div style="font-size:9px;color:var(--olive-400)">Kitchen manager</div></div>
+                <button class="btn btn-ghost btn-xs" type="button">Edit</button>
+              </div>
+              <div class="flex items-center gap-10">
+                <img class="avatar" src="/public/assets/people/avatar-diner-3-320.webp" alt="" />
+                <div style="flex:1"><div style="font-size:11px;font-weight:600;color:var(--olive)">Nadia Haddad</div><div style="font-size:9px;color:var(--olive-400)">Front of house</div></div>
+                <button class="btn btn-ghost btn-xs" type="button">Edit</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel mt-16" style="background:var(--olive-800);border-color:transparent">
+            <div style="color:var(--gold-200);font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase">Demo settings</div>
+            <p style="margin-top:8px;font-size:10.5px;line-height:1.6;color:rgba(251,248,241,.65)">Saving changes writes to local mock state. The real settings API contract is documented in <strong style="color:var(--cream)">docs/BACKEND-INTEGRATION.md</strong>.</p>
+          </div>
+        </aside>
+      </div>
+
+      <p class="tiny mt-16" style="text-align:center">Demo partner settings · all values are illustrative.</p>
+    </div>
+  </div>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>
